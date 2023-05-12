@@ -74,8 +74,6 @@ sbitsInit(state, splineMaxError);
  * 0 = Value-based search
  * 1 = Binary serach
  * 2 = Modified linear search (Spline)
- * 3 = Pure C PGM
- * 4 = Pure C one-level PGM
  */
 #define SEARCH_METHOD 2
 
@@ -84,7 +82,7 @@ sbitsInit(state, splineMaxError);
  * Note: The Radix search structure is only used with Spline (SEARCH_METHOD == 2)
  * To use a pure Spline index without a Radix table, set RADIX_BITS to 0
  */
-#define RADIX_BITS 0
+#define RADIX_BITS 4
 
 ```
 
@@ -92,8 +90,6 @@ The SEARCH_METHOD defines the method used for indexing physical data pages.
 * 0 Uses a linear function to approximate data page locations.
 * 1 Performs a binary search over all data pages.
 * 2 Uses a Spline structure (with optional Radix table) to index data pages.
-* 3 Uses a multi-level PGM structure to index data pages.
-* 4 Uses a single-level PGM structure to index data pages.
 
 The RADIX_BITS constant defines how many bits are indexed by the Radix table when using SEARCH_METHOD 2.
 Setting this constant to 0 will omit the Radix table, indexing will rely solely on the Spline structure.
