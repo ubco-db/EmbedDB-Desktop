@@ -1,2 +1,4 @@
 datafile.bin
 indexfile.bin
+*.exe
+*.o
