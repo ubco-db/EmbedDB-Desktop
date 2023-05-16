@@ -49,14 +49,14 @@
  * 1 = Binary serach
  * 2 = Modified linear search (Spline)
  */
-#define SEARCH_METHOD 0
+#define SEARCH_METHOD 2
 
 /**
  * Number of bits to be indexed by the Radix Search structure
  * Note: The Radix search structure is only used with Spline (SEARCH_METHOD == 2)
  * To use a pure Spline index without a Radix table, set RADIX_BITS to 0
  */
-#define RADIX_BITS 0
+#define RADIX_BITS 4
 
 int32_t* pageData;
 
@@ -183,7 +183,7 @@ void* sbitsGetMinKey(sbitsState *state, void *buffer)
 }
 
 /**
-@brief     	Return the smallest key in the node
+@brief     	Return the largest key in the node
 @param     	state
                 SBITS algorithm state structure
 @param     	buffer
@@ -234,17 +234,20 @@ void* getPageBounds(void* data, sbitsState *state, uint64_t size)
                 max error of indexing structure (spline or PGM)
 @return		Return 0 if success. Non-zero value if error.
 */
-int8_t sbitsInit(sbitsState *state, size_t indexMaxError)
-{
+int8_t sbitsInit(sbitsState *state, size_t indexMaxError) {
+	if (SBITS_USING_VDATA(state->parameters)) {
+		state->recordSize += 4;
+	}
+
 	printf("Initializing SBITS.\n");
 	printf("Buffer size: %d  Page size: %d\n", state->bufferSizeInBlocks, state->pageSize);	
 	state->recordSize = state->keySize + state->dataSize;
-	printf("Record size: %d\n", state->recordSize);
-	printf("Use index: %d  Max/min: %d Sum: %d Bmap: %d\n", SBITS_USING_INDEX(state->parameters), SBITS_USING_MAX_MIN(state->parameters),
-								SBITS_USING_SUM(state->parameters), SBITS_USING_BMAP(state->parameters));
+	printf("Key size: %d Data size: %d %sRecord size: %d\n", state->keySize, state->dataSize, SBITS_US_VDATA(state->parameters) ? "Variable data pointer size: 4 ":"", state->recordSize);
+	printf("Use index: %d  Max/min: %d Sum: %d Bmap: %d\n", SBITS_USING_INDEX(state->parameters), SBITS_USING_MAX_MIN(state->parameters), SBITS_USING_SUM(state->parameters), SBITS_USING_BMAP(state->parameters));
 	
 	state->file = NULL;
  	state->indexFile = NULL;
+	state->varFile = NULL;
 	state->nextPageId = 0;
 	state->nextPageWriteId = 0;
 	state->wrappedMemory = 0;
@@ -275,8 +278,7 @@ int8_t sbitsInit(sbitsState *state, size_t indexMaxError)
 
 	id_t numPages = (state->endAddress - state->startAddress) / state->pageSize;
 
-	if (numPages < (SBITS_USING_INDEX(state->parameters)*2+2) * state->eraseSizeInPages)
-	{
+	if (numPages < (SBITS_USING_INDEX(state->parameters)*2+2) * state->eraseSizeInPages) {
 		printf("ERROR: Number of pages allocated must be at least twice erase block size for SBITS and four times when using indexing. Memory pages: %d\n", numPages);		
 		return -1;
 	}
@@ -286,7 +288,7 @@ int8_t sbitsInit(sbitsState *state, size_t indexMaxError)
 	state->firstDataPage = 0;
 	state->firstDataPageId = 0;
 	state->erasedEndPage = 0;	
-	state->avgKeyDiff = 1;	
+	state->avgKeyDiff = 1;
 
  	/* Setup data file. */    
     state->file = fopen("datafile.bin", "w+b");	
@@ -296,15 +298,11 @@ int8_t sbitsInit(sbitsState *state, size_t indexMaxError)
         return -1;
     }   	
 
-	if (SBITS_USING_INDEX(state->parameters))
-	{	/* Allocate file and buffer for index */
-		if (state->bufferSizeInBlocks < 4)
-		{
+	if (SBITS_USING_INDEX(state->parameters)) {	/* Allocate file and buffer for index */
+		if (state->bufferSizeInBlocks < 4) {
 			printf("ERROR: SBITS using index requires at least 4 page buffers. Defaulting to without index.\n");
 			state->parameters -= SBITS_USE_INDEX;
-		}
-		else
-		{
+		} else {
 			/* Setup index file. */  
 			state->indexFile = fopen("indexfile.bin", "w+b");
 			if (state->indexFile == NULL) 
@@ -344,7 +342,30 @@ int8_t sbitsInit(sbitsState *state, size_t indexMaxError)
 		}
 	}
 
-	if(SEARCH_METHOD == 2){
+	if (SBITS_USING_VDATA(state->parameters)) {
+		if (state->bufferSizeInBlocks < 4 + (SBITS_USING_INDEX(state->parameters) ? 2 : 0)) {
+			printf("ERROR: SBITS using variable records requires at least 4 page buffers if there is no index and 6 if there is. Defaulting to no variable data.\n");
+			state->parameters -= SBITS_USE_VDATA;
+		} else {
+			// SETUP FILE
+			state->varFile = fopen("varFile.bin", "w+b");
+			if (state->varFile == NULL) {
+				printf("Error: Can't open variable data file!\n");
+				return -1;
+			}
+
+			// Initialize variable data outpt buffer
+			initBufferPage(state, SBITS_VAR_WRITE_BUFFER(state->parameters));
+			
+			state->currentVarLoc = 0;
+			state->minVarRecordId = 0;
+			state->wrappedVariableMemory = 0;
+			state->numAvailVarPages = (state->varAddressEnd - state->varAddressStart) / state->pageSize;
+			state->nextVarPageId = 0;
+		}
+	}
+
+	if(SEARCH_METHOD == 2) {
 		initRadixSpline(state, numPages, RADIX_BITS);
 	}
 
@@ -455,8 +476,7 @@ void indexPage(sbitsState *state, int32_t pageNum){
                 Data for record
 @return		Return 0 if success. Non-zero value if error.
 */
-int8_t sbitsPut(sbitsState *state, void* key, void *data)
-{
+int8_t sbitsPut(sbitsState *state, void* key, void *data) {
 	/* Copy record into block */
 	count_t count =  SBITS_GET_COUNT(state->buffer); 
 
@@ -518,6 +538,17 @@ int8_t sbitsPut(sbitsState *state, void* key, void *data)
 	/* Copy record onto page */
 	memcpy((int8_t*)state->buffer + (state->recordSize * count) + state->headerSize, key, state->keySize);
 	memcpy((int8_t*)state->buffer + (state->recordSize * count) + state->headerSize + state->keySize, data, state->dataSize);
+	
+	/* Copy variable data offset if using variable data*/
+	if(SBITS_USING_VDATA(state->parameters)) {
+		id_t dataLocation;
+		if(state->recordHasVarData) {
+			dataLocation = state->currentVarLoc;
+		} else {
+			dataLocation = SBITS_NO_VAR_DATA;
+		}
+		memcpy((int8_t*)state->buffer + (state->recordSize * count) + state->headerSize + state->keySize + state->dataSize, dataLocation, 4);
+	}
 
 	/* Update count */
 	SBITS_INC_COUNT(state->buffer);	
@@ -563,6 +594,74 @@ int8_t sbitsPut(sbitsState *state, void* key, void *data)
 	}
 	
 	return 0;	
+}
+
+
+/**
+ * @brief	Puts the given key, data, and variable length data into the structure.
+ * @param	state			SBITS algorithm state structure
+ * @param	key				Key for record
+ * @param	data			Data for record
+ * @param	variableData	Variable length data for record
+ * @param	length			Length of the variable length data in bytes
+ * @return	Return 0 if success. Non-zero value if error.
+*/
+int8_t sbitsPutVar(sbitsState *state, void* key, void *data, void *variableData, uint32_t length) {
+	if (SBITS_USING_VDATA(state->parameters)) {
+		// Insert their data
+		if (variableData != NULL) {
+			// Check that there is enough space remaining in this page to start the insert of the variable data here
+			void *buf = (int8_t*)state->buffer + state->pageSize*(SBITS_VAR_WRITE_BUFFER(state->parameters));
+			if (state->currentVarLoc % state->pageSize < 4) {
+				writeVariablePage(state, buf);
+				initBufferPage(state, SBITS_VAR_WRITE_BUFFER(state->parameters));
+				// Move data writing location to the beginning of the next page, leaving the first 4 bytes for a header
+				state->currentVarLoc = (id_t) ceilf(state->currentVarLoc / state->pageSize) + sizeof(id_t);
+			}
+
+			// Perform the regular insert
+			state->recordHasVarData = 1;
+			int8_t r;
+			if ((r = sbitsPut(state, key, data)) != 0) {
+				return r;
+			}
+
+			// Update the header to include the maximum key value stored on this page 
+			id_t* ptr = buf;
+			*ptr = *((id_t*)key);
+
+			// Write the length of the data item into the buffer
+			*((uint32_t*)((uint8_t*)buf + (state->currentVarLoc % state->pageSize))) = length;
+			state->currentVarLoc += 4;
+
+			while (length > 0) {
+				// Copy data into the buffer. Write the min of the space left in this page and the remaining length of the data
+				uint8_t amtToWrite = min(state->pageSize - state->currentVarLoc % state->pageSize, length);
+				memcpy((uint8_t*)buf + (state->currentVarLoc % state->pageSize), data, amtToWrite);
+				length -= amtToWrite;
+				state->currentVarLoc += amtToWrite;
+
+				// If we need to write the buffer to file
+				if (state->currentVarLoc % state->pageSize == 0) {
+					writeVariablePage(state, buf);
+					initBufferPage(state, SBITS_VAR_WRITE_BUFFER(state->parameters));
+
+					// Update the header to include the maximum key value stored on this page 
+					id_t* ptr = buf;
+					*ptr = *((id_t*)key);
+					state->currentVarLoc += sizeof(id_t);
+				}
+			}
+		} else {
+			// Var data enabled, but not provided
+			state->recordHasVarData = 0;
+			return sbitsPut(state, key, data);
+		}
+	} else {
+		printf("Error: Can't insert variable data because it is not enabled\n");
+		return -1;
+	}
+	return 0;
 }
 
 
@@ -877,6 +976,77 @@ int8_t sbitsGet(sbitsState *state, void* key, void *data)
 
 
 /**
+ * @brief	Given a key, returns data associated with key.
+ * 			Note: Space for data must be already allocated.
+ * 			Data is copied from database into data buffer.
+ * @param	state	SBITS algorithm state structure
+ * @param	key		Key for record
+ * @param	data	Pre-allocated memory to copy data for record
+ * @return	Return 0 if success. Non-zero value if error.
+ * 			-1 : Error reading file
+ * 			1  : Variable data was deleted to make room for newer data
+*/
+int8_t sbitsGetVar(sbitsState *state, void *key, void *data, void ** varData) {
+	// Get the fixed data
+	int8_t r = sbitsGet(state, key, data);
+	if (r != 0) {
+		return r;
+	}
+
+	// Check if the variable data associated with this key has been overwritten due to file wrap around
+	if (*((id_t*)key) < state->minVarRecordId) {
+		*varData = NULL;
+		return 1;
+	}
+
+	// Now the input buffer contains the record, so we can use that to find the variable data
+	void* buf = (int8_t*)state->buffer + state->pageSize;
+	id_t recordNum = sbitsSearchNode(state, buf, key, 0, 0);
+
+	id_t varDataOffset = *((id_t*)((int8_t*)buf + state->headerSize + state->recordSize*recordNum + state->keySize + state->dataSize));
+	if (varDataOffset == SBITS_NO_VAR_DATA) {
+		*varData = NULL;
+		return 0;
+	}
+
+	/* Get the data */
+
+	// Read the page into the same read buffer as the data page
+	void* ptr = (int8_t*)state->buffer + SBITS_VAR_READ_BUFFER(state->parameters)*state->pageSize;
+	id_t pageNum = varDataOffset / state->pageSize;
+	if (readVariablePage(state, pageNum) != 0) {
+		return -1;
+	}
+
+	// Get pointer to the beginning of the data
+	uint16_t bufPos =  varDataOffset % state->pageSize;
+	// Get length of data and move to the data portion of the record
+	uint32_t dataLength = *((uint32_t*)((int8_t*)buf + bufPos));
+	bufPos += 4;
+
+	// Allocate memory in the return pointer **TODO: Implement returning an iterator instead**
+	*varData = malloc(dataLength);
+
+	uint32_t amtRead = 0;
+	while (amtRead != dataLength) {
+		uint16_t amtToRead = min(dataLength - amtRead, state->pageSize - bufPos);
+		memcpy((int8_t*)*varData + amtRead, (int8_t*)buf + bufPos, amtToRead);
+		amtRead += amtToRead;
+
+		// If we need to keep reading, read the next page
+		if (amtRead != dataLength) {
+			pageNum = (pageNum + 1) % ((state->varAddressEnd - state->varAddressStart) / state->pageSize);
+			readVariablePage(state, pageNum);
+			// Skip past the header
+			bufPos = 4;
+		}
+	}
+
+	return 0;
+}
+
+
+/**
 @brief     	Initialize iterator on sbits structure.
 @param     	state
                 SBITS algorithm state structure
@@ -1105,6 +1275,7 @@ void printStats(sbitsState *state)
 
 }
 
+
 /**
 @brief     	Writes page in buffer to storage. Returns page number.
 @param     	state
@@ -1236,6 +1407,45 @@ id_t writeIndexPage(sbitsState *state, void *buffer)
 	return pageNum;
 }
 
+
+/**
+ * @brief	Writes variable data page in buffer to storage. Returns page number.
+ * @param	state	SBITS algorithm state structure
+ * @param	buffer	Buffer to write to storage
+ * @return	Return page number if success, -1 if error.
+*/
+id_t writeVariablePage(sbitsState *state, void *buffer) {
+	if (state->varFile == NULL) {
+		return -1;
+	}
+
+	// Make sure the address being witten to wraps around
+	state->nextVarPageId %= (state->varAddressEnd - state->varAddressStart) / state->pageSize;
+
+	// Erase data if needed
+	if (state->numAvailVarPages <= 0) {
+		state->numAvailVarPages += state->eraseSizeInPages;
+		// Last page that is deleted
+		id_t pageNum = (state->nextVarPageId + state->eraseSizeInPages) % ((state->varAddressEnd - state->varAddressStart) / state->pageSize);
+
+		// Read in that page so we can update which records we still have the data for
+		readVariablePage(state, pageNum);
+		void* buf = (int8_t*)state->buffer + state->pageSize*SBITS_VAR_READ_BUFFER(state->parameters);
+		state->minVarRecordId = *((id_t*)buf);
+	}
+
+	// Write to file
+	fseek(state->varFile, state->pageSize*state->nextVarPageId, SEEK_SET);
+	fwrite(buffer, state->pageSize, 1, state->varFile);
+	
+	state->nextVarPageId++;
+	state->numAvailVarPages--;
+	state->numWrites++;
+
+	return state->nextIdxPageId - 1;
+}
+
+
 /**
 @brief     	Reads given page from storage.
 @param     	state
@@ -1303,6 +1513,31 @@ int8_t readIndexPage(sbitsState *state, id_t pageNum)
 	state->bufferedIndexPageId = pageNum;    
 	return 0;
 }
+
+
+/**
+* @brief	Reads given variable data page from storage
+* @param 	state 	SBITS algorithm state structure
+* @param 	pageNum Page number to read
+* @return 	Return 0 if success, -1 if error
+*/
+int8_t readVariablePage(sbitsState *state, id_t pageNum) {
+	// Get buffer to read into
+	void* buf = (int8_t*)state->buffer + SBITS_VAR_READ_BUFFER(state->parameters)*state->pageSize;
+
+	// Go to page to read
+	fseek(state->varFile, pageNum*state->pageSize, SEEK_SET);
+
+	// Read in one page worth of data
+	if (fread(buf, state->pageSize, 1, state->varFile) != 0) {
+		return -1;
+	}
+
+	// Track stats
+	state->numReads++;
+	return 0;
+}
+
 
 /**
 @brief     	Resets statistics.
