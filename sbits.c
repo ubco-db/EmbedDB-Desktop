@@ -61,6 +61,12 @@ THE POSSIBILITY OF SUCH DAMAGE.
  */
 #define RADIX_BITS 0
 
+/*
+ * Defines if the radix table should be use, or just the spline structure. It is
+ * only applicable for search method 2.
+ */
+#define USE_RADIX 0
+
 int32_t *pageData;
 
 void printBitmap(char *bm) {
@@ -382,7 +388,7 @@ int8_t sbitsInit(sbitsState *state, size_t indexMaxError) {
             // Initialize variable data outpt buffer
             initBufferPage(state, SBITS_VAR_WRITE_BUFFER(state->parameters));
 
-            state->currentVarLoc = 0;
+            state->currentVarLoc = 4;
             state->minVarRecordId = 0;
             state->wrappedVariableMemory = 0;
             state->numAvailVarPages =
@@ -393,7 +399,12 @@ int8_t sbitsInit(sbitsState *state, size_t indexMaxError) {
     }
 
     if (SEARCH_METHOD == 2) {
-        initRadixSpline(state, numPages, RADIX_BITS);
+        if (USE_RADIX) {
+            initRadixSpline(state, numPages, RADIX_BITS);
+        } else {
+            state->spl = malloc(sizeof(spline));
+            splineInit(state->spl, numPages, indexMaxError);
+        }
     }
 
     return 0;
@@ -488,7 +499,11 @@ void indexPage(sbitsState *state) {
     if (SEARCH_METHOD == 2) {
         int32_t minKey;
         memcpy(&minKey, sbitsGetMinKey(state, state->buffer), state->keySize);
-        radixsplineAddPoint(state->rdix, minKey);
+        if (USE_RADIX) {
+            radixsplineAddPoint(state->rdix, minKey);
+        } else {
+            splineAdd(state->spl, minKey);
+        }
     }
 }
 
@@ -645,9 +660,7 @@ int8_t sbitsPutVar(sbitsState *state, void *key, void *data, void *variableData,
         if (variableData != NULL) {
             // Check that there is enough space remaining in this page to start
             // the insert of the variable data here
-            void *buf =
-                (int8_t *)state->buffer +
-                state->pageSize * (SBITS_VAR_WRITE_BUFFER(state->parameters));
+            void *buf = (int8_t *)state->buffer + state->pageSize * (SBITS_VAR_WRITE_BUFFER(state->parameters));
             if (state->currentVarLoc % state->pageSize > state->pageSize - 4) {
                 printf("%d\n", *(id_t *)key);
                 writeVariablePage(state, buf);
@@ -673,19 +686,28 @@ int8_t sbitsPutVar(sbitsState *state, void *key, void *data, void *variableData,
             *ptr = *((id_t *)key);
 
             // Write the length of the data item into the buffer
-            *((uint32_t *)((uint8_t *)buf +
-                           (state->currentVarLoc % state->pageSize))) = length;
+            *((uint32_t *)((uint8_t *)buf + (state->currentVarLoc % state->pageSize))) = length;
             state->currentVarLoc += 4;
+
+            // Check if we need to write after doing that
+            if (state->currentVarLoc % state->pageSize == 0) {
+                writeVariablePage(state, buf);
+                initBufferPage(state,
+                                SBITS_VAR_WRITE_BUFFER(state->parameters));
+
+                // Update the header to include the maximum key value stored
+                // on this page
+                id_t *ptr = buf;
+                *ptr = *((id_t *)key);
+                state->currentVarLoc += sizeof(id_t);
+            }
+
             int amtWritten = 0;
             while (length > 0) {
                 // Copy data into the buffer. Write the min of the space left in
                 // this page and the remaining length of the data
-                uint8_t amtToWrite = __min(
-                    state->pageSize - state->currentVarLoc % state->pageSize,
-                    length);
-                memcpy(
-                    (uint8_t *)buf + (state->currentVarLoc % state->pageSize),
-                    (uint8_t *)variableData + amtWritten, amtToWrite);
+                uint8_t amtToWrite = __min(state->pageSize - state->currentVarLoc % state->pageSize, length);
+                memcpy((uint8_t *)buf + (state->currentVarLoc % state->pageSize),(uint8_t *)variableData + amtWritten, amtToWrite);
                 length -= amtToWrite;
                 amtWritten += amtToWrite;
                 state->currentVarLoc += amtToWrite;
@@ -960,7 +982,12 @@ int8_t sbitsGet(sbitsState *state, void *key, void *data) {
     // NEXT STEP: Make it so that a point is only added when a new spline point
     // is added, not for every point
     id_t location;
-    radixsplineFind(state->rdix, *((int32_t *)key), &location, &lowbound, &highbound);
+    if (USE_RADIX) {
+        radixsplineFind(state->rdix, *((int32_t *)key), &location, &lowbound, &highbound);
+    } else {
+        splineFind(state->spl, *((int32_t *)key), &location, &lowbound,
+                   &highbound);
+    }
 
     pageId = location;
     int32_t pageError = 0;
@@ -1032,17 +1059,17 @@ int8_t sbitsGetVar(sbitsState *state, void *key, void *data, void **varData) {
     /* Get the data */
 
     // Read the page into the buffer for variable data
-    void *ptr = (int8_t *)state->buffer +
-                SBITS_VAR_READ_BUFFER(state->parameters) * state->pageSize;
+    void *ptr = (int8_t *)state->buffer + SBITS_VAR_READ_BUFFER(state->parameters) * state->pageSize;
     id_t pageNum = varDataOffset / state->pageSize;
     if (readVariablePage(state, pageNum) != 0) {
         return -1;
     }
 
+
     // Get pointer to the beginning of the data
     uint16_t bufPos = varDataOffset % state->pageSize;
     // Get length of data and move to the data portion of the record
-    uint32_t dataLength = *((uint32_t *)((int8_t *)buf + bufPos));
+    uint32_t dataLength = *((uint32_t *)((int8_t *)ptr + bufPos));
     bufPos += 4;
 
     // Allocate memory in the return pointer **TODO: Implement returning an
@@ -1050,10 +1077,9 @@ int8_t sbitsGetVar(sbitsState *state, void *key, void *data, void **varData) {
     *varData = malloc(dataLength);
 
     uint32_t amtRead = 0;
-    while (amtRead != dataLength) {
-        uint16_t amtToRead =
-            __min(dataLength - amtRead, state->pageSize - bufPos);
-        memcpy((int8_t *)*varData + amtRead, (int8_t *)buf + bufPos, amtToRead);
+    while (amtRead < dataLength) {
+        uint16_t amtToRead = __min(dataLength - amtRead, state->pageSize - bufPos);
+        memcpy((int8_t *)*varData + amtRead, (int8_t *)ptr + bufPos, amtToRead);
         amtRead += amtToRead;
 
         // If we need to keep reading, read the next page
@@ -1315,8 +1341,12 @@ void printStats(sbitsState *state) {
     printf("Max Error: %d\n", state->maxError);
 
     if (SEARCH_METHOD == 2) {
-        splinePrint(state->rdix->spl);
-        radixsplinePrint(state->rdix);
+        if (USE_RADIX) {
+            splinePrint(state->rdix->spl);
+            radixsplinePrint(state->rdix);
+        } else {
+            splinePrint(state->spl);
+        }
     }
 }
 
@@ -1594,9 +1624,9 @@ int8_t readVariablePage(sbitsState *state, id_t pageNum) {
 
     // Go to page to read
     fseek(state->varFile, pageNum * state->pageSize, SEEK_SET);
-
+    
     // Read in one page worth of data
-    if (fread(buf, state->pageSize, 1, state->varFile) != 0) {
+    if (fread(buf, state->pageSize, 1, state->varFile) == 0) {
         return -1;
     }
 

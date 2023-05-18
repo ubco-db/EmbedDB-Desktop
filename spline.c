@@ -246,9 +246,9 @@ size_t pointsBinarySearch(point *arr, int low, int high, int x) {
         
         if (arr[mid].x >= x && arr[mid - 1].x <= x) return mid;
 
-        if (arr[mid].x > x) return radixBinarySearch(arr, low, mid - 1, x);
+        if (arr[mid].x > x) return pointsBinarySearch(arr, low, mid - 1, x);
 
-        return radixBinarySearch(arr, mid + 1, high, x);
+        return pointsBinarySearch(arr, mid + 1, high, x);
     }
 
     mid = low + (high - low) / 2;
@@ -269,9 +269,32 @@ size_t pointsBinarySearch(point *arr, int low, int high, int x) {
  * @param	high	A return value for the largest page it could be on
  */
 void splineFind(spline *spl, id_t key, id_t *loc, id_t *low, id_t *high) {
-    // Perform a binary seach to find the largest spline point with a key <= the key we're looking for
-    size_t pointIdx = pointsBinarySearch(spl->points, 0, spl->count-1, key);
+    size_t pointIdx;
 
+    if (key < spl->points[0].x || spl->count <= 1) {
+        // Key is smaller than any we have on record
+        *loc = *low = *high = spl->points[0].y;
+        return;
+    } else if (key > spl->points[spl->count - 1].x) {
+        *loc = *low = *high = spl->points[spl->count - 1].y;
+        return;
+    } else {
+        // Perform a binary seach to find the spline point above the key we're looking for
+        pointIdx = pointsBinarySearch(spl->points, 0, spl->count-1, key);
+    }
+
+    // Interpolate between two spline points
+    point down = spl->points[pointIdx - 1];
+    point up = spl->points[pointIdx];
+
+    // Estimate location as page number
+    // Keydiff * slope + y
+    *loc = (key - down.x) * ((double)(up.y - down.y) / (up.x - down.x)) + down.y;
     
+    // Set error bounds based on maxError from spline construction
+    *low = (spl->maxError > *loc) ? 0 : *loc - spl->maxError;
+    point lastSplinePoint = spl->points[spl->count - 1];
+    *high = (*loc + spl->maxError > lastSplinePoint.y) ? lastSplinePoint.y : *loc + spl->maxError;
+
 
 }

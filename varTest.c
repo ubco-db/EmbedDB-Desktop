@@ -243,6 +243,7 @@ void runalltests_sbits_variable_data() {
 
         sbitsFlush(state);
         fflush(state->file);
+        fflush(state->varFile);
         uint32_t end = clock();
 
         l = NUM_STEPS - 1;
@@ -266,14 +267,18 @@ void runalltests_sbits_variable_data() {
             for (i = 0; i < numRecords; i++) {
                 int32_t key = i;
                 void* varData = NULL;
-                int8_t result = sbitsGet(state, &key, recordBuffer);
+                int8_t result = sbitsGetVar(state, &key, recordBuffer, &varData);
 
-                if (result == -1) printf("ERROR: Failed to find: %lu\n", key);
-                if (seqdata == 1 && *((int32_t *)recordBuffer) != key % 100) {
+                if (result == -1) {
+                    printf("ERROR: Failed to find: %lu\n", key);
+                } else if (result == 1) {
+                    printf("WARN: Variable data associated with key %lu was deleted\n", key);
+                } else if (*((int32_t *)recordBuffer) != key % 100 && strncmp("Hello there", varData, 13)) {
                     printf("ERROR: Wrong data for: %lu\n", key);
-                    printf("Key: %lu Data: %lu\n", key, *((int32_t *)recordBuffer));
+                    printf("Key: %lu Data: %lu Var: %s\n", key, *((int32_t *)recordBuffer), varData);
                     return;
                 }
+                // printf("Key: %lu Data: %lu Var: %s\n", key, *((int32_t *)recordBuffer), varData);
 
                 if (i % stepSize == 0) {
                     l = i / stepSize - 1;
