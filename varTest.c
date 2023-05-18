@@ -1,11 +1,13 @@
 #include <errno.h>
 #include <string.h>
 #include <time.h>
+#include <stdlib.h>
 
 #include "sbits.h"
 
 #define NUM_STEPS 10
 #define NUM_RUNS 1
+#define IMAGE_TEST 1
 
 void runalltests_sbits_variable_data();
 void updateBitmapInt8Bucket(void* data, void* bm);
@@ -17,8 +19,9 @@ void updateBitmapInt64(void* data, void* bm);
 int8_t inBitmapInt64(void* data, void* bm);
 int8_t int32Comparator(void* a, void* b);
 uint32_t keyModifier(uint32_t inputKey);
-uint32_t randomData(void** data, uint32_t sizeLowerBound,
-    uint32_t sizeUpperBound);
+uint32_t randomData(void** data, uint32_t sizeLowerBound, uint32_t sizeUpperBound);
+uint32_t readImageFromFile(void** data, char* filename);
+void writeDataToFile(void* data, char* filename, uint32_t length);
 
 int main() { runalltests_sbits_variable_data(); }
 
@@ -45,7 +48,7 @@ void runalltests_sbits_variable_data() {
     uint32_t rhits[NUM_STEPS][NUM_RUNS];
 
     /* Determines if generated, sequential data is used, or data from an input file*/
-    int8_t seqdata = 0;
+    int8_t seqdata = 1;
 
     // Files for non-sequentioal data
     FILE* infile = NULL, * infileRandom = NULL;
@@ -99,9 +102,11 @@ void runalltests_sbits_variable_data() {
         // numRecords = 500000;
 
         infile = fopen("data/seatac_data_100KSorted.bin", "r+b");
-        infileRandom = fopen("data/seatac_data_100KSorted_randomized.bin",
-        "r+b"); minRange = 1314604380; maxRange = 1609487580; numRecords =
-        100001; testRecords = 100001;
+        infileRandom = fopen("data/seatac_data_100KSorted_randomized.bin", "r+b");
+        minRange = 1314604380;
+        maxRange = 1609487580;
+        numRecords = 100001;
+        testRecords = 100001;
 
         // infile = fopen("data/uwa500K.bin", "r+b");
         // infileRandom =
@@ -126,21 +131,19 @@ void runalltests_sbits_variable_data() {
         state->pageSize = 512;
         state->bitmapSize = 0;
         state->bufferSizeInBlocks = M;
-        state->buffer =
-            malloc((size_t)state->bufferSizeInBlocks * state->pageSize);
+        state->buffer = malloc((size_t)state->bufferSizeInBlocks * state->pageSize);
 
         /* Address level parameters */
         state->startAddress = 0;
         state->endAddress = state->pageSize * numRecords / 10;
         state->varAddressStart = 0;
-        state->varAddressEnd = state->pageSize * numRecords / 10;
+        state->varAddressEnd = 1000000000;
         state->eraseSizeInPages = 4;
 
         state->parameters = SBITS_USE_BMAP | SBITS_USE_INDEX | SBITS_USE_VDATA;
 
         if (SBITS_USING_INDEX(state->parameters) == 1)
-            state->endAddress +=
-            state->pageSize * (state->eraseSizeInPages * 2);
+            state->endAddress += state->pageSize * (state->eraseSizeInPages * 2);
         if (SBITS_USING_BMAP(state->parameters)) state->bitmapSize = 8;
 
         /* Setup for data and bitmap comparison functions */
@@ -170,17 +173,33 @@ void runalltests_sbits_variable_data() {
             for (i = 0; i < numRecords; i++) {
                 *((int32_t*)recordBuffer) = i;
                 *((int32_t*)(recordBuffer + 4)) = (i % 100);
-                char* variableData = "Hello there";
-                uint32_t length = strlen(variableData) + 1;
+                void* variableData = NULL;
+                int useVarData = rand() % 100 < 5;
+                uint32_t length = 0;
+                if (useVarData) {
+                    if (IMAGE_TEST) {
+                        length = readImageFromFile(&variableData, "justinwee.png");
+                        if (length == -1) {
+                            printf("AAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n");
+                            exit(-1);
+                        }
+                    } else {
+                        length = randomData(&variableData, 1200, 1201);
+                    }
+                }
                 // Put variable length data
-                sbitsPutVar(state, recordBuffer, (void*)(recordBuffer + 4), i % 10 == 0 ? variableData : NULL, length);
+                sbitsPutVar(state, recordBuffer, (void*)(recordBuffer + 4), useVarData ? variableData : NULL, length);
+                free(variableData);
+                variableData = NULL;
+                if (useVarData) {
+                    printf("Using var data: KEY:%d\n", i);
+                }
 
                 if (i % stepSize == 0) {
                     // printf("Num: %lu KEY: %lu\n", i, i);
                     l = i / stepSize - 1;
                     if (l < NUM_STEPS && l >= 0) {
-                        times[l][r] =
-                            ((clock() - start) * 1000) / CLOCKS_PER_SEC;
+                        times[l][r] = ((clock() - start) * 1000) / CLOCKS_PER_SEC;
                         reads[l][r] = state->numReads;
                         writes[l][r] = state->numWrites;
                         overwrites[l][r] = 0;
@@ -241,7 +260,7 @@ void runalltests_sbits_variable_data() {
                         maxRange = *((uint32_t*)buf);
                         printf("Num: %lu KEY: %lu\n", i, *((int32_t*)buf));
                         goto doneread;
-                     }
+                    }
                 }
             }
             numRecords = i;
@@ -275,19 +294,34 @@ void runalltests_sbits_variable_data() {
             for (i = 0; i < numRecords; i++) {
                 int32_t key = i;
                 void* varData = NULL;
-                int8_t result = sbitsGetVar(state, &key, recordBuffer, &varData);
+                uint32_t length = -1;
+                int8_t result = sbitsGetVar(state, &key, recordBuffer, &varData, &length);
 
                 if (result == -1) {
                     printf("ERROR: Failed to find: %lu\n", key);
                 } else if (result == 1) {
                     printf("WARN: Variable data associated with key %lu was deleted\n", key);
-                } else if (*((int32_t*)recordBuffer) != key % 100 && strncmp("Hello there", varData, 13)) {
+                } else if (*((int32_t*)recordBuffer) != key % 100) {
                     printf("ERROR: Wrong data for: %lu\n", key);
-                    printf("Key: %lu Data: %lu Var: %s\n", key, *((int32_t*)recordBuffer), varData);
+                    // printf("Key: %lu Data: %lu Var length: %d\n", key, *((int32_t*)recordBuffer), length);
                     return;
                 }
+                if (length != -1) {
+                    if (IMAGE_TEST) {
+                        char filename[17];
+                        strcpy(filename, "weeeeeee");
+                        filename[8] = key / 1000 + '0';
+                        filename[9] = (key % 1000) / 100 + '0';
+                        filename[10] = (key % 100) / 10 + '0';
+                        filename[11] = (key % 10) + '0';
+                        strcpy(filename + 12, ".png");
+                        writeDataToFile(varData, filename, length);
+                        printf("Key: %lu Data: %lu Var length: %d\n", key, *((int32_t*)recordBuffer), length);
+                    }
+                }
                 // printf("Key: %lu Data: %lu Var: %s\n", key, *((int32_t *)recordBuffer), varData);
-
+                free(varData);
+                varData = NULL;
                 if (i % stepSize == 0) {
                     l = i / stepSize - 1;
                     if (l < NUM_STEPS && l >= 0) {
@@ -637,12 +671,63 @@ int8_t int32Comparator(void* a, void* b) {
     return 0;
 }
 
-uint32_t randomData(void** data, uint32_t sizeLowerBound,
-    uint32_t sizeUpperBound) {
+uint32_t randomData(void** data, uint32_t sizeLowerBound, uint32_t sizeUpperBound) {
     uint32_t size = rand() % (sizeUpperBound - sizeLowerBound) + sizeLowerBound;
     *data = malloc(size);
     for (uint32_t i = 0; i < size; i++) {
-        *((uint8_t*)data + i) = rand() % UINT8_MAX;
+        *((uint8_t*)(*data) + i) = rand() % UINT8_MAX;
     }
     return size;
+}
+
+uint32_t readImageFromFile(void** data, char* filename) {
+    FILE* file = fopen(filename, "rb");
+    if (file == NULL) {
+        printf("Failed to open the file\n");
+        return -1;
+    }
+
+    // Determine the file size
+    fseek(file, 0, SEEK_END);
+    long file_size = ftell(file);
+    rewind(file);
+
+    // Allocate memory to store the file data
+    *data = (char*)malloc(file_size);
+    if (*data == NULL) {
+        printf("Failed to allocate memory\n");
+        fclose(file);
+        return -1;
+    }
+
+    // Read the file data into the buffer
+    size_t bytes_read = fread(*data, 1, file_size, file);
+    if (bytes_read != file_size) {
+        printf("Failed to read the file\n");
+        free(*data);
+        fclose(file);
+        return 1;
+    }
+
+    fclose(file);
+
+    return file_size;
+}
+
+void writeDataToFile(void* data, char* filename, uint32_t length) {
+    FILE* file = fopen(filename, "w+b");
+    if (file == NULL) {
+        printf("Failed to open the file\n");
+        return;
+    }
+
+    printf("Length to write: %d\n", length);
+
+    // Write the data to the file
+    size_t bytes_written = fwrite(data, 1, length, file);
+    if (bytes_written != length) {
+        printf("Failed to write to the file\n");
+    }
+
+    fclose(file);
 }

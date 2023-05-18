@@ -245,7 +245,7 @@ int8_t sbitsGet(sbitsState *state, void *key, void *data);
  * 			-1 : Error reading file
  * 			1  : Variable data was deleted to make room for newer data
 */
-int8_t sbitsGetVar(sbitsState *state, void *key, void *data, void ** varData);
+int8_t sbitsGetVar(sbitsState *state, void *key, void *data, void ** varData, uint32_t *length);
 
 /**
  * @brief	Initialize iterator on sbits structure.

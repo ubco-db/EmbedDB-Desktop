@@ -10,18 +10,18 @@
  * @par Redistribution and use in source and binary forms, with or without
  * 		modification, are permitted provided that the following conditions are
  * met:
- * 
+ *
  * @par 1.Redistributions of source code must retain the above copyright notice,
  * 		this list of conditions and the following disclaimer.
- * 
+ *
  * @par 2.Redistributions in binary form must reproduce the above copyright notice,
  * 		this list of conditions and the following disclaimer in the
  * documentation and/or other materials provided with the distribution.
- * 
+ *
  * @par 3.Neither the name of the copyright holder nor the names of its
  * contributors may be used to endorse or promote products derived from this
  * software without specific prior written permission.
- * 
+ *
  * @par THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * 		AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
  * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -92,19 +92,21 @@ void initBufferPage(sbitsState* state, int pageNum) {
 		((int8_t*)buf)[i] = 0;
 	}
 
-	/* Initialize header key min. Max and sum is already set to zero by the
-	 * for-loop above */
-	void* min = SBITS_GET_MIN_KEY(buf, state);
-	/* Initialize min to all 1s */
-	for (i = 0; i < state->keySize; i++) {
-		((int8_t*)min)[i] = 1;
-	}
+	if (pageNum != SBITS_VAR_WRITE_BUFFER(state->parameters)) {
+		/* Initialize header key min. Max and sum is already set to zero by the
+		 * for-loop above */
+		void* min = SBITS_GET_MIN_KEY(buf, state);
+		/* Initialize min to all 1s */
+		for (i = 0; i < state->keySize; i++) {
+			((int8_t*)min)[i] = 1;
+		}
 
-	/* Initialize data min. */
-	min = SBITS_GET_MIN_DATA(buf, state);
-	/* Initialize min to all 1s */
-	for (i = 0; i < state->dataSize; i++) {
-		((int8_t*)min)[i] = 1;
+		/* Initialize data min. */
+		min = SBITS_GET_MIN_DATA(buf, state);
+		/* Initialize min to all 1s */
+		for (i = 0; i < state->dataSize; i++) {
+			((int8_t*)min)[i] = 1;
+		}
 	}
 }
 
@@ -248,8 +250,8 @@ int8_t sbitsInit(sbitsState* state, size_t indexMaxError) {
 	printf("Header size: %d  Records per page: %d\n", state->headerSize, state->maxRecordsPerPage);
 
 	/* Initialize max error to maximum records per page */
-	// state->maxError = state->maxRecordsPerPage;
-	state->maxError = -1;
+	state->maxError = state->maxRecordsPerPage;
+	// state->maxError = -1;
 
 	/* Allocate first page of buffer as output page */
 	initBufferPage(state, 0);
@@ -575,15 +577,14 @@ int8_t sbitsPutVar(sbitsState* state, void* key, void* data, void* variableData,
 		// Insert their data
 		if (variableData != NULL) {
 			// Check that there is enough space remaining in this page to start the insert of the variable data here
-			void* buf =
-				(int8_t*)state->buffer + state->pageSize * (SBITS_VAR_WRITE_BUFFER(state->parameters));
+			void* buf = (int8_t*)state->buffer + state->pageSize * (SBITS_VAR_WRITE_BUFFER(state->parameters));
 			if (state->currentVarLoc % state->pageSize > state->pageSize - 4) {
 				printf("%d\n", *(id_t*)key);
 				writeVariablePage(state, buf);
 				initBufferPage(state, SBITS_VAR_WRITE_BUFFER(state->parameters));
 				// Move data writing location to the beginning of the next page,
 				// leaving the first 4 bytes for a header
-				state->currentVarLoc = (id_t)ceilf(state->currentVarLoc / state->pageSize) + sizeof(id_t);
+				state->currentVarLoc += state->pageSize - state->currentVarLoc % state->pageSize + sizeof(id_t);
 			}
 
 			// Perform the regular insert
@@ -616,11 +617,9 @@ int8_t sbitsPutVar(sbitsState* state, void* key, void* data, void* variableData,
 
 			int amtWritten = 0;
 			while (length > 0) {
-				// Copy data into the buffer. Write the min of the space left in
-				// this page and the remaining length of the data
-				uint8_t amtToWrite = __min(state->pageSize - state->currentVarLoc % state->pageSize, length);
-				memcpy(
-					(uint8_t*)buf + (state->currentVarLoc % state->pageSize), (uint8_t*)variableData + amtWritten, amtToWrite);
+				// Copy data into the buffer. Write the min of the space left in this page and the remaining length of the data
+				size_t amtToWrite = __min(state->pageSize - state->currentVarLoc % state->pageSize, length);
+				memcpy((uint8_t*)buf + (state->currentVarLoc % state->pageSize), (uint8_t*)variableData + amtWritten, amtToWrite);
 				length -= amtToWrite;
 				amtWritten += amtToWrite;
 				state->currentVarLoc += amtToWrite;
@@ -895,18 +894,11 @@ int8_t sbitsGet(sbitsState* state, void* key, void* data) {
  * 			-1 : Error reading file
  * 			1  : Variable data was deleted to make room for newer data
  */
-int8_t sbitsGetVar(sbitsState* state, void* key, void* data, void** varData) {
+int8_t sbitsGetVar(sbitsState* state, void* key, void* data, void** varData, uint32_t* length) {
 	// Get the fixed data
 	int8_t r = sbitsGet(state, key, data);
 	if (r != 0) {
 		return r;
-	}
-
-	// Check if the variable data associated with this key has been overwritten
-	// due to file wrap around
-	if (*((id_t*)key) < state->minVarRecordId) {
-		*varData = NULL;
-		return 1;
 	}
 
 	// Now the input buffer contains the record, so we can use that to find the
@@ -918,6 +910,14 @@ int8_t sbitsGetVar(sbitsState* state, void* key, void* data, void** varData) {
 	if (varDataOffset == SBITS_NO_VAR_DATA) {
 		*varData = NULL;
 		return 0;
+	}
+
+
+	// Check if the variable data associated with this key has been overwritten
+	// due to file wrap around
+	if (*((id_t*)key) < state->minVarRecordId) {
+		*varData = NULL;
+		return 1;
 	}
 
 	/* Get the data */
@@ -933,6 +933,7 @@ int8_t sbitsGetVar(sbitsState* state, void* key, void* data, void** varData) {
 	uint16_t bufPos = varDataOffset % state->pageSize;
 	// Get length of data and move to the data portion of the record
 	uint32_t dataLength = *((uint32_t*)((int8_t*)ptr + bufPos));
+	*length = dataLength;
 	bufPos += 4;
 
 	// Allocate memory in the return pointer **TODO: Implement returning an
@@ -1318,6 +1319,7 @@ id_t writeIndexPage(sbitsState* state, void* buffer) {
  * @return	Return page number if success, -1 if error.
  */
 id_t writeVariablePage(sbitsState* state, void* buffer) {
+	// printf("Wring var page\n");
 	if (state->varFile == NULL) {
 		return -1;
 	}
