@@ -154,8 +154,7 @@ void splineAdd(spline *spl, id_t key) {
         spl->upper.y = spl->currentPointLoc + spl->maxError;
     } else { /* Check if must update upper or lower limits */
         /* Upper limit */
-        if (splineIsLeft(upperXDiff, upperYDiff, xdiff,
-                         spl->currentPointLoc + spl->maxError - last.y) == 1) {
+        if (splineIsLeft(upperXDiff, upperYDiff, xdiff, spl->currentPointLoc + spl->maxError - last.y) == 1) {
             spl->upper.x = key;
             spl->upper.y = spl->currentPointLoc + spl->maxError;
         }
@@ -238,4 +237,41 @@ void splinePrint(spline *spl) {
 */
 uint32_t splineSize(spline *spl) {
     return sizeof(spline) + (spl->count * sizeof(point));
+}
+
+size_t pointsBinarySearch(point *arr, int low, int high, int x) {
+    int32_t mid;
+    if (high >= low) {
+        mid = low + (high - low) / 2;
+        
+        if (arr[mid].x >= x && arr[mid - 1].x <= x) return mid;
+
+        if (arr[mid].x > x) return radixBinarySearch(arr, low, mid - 1, x);
+
+        return radixBinarySearch(arr, mid + 1, high, x);
+    }
+
+    mid = low + (high - low) / 2;
+    if (mid >= high) {
+        return high;
+    } else {
+        return low;
+    }
+}
+
+/**
+ * @brief	Estimate the page number of a given key
+ *
+ * @param	spl		The spline structure to search
+ * @param	key		The key to search for
+ * @param	loc		A return value for the best estimate of which page the key is on
+ * @param	low		A return value for the smallest page that it could be on
+ * @param	high	A return value for the largest page it could be on
+ */
+void splineFind(spline *spl, id_t key, id_t *loc, id_t *low, id_t *high) {
+    // Perform a binary seach to find the largest spline point with a key <= the key we're looking for
+    size_t pointIdx = pointsBinarySearch(spl->points, 0, spl->count-1, key);
+
+    
+
 }

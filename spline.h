@@ -109,6 +109,18 @@ void splinePrint(spline *spl);
 uint32_t splineSize(spline *spl);
 
 
+/**
+ * @brief	Estimate the page number of a given key
+ * 
+ * @param	spl		The spline structure to search
+ * @param	key		The key to search for
+ * @param	loc		A return value for the best estimate of which page the key is on
+ * @param	low		A return value for the smallest page that it could be on
+ * @param	high	A return value for the largest page it could be on
+*/
+void splineFind(spline* spl, id_t key, id_t* loc, id_t* low, id_t* high);
+
+
 #ifdef __cplusplus
 }
 #endif

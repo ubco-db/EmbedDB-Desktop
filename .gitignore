@@ -1,4 +1,5 @@
 datafile.bin
 indexfile.bin
+varFile.bin
 *.exe
 *.o

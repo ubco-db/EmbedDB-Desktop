@@ -85,7 +85,6 @@ void radixsplineRebuild(radixspline *rsidx, int8_t radixSize,
     for (id_t i = 0; i < rsidx->size / pow(2, shiftAmount); i++) {
         rsidx->table[i] = rsidx->table[(i << shiftAmount)];
     }
-    id_t test = pow(2, shiftAmount);
     for (id_t i = rsidx->size / pow(2, shiftAmount); i < rsidx->size; i++) {
         rsidx->table[i] = INT32_MAX;
     }
@@ -202,7 +201,7 @@ size_t radixBinarySearch(point *arr, int low, int high, int x) {
     int32_t mid;
     if (high >= low) {
         mid = low + (high - low) / 2;
-
+        
         if (arr[mid].x >= x && arr[mid - 1].x <= x) return mid;
 
         if (arr[mid].x > x) return radixBinarySearch(arr, low, mid - 1, x);
