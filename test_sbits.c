@@ -258,13 +258,13 @@ uint32_t keyModifier(uint32_t inputKey) { return inputKey * 2; }
 void runalltests_sbits() {
     printf("\nSTARTING SBITS TESTS.\n");
     int8_t M = 4;
-    int32_t numRecords = 10000;   // default values
-    int32_t testRecords = 10000;  // default values
+    int32_t numRecords = 500000;   // default values
+    int32_t testRecords = 500000;  // default values
     uint8_t useRandom = 0;        // default values
     size_t splineMaxError = 0;    // default values
     uint32_t numSteps = 10;
     uint32_t stepSize = numRecords / numSteps;
-    count_t r, numRuns = 1, l;
+    count_t r, numRuns = 20, l;
     uint32_t times[numSteps][numRuns];
     uint32_t reads[numSteps][numRuns];
     uint32_t writes[numSteps][numRuns];
@@ -273,7 +273,7 @@ void runalltests_sbits() {
     uint32_t rtimes[numSteps][numRuns];
     uint32_t rreads[numSteps][numRuns];
     uint32_t rhits[numSteps][numRuns];
-    int8_t seqdata = 0;
+    int8_t seqdata = 1;
     FILE *infile, *infileRandom;
     uint32_t minRange, maxRange;
 
