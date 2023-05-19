@@ -1,5 +1,7 @@
 {
     "files.associations": {
         "radixspline.h": "c"
-    }
+    },
+    "clang-format.style": "file",
+    "editor.formatOnSave": true
 }
