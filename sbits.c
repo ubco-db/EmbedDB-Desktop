@@ -579,7 +579,6 @@ int8_t sbitsPutVar(sbitsState* state, void* key, void* data, void* variableData,
 			// Check that there is enough space remaining in this page to start the insert of the variable data here
 			void* buf = (int8_t*)state->buffer + state->pageSize * (SBITS_VAR_WRITE_BUFFER(state->parameters));
 			if (state->currentVarLoc % state->pageSize > state->pageSize - 4) {
-				printf("%d\n", *(id_t*)key);
 				writeVariablePage(state, buf);
 				initBufferPage(state, SBITS_VAR_WRITE_BUFFER(state->parameters));
 				// Move data writing location to the beginning of the next page,
@@ -1331,8 +1330,7 @@ id_t writeVariablePage(sbitsState* state, void* buffer) {
 	if (state->numAvailVarPages <= 0) {
 		state->numAvailVarPages += state->eraseSizeInPages;
 		// Last page that is deleted
-		id_t pageNum =
-			(state->nextVarPageId + state->eraseSizeInPages) % ((state->varAddressEnd - state->varAddressStart) / state->pageSize);
+		id_t pageNum =(state->nextVarPageId + state->eraseSizeInPages) % ((state->varAddressEnd - state->varAddressStart) / state->pageSize);
 
 		// Read in that page so we can update which records we still have the
 		// data for
