@@ -134,7 +134,6 @@ void main() {
     for (r = 0; r < NUM_RUNS; r++) {
         sbitsState *state = (sbitsState *)malloc(sizeof(sbitsState));
 
-        state->recordSize = 20;
         state->keySize = 4;
         state->dataSize = 12;
         state->pageSize = 512;
@@ -194,7 +193,7 @@ void main() {
                 uint8_t hasVarData = 0;
                 uint32_t length;
                 if (IMAGE_TEST) {
-                    imageVarData(0.05, "justintinywee.png", &hasVarData, &length, &variableData);
+                    imageVarData(0.05, "test.png", &hasVarData, &length, &variableData);
                 } else {
                     randomVarData(0.1, 10, 100, &hasVarData, &length, &variableData);
                 }
@@ -252,7 +251,7 @@ void main() {
                     uint8_t hasVarData = 0;
                     uint32_t length = 0;
                     if (IMAGE_TEST) {
-                        imageVarData(0.01, "justintinywee.png", &hasVarData, &length, &variableData);
+                        imageVarData(0.01, "test.png", &hasVarData, &length, &variableData);
                     } else {
                         randomVarData(0.10, 10, 100, &hasVarData, &length, &variableData);
                     }
@@ -353,7 +352,7 @@ void main() {
 
                 // Retrieve image
                 if (varData != NULL && IMAGE_TEST) {
-                    retrieveImageData(&varData, length, key, "weeeeeee", ".png");
+                    retrieveImageData(&varData, length, key, "test", ".png");
                 }
 
                 // printf("Key: %lu Data: %lu Var: %s\n", key, *((int32_t *)recordBuffer), varData);
@@ -426,7 +425,7 @@ void main() {
 
                         // Retrieve image
                         if (length != -1 && IMAGE_TEST) {
-                            retrieveImageData(&varData, length, *key, "weeeeeee", ".png");
+                            retrieveImageData(&varData, length, *key, "test", ".png");
                         }
 
                         // printf("Key: %lu Data: %lu Var: %s\n", key, *((int32_t *)recordBuffer), varData);
@@ -475,7 +474,7 @@ void main() {
 
                     // Retrieve image
                     if (length != -1 && IMAGE_TEST) {
-                        retrieveImageData(&varData, length, key, "weeeeeee", ".png");
+                        retrieveImageData(&varData, length, key, "test", ".png");
                     }
 
                     // printf("Key: %lu Data: %lu Var: %s\n", key, *((int32_t *)recordBuffer), varData);
@@ -868,7 +867,7 @@ void imageVarData(float chance, char *filename, uint8_t *usingVarData, uint32_t 
     *usingVarData = (rand() % 100) / 100.0 < chance;
     if (usingVarData) {
         *length = readImageFromFile(varData, filename);
-        printf("Length from file: %i\n", *length);
+        // printf("Length from file: %i\n", *length);
         if (*length == -1) {
             printf("ERROR: Failed to read image '%s'\n", filename);
             exit(-1);
@@ -924,7 +923,7 @@ int retrieveData(sbitsState *state, int32_t key, int8_t *recordBuffer) {
 
     // Retrieve image
     if (length != -1 && IMAGE_TEST) {
-        retrieveImageData(&varData, length, key, "weeeeeee", ".png");
+        retrieveImageData(&varData, length, key, "test", ".png");
     }
 
     // printf("Key: %lu Data: %lu Var: %s\n", key, *((int32_t *)recordBuffer), varData);
