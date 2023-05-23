@@ -1,38 +1,38 @@
 /******************************************************************************/
 /**
-@file		test_sbits.c
-@author		Ramon Lawrence
-@brief		This file does performance/correctness testing of sequential
-bitmap indexing for time series (SBITS).
-@copyright	Copyright 2021
-                        The University of British Columbia,
-            Ramon Lawrence
-@par Redistribution and use in source and binary forms, with or without
-        modification, are permitted provided that the following conditions are
-met:
-
-@par 1.Redistributions of source code must retain the above copyright notice,
-        this list of conditions and the following disclaimer.
-
-@par 2.Redistributions in binary form must reproduce the above copyright notice,
-        this list of conditions and the following disclaimer in the
-documentation and/or other materials provided with the distribution.
-
-@par 3.Neither the name of the copyright holder nor the names of its
-contributors may be used to endorse or promote products derived from this
-software without specific prior written permission.
-
-@par THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-        AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
-THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-        ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS
-BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-        CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-        SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-        INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-        CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-        ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
-THE POSSIBILITY OF SUCH DAMAGE.
+* @file		test_sbits.c
+* @author		Ramon Lawrence
+* @brief		This file does performance/correctness testing of sequential
+* bitmap indexing for time series (SBITS).
+* @copyright	Copyright 2021
+*                         The University of British Columbia,
+*             Ramon Lawrence
+* @par Redistribution and use in source and binary forms, with or without
+*         modification, are permitted provided that the following conditions are
+* met:
+* 
+* @par 1.Redistributions of source code must retain the above copyright notice,
+*         this list of conditions and the following disclaimer.
+* 
+* @par 2.Redistributions in binary form must reproduce the above copyright notice,
+*         this list of conditions and the following disclaimer in the
+* documentation and/or other materials provided with the distribution.
+* 
+* @par 3.Neither the name of the copyright holder nor the names of its
+* contributors may be used to endorse or promote products derived from this
+* software without specific prior written permission.
+* 
+* @par THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+*         AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+* THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+*         ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS
+* BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+*         CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+*         SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+*         INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+*         CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+*         ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
+* THE POSSIBILITY OF SUCH DAMAGE.
 */
 /******************************************************************************/
 #include <errno.h>
@@ -258,13 +258,13 @@ uint32_t keyModifier(uint32_t inputKey) { return inputKey * 2; }
 void runalltests_sbits() {
     printf("\nSTARTING SBITS TESTS.\n");
     int8_t M = 4;
-    int32_t numRecords = 10000;   // default values
-    int32_t testRecords = 10000;  // default values
+    int32_t numRecords = 500000;   // default values
+    int32_t testRecords = 500000;  // default values
     uint8_t useRandom = 0;        // default values
     size_t splineMaxError = 0;    // default values
     uint32_t numSteps = 10;
     uint32_t stepSize = numRecords / numSteps;
-    count_t r, numRuns = 1, l;
+    count_t r, numRuns = 20, l;
     uint32_t times[numSteps][numRuns];
     uint32_t reads[numSteps][numRuns];
     uint32_t writes[numSteps][numRuns];
@@ -273,7 +273,7 @@ void runalltests_sbits() {
     uint32_t rtimes[numSteps][numRuns];
     uint32_t rreads[numSteps][numRuns];
     uint32_t rhits[numSteps][numRuns];
-    int8_t seqdata = 0;
+    int8_t seqdata = 1;
     FILE *infile, *infileRandom;
     uint32_t minRange, maxRange;
 
@@ -286,12 +286,12 @@ void runalltests_sbits() {
         // testRecords = 18354;
 
         // position.bin
-        infile = fopen("data/position.bin", "r+b");
-        infileRandom = fopen("data/position_randomized.bin", "r+b");
-        minRange = 0;
-        maxRange = INT32_MAX;
-        numRecords = 1518;
-        testRecords = 1518;
+        // infile = fopen("data/position.bin", "r+b");
+        // infileRandom = fopen("data/position_randomized.bin", "r+b");
+        // minRange = 0;
+        // maxRange = INT32_MAX;
+        // numRecords = 1518;
+        // testRecords = 1518;
 
         // ethylene_CO.bin
         // infile = fopen("data/ethylene_CO.bin", "r+b");
@@ -328,16 +328,16 @@ void runalltests_sbits() {
         // "r+b"); minRange = 1314604380; maxRange = 1609487580; numRecords =
         // 100001; testRecords = 100001;
 
-        // infile = fopen("data/uwa_data_only_2000_500KSorted.bin", "r+b");
+        infile = fopen("data/uwa500K.bin", "r+b");
         // infileRandom =
         // fopen("data/uwa_data_only_2000_500KSorted_randomized.bin", "r+b");
-        // minRange = 946713600;
-        // maxRange = 977144040;
-        // numRecords = 500000;
-        // testRecords = 500000;
+        minRange = 946713600;
+        maxRange = 977144040;
+        numRecords = 500000;
+        testRecords = 500000;
 
         splineMaxError = 1;
-        useRandom = 1;
+        useRandom = 0;
 
         stepSize = numRecords / numSteps;
     }
@@ -428,7 +428,8 @@ void runalltests_sbits() {
                 /* Process all records on page */
                 int16_t count = *((int16_t *)(infileBuffer + 4));
                 for (int j = 0; j < count; j++) {
-                    void *buf = (infileBuffer + headerSize + j * state->recordSize);
+                    void *buf =
+                        (infileBuffer + headerSize + j * state->recordSize);
 
                     // printf("Key: %lu, Data: %lu, Page num: %lu, i: %lu\n",
                     // *(id_t*)buf, *(id_t*)(buf + 4), i/31, i);
@@ -514,7 +515,8 @@ void runalltests_sbits() {
             i = 0;
             int8_t queryType = 1;
 
-            if (queryType == 1) { /* Query each record from original data set. */
+            if (queryType ==
+                1) { /* Query each record from original data set. */
                 if (useRandom) {
                     fseek(infileRandom, 0, SEEK_SET);
                 } else {
@@ -524,10 +526,12 @@ void runalltests_sbits() {
                 while (1) {
                     /* Read page */
                     if (useRandom) {
-                        if (0 == fread(infileBuffer, state->pageSize, 1, infileRandom))
+                        if (0 == fread(infileBuffer, state->pageSize, 1,
+                                       infileRandom))
                             break;
                     } else {
-                        if (0 == fread(infileBuffer, state->pageSize, 1, infile))
+                        if (0 ==
+                            fread(infileBuffer, state->pageSize, 1, infile))
                             break;
                     }
 
@@ -535,14 +539,19 @@ void runalltests_sbits() {
                     /* Process all records on page */
                     int16_t count = *((int16_t *)(infileBuffer + 4));
                     for (int j = 0; j < count; j++) {
-                        void *buf = (infileBuffer + headerSize + j * state->recordSize);
+                        void *buf =
+                            (infileBuffer + headerSize + j * state->recordSize);
                         int32_t *key = (int32_t *)buf;
 
                         int8_t result = sbitsGet(state, key, recordBuffer);
                         if (result != 0)
-                            printf("ERROR: Failed to find key: %lu, i: %lu\n", *key, i);
-                        if (*((int32_t *)recordBuffer) != *((int32_t *)((int8_t *)buf + 4))) {
-                            printf("ERROR: Wrong data for: Key: %lu Data: %lu\n",*key, *((int32_t *)recordBuffer));
+                            printf("ERROR: Failed to find key: %lu, i: %lu\n",
+                                   *key, i);
+                        if (*((int32_t *)recordBuffer) !=
+                            *((int32_t *)((int8_t *)buf + 4))) {
+                            printf(
+                                "ERROR: Wrong data for: Key: %lu Data: %lu\n",
+                                *key, *((int32_t *)recordBuffer));
                             printf("%lu %d %d %d\n", *((uint32_t *)buf),
                                    *((int32_t *)((int8_t *)buf + 4)),
                                    *((int32_t *)((int8_t *)buf + 8)),
@@ -555,7 +564,8 @@ void runalltests_sbits() {
                             l = i / stepSize - 1;
                             printf("Num: %lu KEY: %lu\n", i, *key);
                             if (l < numSteps && l >= 0) {
-                                rtimes[l][r] = ((clock() - start) * 1000) / CLOCKS_PER_SEC;
+                                rtimes[l][r] =
+                                    ((clock() - start) * 1000) / CLOCKS_PER_SEC;
                                 rreads[l][r] = state->numReads;
                                 rhits[l][r] = state->bufferHits;
                             }
