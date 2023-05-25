@@ -7,12 +7,13 @@
 #include "sbits.h"
 
 #define NUM_STEPS 10
-#define NUM_RUNS 20
+#define NUM_RUNS 1
 #define IMAGE_TEST 0
-#define VALIDATE_VAR_DATA 0
+#define VALIDATE_VAR_DATA 1
 
 // Cursed linkedList for tracking data
 typedef struct Node {
+    int32_t key;
     void *data;
     uint32_t length;
     struct Node *next;
@@ -42,10 +43,10 @@ void main() {
     int8_t M = 6;
 
     // Initialize to default values
-    int32_t numRecords = 500000;  // default values
-    int32_t testRecords = 500000; // default values
-    uint8_t useRandom = 0;      // default values
-    size_t splineMaxError = 0;  // default values
+    int32_t numRecords = 600;  // default values
+    int32_t testRecords = 600; // default values
+    uint8_t useRandom = 0;     // default values
+    size_t splineMaxError = 0; // default values
     uint32_t stepSize = numRecords / NUM_STEPS;
     count_t r, l;
     uint32_t times[NUM_STEPS][NUM_RUNS];
@@ -135,7 +136,7 @@ void main() {
         sbitsState *state = (sbitsState *)malloc(sizeof(sbitsState));
 
         state->keySize = 4;
-        state->dataSize = 12;
+        state->dataSize = 4;
         state->pageSize = 512;
         state->bitmapSize = 0;
         state->bufferSizeInBlocks = M;
@@ -145,7 +146,7 @@ void main() {
         state->startAddress = 0;
         state->endAddress = state->pageSize * numRecords / 10;
         state->varAddressStart = 0;
-        state->varAddressEnd = 1000000000;
+        state->varAddressEnd = 10000;
         state->eraseSizeInPages = 4;
 
         state->parameters = SBITS_USE_BMAP | SBITS_USE_INDEX | SBITS_USE_VDATA;
@@ -183,6 +184,7 @@ void main() {
 
         int32_t i;
         if (seqdata == 1) {
+            char vardata[15] = "Testing 000...";
             for (i = 0; i < numRecords; i++) {
                 // Key = i, fixed data = i % 100
                 *((int32_t *)recordBuffer) = i;
@@ -195,14 +197,22 @@ void main() {
                 if (IMAGE_TEST) {
                     imageVarData(0.05, "test.png", &hasVarData, &length, &variableData);
                 } else {
-                    randomVarData(0.1, 10, 100, &hasVarData, &length, &variableData);
+                    // randomVarData(0.1, 10, 100, &hasVarData, &length, &variableData);
+                    hasVarData = 1;
+                    length = 15;
+                    vardata[10] = (char)(i % 10) + '0';
+                    vardata[9] = (char)((i / 10) % 10) + '0';
+                    vardata[8] = (char)((i / 100) % 10) + '0';
+                    variableData = malloc(length);
+                    memcpy(variableData, vardata, length);
                 }
 
                 // Put variable length data
-                sbitsPutVar(state, recordBuffer, (void*)(recordBuffer + 4), hasVarData ? variableData : NULL, length);
+                sbitsPutVar(state, recordBuffer, (void *)(recordBuffer + 4), hasVarData ? variableData : NULL, length);
 
                 if (hasVarData) {
                     if (VALIDATE_VAR_DATA) {
+                        validationTail->key = i;
                         validationTail->data = variableData;
                         validationTail->length = length;
                         validationTail->next = malloc(sizeof(Node));
@@ -258,12 +268,13 @@ void main() {
 
                     // Put variable length data
                     // printf("Key: %i, Data: %i\n", *(uint32_t*)buf, *(uint32_t*)((int8_t*)buf + 4));
-                    if (0 != sbitsPutVar(state, buf, (void *)((int8_t*)buf + 4), hasVarData ? variableData : NULL, length)) {
+                    if (0 != sbitsPutVar(state, buf, (void *)((int8_t *)buf + 4), hasVarData ? variableData : NULL, length)) {
                         printf("ERROR: Failed to insert record\n");
                     }
 
                     if (hasVarData) {
                         if (VALIDATE_VAR_DATA) {
+                            validationTail->key = *((int32_t *)buf);
                             validationTail->data = variableData;
                             validationTail->length = length;
                             validationTail->next = malloc(sizeof(Node));
@@ -299,7 +310,6 @@ void main() {
                 }
             }
             numRecords = i;
-
         }
 
     doneread:
@@ -340,24 +350,31 @@ void main() {
                 } else if (*((int32_t *)recordBuffer) != key % 100) {
                     printf("ERROR: Wrong data for: %lu\n", key);
                 } else if (VALIDATE_VAR_DATA && varData != NULL) {
+                    while (validationHead->key != key) {
+                        Node *tmp = validationHead;
+                        validationHead = validationHead->next;
+                        free(tmp->data);
+                        free(tmp);
+                    }
+                    if (validationHead == NULL) {
+                        printf("ERROR: No validation data for: %lu\n", key);
+                        return;
+                    }
                     // Check that the var data is correct
                     if (!dataEquals(varData, length, validationHead)) {
                         printf("ERROR: Wrong var data for: %lu\n", key);
                     }
-                    Node *tmp = validationHead;
-                    validationHead = validationHead->next;
-                    free(tmp->data);
-                    free(tmp);
                 }
 
                 // Retrieve image
                 if (varData != NULL && IMAGE_TEST) {
-                    retrieveImageData(&varData, length, key, "test", ".png");
+                    if (IMAGE_TEST) {
+                        retrieveImageData(&varData, length, key, "test", ".png");
+                    }
+                    free(varData);
+                    varData = NULL;
                 }
 
-                // printf("Key: %lu Data: %lu Var: %s\n", key, *((int32_t *)recordBuffer), varData);
-                free(varData);
-                varData = NULL;
                 if (i % stepSize == 0) {
                     l = i / stepSize - 1;
                     if (l < NUM_STEPS && l >= 0) {
@@ -410,7 +427,7 @@ void main() {
                             printf("ERROR: Failed to find: %lu\n", key);
                         } else if (result == 1) {
                             printf("WARN: Variable data associated with key %lu was deleted\n", key);
-                        } else if (*((int32_t *)recordBuffer) != *((int32_t*)((int8_t*)buf + 4))) {
+                        } else if (*((int32_t *)recordBuffer) != *((int32_t *)((int8_t *)buf + 4))) {
                             printf("ERROR: Wrong data for: %lu\n", key);
                         } else if (VALIDATE_VAR_DATA && length != -1) {
                             // Check that the var data is correct
@@ -570,7 +587,6 @@ void main() {
         free(state->buffer);
         free(state);
     }
-
 
     // Prints results
     uint32_t sum;
@@ -904,7 +920,7 @@ void retrieveImageData(void **varData, uint32_t length, int32_t key, char *filen
 }
 
 uint8_t dataEquals(void *varData, uint32_t length, Node *node) {
-    return length == node->length && memcmp(varData, node->data, node->length) == 0;
+    return length == node->length && memcmp(varData, node->data, length) == 0;
 }
 
 int retrieveData(sbitsState *state, int32_t key, int8_t *recordBuffer) {

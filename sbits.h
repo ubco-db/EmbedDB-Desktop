@@ -127,9 +127,10 @@ typedef struct {
 	count_t eraseSizeInPages;					/* Erase size in pages */
 	id_t 	startDataPage;						/* Start data page number */
 	id_t 	endDataPage;						/* End data page number */
-	id_t 	numAvailVarPages;							/* Logical page number of last available var page */
+	id_t 	numAvailVarPages;					/* Number of writable pages left before needing to delete */
 	id_t	varAddressStart;					/* Start address for the variable data page */
 	id_t 	varAddressEnd;						/* End address for the variable data page */
+	count_t	numVarPages;						/* Number of variable pages */
 	id_t	startIdxPage;						/* Start index page number */
 	id_t 	endIdxPage;							/* End index page number */
 	id_t 	firstDataPage;						/* First data page number (physical location) */

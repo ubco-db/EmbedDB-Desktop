@@ -67,8 +67,6 @@
   */
 #define USE_RADIX 0
 
-int32_t* pageData;
-
 void printBitmap(char* bm) {
 	for (int8_t i = 0; i <= 7; i++) {
 		printf(" " BYTE_TO_BINARY_PATTERN "", BYTE_TO_BINARY(*(bm + i)));
@@ -344,7 +342,10 @@ int8_t sbitsInit(sbitsState* state, size_t indexMaxError) {
 			state->minVarRecordId = 0;
 			state->wrappedVariableMemory = 0;
 			state->numAvailVarPages = (state->varAddressEnd - state->varAddressStart) / state->pageSize;
+            state->numVarPages = state->numAvailVarPages;
 			state->nextVarPageId = 0;
+
+            printf("Variable data pages: %d\n", state->numVarPages);
 		}
 	}
 
@@ -514,7 +515,7 @@ int8_t sbitsPut(sbitsState* state, void* key, void* data) {
 	if (SBITS_USING_VDATA(state->parameters)) {
 		id_t dataLocation;
 		if (state->recordHasVarData) {
-			dataLocation = state->currentVarLoc;
+			dataLocation = state->currentVarLoc % (state->numVarPages * state->pageSize);
 		} else {
 			dataLocation = SBITS_NO_VAR_DATA;
 		}
@@ -593,8 +594,7 @@ int8_t sbitsPutVar(sbitsState* state, void* key, void* data, void* variableData,
 				return r;
 			}
 
-			// Update the header to include the maximum key value stored on this
-			// page
+			// Update the header to include the maximum key value stored on this page
 			id_t* ptr = buf;
 			*ptr = *((id_t*)key);
 
@@ -607,8 +607,7 @@ int8_t sbitsPutVar(sbitsState* state, void* key, void* data, void* variableData,
 				writeVariablePage(state, buf);
 				initBufferPage(state, SBITS_VAR_WRITE_BUFFER(state->parameters));
 
-				// Update the header to include the maximum key value stored
-				// on this page
+				// Update the header to include the maximum key value stored on this page
 				id_t* ptr = buf;
 				*ptr = *((id_t*)key);
 				state->currentVarLoc += sizeof(id_t);
@@ -911,9 +910,7 @@ int8_t sbitsGetVar(sbitsState* state, void* key, void* data, void** varData, uin
 		return 0;
 	}
 
-
-	// Check if the variable data associated with this key has been overwritten
-	// due to file wrap around
+	// Check if the variable data associated with this key has been overwritten due to file wrap around
 	if (*((id_t*)key) < state->minVarRecordId) {
 		*varData = NULL;
 		return 1;
@@ -923,7 +920,7 @@ int8_t sbitsGetVar(sbitsState* state, void* key, void* data, void** varData, uin
 
 	// Read the page into the buffer for variable data
 	void* ptr = (int8_t*)state->buffer + SBITS_VAR_READ_BUFFER(state->parameters) * state->pageSize;
-	id_t pageNum = varDataOffset / state->pageSize;
+	id_t pageNum = (varDataOffset / state->pageSize) % state->numVarPages;
 	if (readVariablePage(state, pageNum) != 0) {
 		return -1;
 	}
@@ -934,21 +931,37 @@ int8_t sbitsGetVar(sbitsState* state, void* key, void* data, void** varData, uin
 	uint32_t dataLength = *((uint32_t*)((int8_t*)ptr + bufPos));
 	*length = dataLength;
 	bufPos += 4;
+    // If the length was the last thing in the page, then we need to read the next page for the data
+    if (bufPos >= state->pageSize) {
+        pageNum = (pageNum + 1) % state->numVarPages;
+        if (readVariablePage(state, pageNum) != 0) {
+            return -1;
+        }
+        // Skip past the header
+        bufPos = 4;
+    }
 
-	// Allocate memory in the return pointer **TODO: Implement returning an
-	// iterator instead**
+
+	// Allocate memory in the return pointer **TODO: Implement returning an iterator instead**
 	*varData = malloc(dataLength);
+    if (*varData == NULL) {
+        printf("Malloc failed while reading in var data\n");
+        exit(1);
+    }
 
 	uint32_t amtRead = 0;
 	while (amtRead < dataLength) {
+        // Read either the rest of the data or the rest of the page
 		uint16_t amtToRead = __min(dataLength - amtRead, state->pageSize - bufPos);
 		memcpy((int8_t*)*varData + amtRead, (int8_t*)ptr + bufPos, amtToRead);
 		amtRead += amtToRead;
 
 		// If we need to keep reading, read the next page
 		if (amtRead != dataLength) {
-			pageNum = (pageNum + 1) % ((state->varAddressEnd - state->varAddressStart) / state->pageSize);
-			readVariablePage(state, pageNum);
+			pageNum = (pageNum + 1) % state->numVarPages;
+			if (readVariablePage(state, pageNum) != 0) {
+                return -1;
+            }
 			// Skip past the header
 			bufPos = 4;
 		}
@@ -1324,19 +1337,20 @@ id_t writeVariablePage(sbitsState* state, void* buffer) {
 	}
 
 	// Make sure the address being witten to wraps around
-	state->nextVarPageId %= (state->varAddressEnd - state->varAddressStart) / state->pageSize;
+	state->nextVarPageId %= state->numVarPages;
 
 	// Erase data if needed
 	if (state->numAvailVarPages <= 0) {
 		state->numAvailVarPages += state->eraseSizeInPages;
 		// Last page that is deleted
-		id_t pageNum =(state->nextVarPageId + state->eraseSizeInPages) % ((state->varAddressEnd - state->varAddressStart) / state->pageSize);
+		id_t pageNum = (state->nextVarPageId + state->eraseSizeInPages - 1) % state->numVarPages;
 
-		// Read in that page so we can update which records we still have the
-		// data for
-		readVariablePage(state, pageNum);
+		// Read in that page so we can update which records we still have the data for
+		if (readVariablePage(state, pageNum) != 0) {
+            return -1;
+        }
 		void* buf = (int8_t*)state->buffer + state->pageSize * SBITS_VAR_READ_BUFFER(state->parameters);
-		state->minVarRecordId = *((id_t*)buf);
+		state->minVarRecordId = *((id_t*)buf) + 1;
 	}
 
 	// Write to file
