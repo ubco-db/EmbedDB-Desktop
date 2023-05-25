@@ -367,7 +367,7 @@ void main() {
                 }
 
                 // Retrieve image
-                if (varData != NULL && IMAGE_TEST) {
+                if (varData != NULL) {
                     if (IMAGE_TEST) {
                         retrieveImageData(&varData, length, key, "test", ".png");
                     }
@@ -424,29 +424,36 @@ void main() {
                         int8_t result = sbitsGetVar(state, key, recordBuffer, &varData, &length);
 
                         if (result == -1) {
-                            printf("ERROR: Failed to find: %lu\n", key);
+                            printf("ERROR: Failed to find: %lu\n", *key);
                         } else if (result == 1) {
-                            printf("WARN: Variable data associated with key %lu was deleted\n", key);
+                            printf("WARN: Variable data associated with key %lu was deleted\n", *key);
                         } else if (*((int32_t *)recordBuffer) != *((int32_t *)((int8_t *)buf + 4))) {
-                            printf("ERROR: Wrong data for: %lu\n", key);
+                            printf("ERROR: Wrong data for: %lu\n", *key);
                         } else if (VALIDATE_VAR_DATA && length != -1) {
+                            while (validationHead->key != *key) {
+                                Node *tmp = validationHead;
+                                validationHead = validationHead->next;
+                                free(tmp->data);
+                                free(tmp);
+                            }
+                            if (validationHead == NULL) {
+                                printf("ERROR: No validation data for: %lu\n", *key);
+                                return;
+                            }
                             // Check that the var data is correct
                             if (!dataEquals(varData, length, validationHead)) {
-                                printf("ERROR: Wrong var data for: %lu\n", key);
+                                printf("ERROR: Wrong var data for: %lu\n", *key);
                             }
-                            Node *tmp = validationHead;
-                            validationHead = validationHead->next;
-                            free(tmp->data);
-                            free(tmp);
                         }
 
                         // Retrieve image
-                        if (length != -1 && IMAGE_TEST) {
-                            retrieveImageData(&varData, length, *key, "test", ".png");
+                        if (varData != NULL) {
+                            if (IMAGE_TEST) {
+                                retrieveImageData(&varData, length, *key, "test", ".png");
+                            }
+                            free(varData);
+                            varData = NULL;
                         }
-
-                        // printf("Key: %lu Data: %lu Var: %s\n", key, *((int32_t *)recordBuffer), varData);
-                        free(varData);
 
                         if (i % stepSize == 0) {
                             l = i / stepSize - 1;
