@@ -1,39 +1,39 @@
 /******************************************************************************/
 /**
-* @file		test_sbits.c
-* @author		Ramon Lawrence
-* @brief		This file does performance/correctness testing of sequential
-* bitmap indexing for time series (SBITS).
-* @copyright	Copyright 2021
-*                         The University of British Columbia,
-*             Ramon Lawrence
-* @par Redistribution and use in source and binary forms, with or without
-*         modification, are permitted provided that the following conditions are
-* met:
-* 
-* @par 1.Redistributions of source code must retain the above copyright notice,
-*         this list of conditions and the following disclaimer.
-* 
-* @par 2.Redistributions in binary form must reproduce the above copyright notice,
-*         this list of conditions and the following disclaimer in the
-* documentation and/or other materials provided with the distribution.
-* 
-* @par 3.Neither the name of the copyright holder nor the names of its
-* contributors may be used to endorse or promote products derived from this
-* software without specific prior written permission.
-* 
-* @par THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-*         AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
-* THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-*         ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS
-* BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-*         CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-*         SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-*         INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-*         CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-*         ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
-* THE POSSIBILITY OF SUCH DAMAGE.
-*/
+ * @file		test_sbits.c
+ * @author		Ramon Lawrence
+ * @brief		This file does performance/correctness testing of sequential
+ * bitmap indexing for time series (SBITS).
+ * @copyright	Copyright 2021
+ *                         The University of British Columbia,
+ *             Ramon Lawrence
+ * @par Redistribution and use in source and binary forms, with or without
+ *         modification, are permitted provided that the following conditions are
+ * met:
+ *
+ * @par 1.Redistributions of source code must retain the above copyright notice,
+ *         this list of conditions and the following disclaimer.
+ *
+ * @par 2.Redistributions in binary form must reproduce the above copyright notice,
+ *         this list of conditions and the following disclaimer in the
+ * documentation and/or other materials provided with the distribution.
+ *
+ * @par 3.Neither the name of the copyright holder nor the names of its
+ * contributors may be used to endorse or promote products derived from this
+ * software without specific prior written permission.
+ *
+ * @par THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ *         AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+ * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ *         ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS
+ * BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ *         CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ *         SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ *         INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ *         CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ *         ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
+ * THE POSSIBILITY OF SUCH DAMAGE.
+ */
 /******************************************************************************/
 #include <errno.h>
 #include <string.h>
@@ -126,7 +126,7 @@ void updateBitmapInt16(void *data, void *bm) {
 
     /* Using a demo range of 0 to 100 */
     // int16_t stepSize = 100 / 15;
-    int16_t stepSize = 450 / 15;  // Temperature data in F. Scaled by 10. */
+    int16_t stepSize = 450 / 15; // Temperature data in F. Scaled by 10. */
     int16_t minBase = 320;
     int32_t current = minBase;
     uint16_t num = 32768;
@@ -153,7 +153,7 @@ int8_t inBitmapInt16(void *data, void *bm) {
 void updateBitmapInt64(void *data, void *bm) {
     int32_t val = *((int32_t *)data);
 
-    int16_t stepSize = 10;  // Temperature data in F. Scaled by 10. */
+    int16_t stepSize = 10; // Temperature data in F. Scaled by 10. */
     int32_t current = 320;
     int8_t bmsize = 63;
     int8_t count = 0;
@@ -181,8 +181,10 @@ int8_t inBitmapInt64(void *data, void *bm) {
 
 int8_t int32Comparator(void *a, void *b) {
     int32_t result = *((int32_t *)a) - *((int32_t *)b);
-    if (result < 0) return -1;
-    if (result > 0) return 1;
+    if (result < 0)
+        return -1;
+    if (result > 0)
+        return 1;
     return 0;
 }
 
@@ -258,8 +260,8 @@ uint32_t keyModifier(uint32_t inputKey) { return inputKey * 2; }
 void runalltests_sbits() {
     printf("\nSTARTING SBITS TESTS.\n");
     int8_t M = 4;
-    int32_t numRecords = 500000;   // default values
-    int32_t testRecords = 500000;  // default values
+    int32_t numRecords = 500000;  // default values
+    int32_t testRecords = 500000; // default values
     uint8_t useRandom = 0;        // default values
     size_t splineMaxError = 0;    // default values
     uint32_t numSteps = 10;
@@ -369,7 +371,8 @@ void runalltests_sbits() {
         if (SBITS_USING_INDEX(state->parameters) == 1)
             state->endAddress +=
                 state->pageSize * (state->eraseSizeInPages * 2);
-        if (SBITS_USING_BMAP(state->parameters)) state->bitmapSize = 8;
+        if (SBITS_USING_BMAP(state->parameters))
+            state->bitmapSize = 8;
 
         /* Setup for data and bitmap comparison functions */
         state->inBitmap = inBitmapInt16;
@@ -388,7 +391,7 @@ void runalltests_sbits() {
         /* Data record is empty. Only need to reset to 0 once as reusing struct.
          */
         int32_t i;
-        for (i = 0; i < state->recordSize - 4; i++)  // 4 is the size of the key
+        for (i = 0; i < state->recordSize - 4; i++) // 4 is the size of the key
         {
             recordBuffer[i + sizeof(int32_t)] = 0;
         }
@@ -423,7 +426,8 @@ void runalltests_sbits() {
             // uint32_t readCounter = 0;
             while (1) {
                 /* Read page */
-                if (0 == fread(infileBuffer, state->pageSize, 1, infile)) break;
+                if (0 == fread(infileBuffer, state->pageSize, 1, infile))
+                    break;
                 // readCounter++;
                 /* Process all records on page */
                 int16_t count = *((int16_t *)(infileBuffer + 4));
@@ -491,7 +495,8 @@ void runalltests_sbits() {
                 int32_t key = i;
                 int8_t result = sbitsGet(state, &key, recordBuffer);
 
-                if (result != 0) printf("ERROR: Failed to find: %lu\n", key);
+                if (result != 0)
+                    printf("ERROR: Failed to find: %lu\n", key);
                 if (seqdata == 1 && *((int32_t *)recordBuffer) != key % 100) {
                     printf("ERROR: Wrong data for: %lu\n", key);
                     printf("Key: %lu Data: %lu\n", key,
@@ -625,7 +630,7 @@ void runalltests_sbits() {
                 mv = 280;
                 // for (int i = 0; i < 1000; i++)
                 // for (int i = 0; i < 16; i++)
-                for (int i = 0; i < 65; i++)  // 65
+                for (int i = 0; i < 65; i++) // 65
                 {
                     // mv = (rand() % 60 + 30) * 10;
                     // mv += 30;
