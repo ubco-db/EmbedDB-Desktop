@@ -302,7 +302,7 @@ size_t radixsplineEstimateLocation(radixspline *rsidx, id_t key) {
  * @param	low		Low bound on predicted location
  * @param	high	High bound on predicted location
  */
-id_t radixsplineFind(radixspline *rsidx, id_t key, id_t *loc, id_t *low, id_t *high) {
+id_t radixsplineFind(radixspline *rsidx, void *key, id_t *loc, id_t *low, id_t *high) {
     /* Estimate location */
     *loc = radixsplineEstimateLocation(rsidx, key);
 
