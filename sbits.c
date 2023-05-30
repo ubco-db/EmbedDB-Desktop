@@ -234,8 +234,8 @@ int8_t sbitsInit(sbitsState *state, size_t indexMaxError) {
     state->indexMaxError = indexMaxError;
 
     /* Calculate block header size */
-    /* Header size fixed: 8 bytes: 4 byte id, 2 for record count, X for bitmap.
-     */
+
+    /* Header size depends on bitmap size: 6 + X bytes: 4 byte id, 2 for record count, X for bitmap. */
     state->headerSize = 6 + state->bitmapSize;
     if (SBITS_USING_MAX_MIN(state->parameters))
         state->headerSize += state->keySize * 2 + state->dataSize * 2;
