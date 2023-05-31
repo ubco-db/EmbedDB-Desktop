@@ -75,7 +75,7 @@ typedef uint16_t count_t;
 
 #define SBITS_GET_BITMAP(x) ((void *)((int8_t *)x + SBITS_BITMAP_OFFSET))
 
-#define SBITS_GET_MIN_KEY(x, y) ((void *)((int8_t *)x + SBITS_MIN_OFFSET))
+#define SBITS_GET_MIN_KEY(x) ((void *)((int8_t *)x + SBITS_MIN_OFFSET))
 #define SBITS_GET_MAX_KEY(x, y) ((void *)((int8_t *)x + SBITS_MIN_OFFSET + y->keySize))
 
 #define SBITS_GET_MIN_DATA(x, y) ((void *)((int8_t *)x + SBITS_MIN_OFFSET + y->keySize * 2))
