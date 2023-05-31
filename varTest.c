@@ -33,7 +33,7 @@ void writeDataToFile(void *data, char *filename, uint32_t length);
 void imageVarData(float chance, char *filename, uint8_t *usingVarData, uint32_t *length, void **varData);
 void retrieveImageData(void **varData, uint32_t length, int32_t key, char *filename, char *filetype);
 uint8_t dataEquals(void *varData, uint32_t length, Node *node);
-void randomVarData(float chance, uint32_t sizeLowerBound, uint32_t sizeUpperBound, uint8_t *usingVarData, uint32_t *length, void **varData);
+void randomVarData(uint32_t chance, uint32_t sizeLowerBound, uint32_t sizeUpperBound, uint8_t *usingVarData, uint32_t *length, void **varData);
 int retrieveData(sbitsState *state, int32_t key, int8_t *recordBuffer);
 
 void main() {
@@ -135,7 +135,7 @@ void main() {
     for (r = 0; r < NUM_RUNS; r++) {
         sbitsState *state = (sbitsState *)malloc(sizeof(sbitsState));
 
-        state->keySize = 4;
+        state->keySize = 6;
         state->dataSize = 4;
         state->pageSize = 512;
         state->bitmapSize = 0;
@@ -146,7 +146,7 @@ void main() {
         state->startAddress = 0;
         state->endAddress = state->pageSize * numRecords / 10;
         state->varAddressStart = 0;
-        state->varAddressEnd = 10000;
+        state->varAddressEnd = 1000000;
         state->eraseSizeInPages = 4;
 
         state->parameters = SBITS_USE_BMAP | SBITS_USE_INDEX | SBITS_USE_VDATA;
@@ -188,7 +188,7 @@ void main() {
             for (i = 0; i < numRecords; i++) {
                 // Key = i, fixed data = i % 100
                 *((int32_t *)recordBuffer) = i;
-                *((int32_t *)(recordBuffer + 4)) = (i % 100);
+                *((int32_t *)(recordBuffer + state->keySize)) = (i % 100);
 
                 // Generate variable-length data
                 void *variableData = NULL;
@@ -197,7 +197,7 @@ void main() {
                 if (IMAGE_TEST) {
                     imageVarData(0.05, "test.png", &hasVarData, &length, &variableData);
                 } else {
-                    // randomVarData(0.1, 10, 100, &hasVarData, &length, &variableData);
+                    // randomVarData(10, 10, 100, &hasVarData, &length, &variableData);
                     hasVarData = 1;
                     length = 15;
                     vardata[10] = (char)(i % 10) + '0';
@@ -208,7 +208,7 @@ void main() {
                 }
 
                 // Put variable length data
-                sbitsPutVar(state, recordBuffer, (void *)(recordBuffer + 4), hasVarData ? variableData : NULL, length);
+                sbitsPutVar(state, recordBuffer, (void *)(recordBuffer + state->keySize), hasVarData ? variableData : NULL, length);
 
                 if (hasVarData) {
                     if (VALIDATE_VAR_DATA) {
@@ -263,11 +263,10 @@ void main() {
                     if (IMAGE_TEST) {
                         imageVarData(0.01, "test.png", &hasVarData, &length, &variableData);
                     } else {
-                        randomVarData(0.10, 10, 100, &hasVarData, &length, &variableData);
+                        randomVarData(10000, 10, 100, &hasVarData, &length, &variableData);
                     }
 
                     // Put variable length data
-                    // printf("Key: %i, Data: %i\n", *(uint32_t*)buf, *(uint32_t*)((int8_t*)buf + 4));
                     if (0 != sbitsPutVar(state, buf, (void *)((int8_t *)buf + 4), hasVarData ? variableData : NULL, length)) {
                         printf("ERROR: Failed to insert record\n");
                     }
@@ -337,39 +336,40 @@ void main() {
         start = clock();
 
         if (seqdata == 1) {
+            void *keyBuf = calloc(1, state->keySize);
             for (i = 0; i < numRecords; i++) {
-                int32_t key = i;
+                *((uint32_t *)keyBuf) = i;
                 void *varData = NULL;
                 uint32_t length = 0;
-                int8_t result = sbitsGetVar(state, &key, recordBuffer, &varData, &length);
+                int8_t result = sbitsGetVar(state, keyBuf, recordBuffer, &varData, &length);
 
                 if (result == -1) {
-                    printf("ERROR: Failed to find: %lu\n", key);
+                    printf("ERROR: Failed to find: %lu\n", i);
                 } else if (result == 1) {
-                    printf("WARN: Variable data associated with key %lu was deleted\n", key);
-                } else if (*((int32_t *)recordBuffer) != key % 100) {
-                    printf("ERROR: Wrong data for: %lu\n", key);
+                    printf("WARN: Variable data associated with key %lu was deleted\n", i);
+                } else if (*((int32_t *)recordBuffer) != i % 100) {
+                    printf("ERROR: Wrong data for: %lu\n", i);
                 } else if (VALIDATE_VAR_DATA && varData != NULL) {
-                    while (validationHead->key != key) {
+                    while (validationHead->key != i) {
                         Node *tmp = validationHead;
                         validationHead = validationHead->next;
                         free(tmp->data);
                         free(tmp);
                     }
                     if (validationHead == NULL) {
-                        printf("ERROR: No validation data for: %lu\n", key);
+                        printf("ERROR: No validation data for: %lu\n", i);
                         return;
                     }
                     // Check that the var data is correct
                     if (!dataEquals(varData, length, validationHead)) {
-                        printf("ERROR: Wrong var data for: %lu\n", key);
+                        printf("ERROR: Wrong var data for: %lu\n", i);
                     }
                 }
 
                 // Retrieve image
                 if (varData != NULL) {
                     if (IMAGE_TEST) {
-                        retrieveImageData(&varData, length, key, "test", ".png");
+                        retrieveImageData(&varData, length, i, "test", ".png");
                     }
                     free(varData);
                     varData = NULL;
@@ -819,10 +819,12 @@ int8_t inBitmapInt64(void *data, void *bm) {
 }
 
 int8_t int32Comparator(void *a, void *b) {
-    int32_t result = *((int32_t *)a) - *((int32_t *)b);
-    if (result < 0)
+    uint32_t a1, a2;
+    memcpy(&a1, a, sizeof(uint32_t));
+    memcpy(&a2, b, sizeof(uint32_t));
+    if (a1 < a2)
         return -1;
-    if (result > 0)
+    if (a1 > a2)
         return 1;
     return 0;
 }
@@ -901,8 +903,11 @@ void imageVarData(float chance, char *filename, uint8_t *usingVarData, uint32_t 
     }
 }
 
-void randomVarData(float chance, uint32_t sizeLowerBound, uint32_t sizeUpperBound, uint8_t *usingVarData, uint32_t *length, void **varData) {
-    *usingVarData = (rand() % 100) / 100.0 < chance;
+/**
+ * @param chance 1 in `chance` chance of having variable data
+ */
+void randomVarData(uint32_t chance, uint32_t sizeLowerBound, uint32_t sizeUpperBound, uint8_t *usingVarData, uint32_t *length, void **varData) {
+    *usingVarData = (rand() % chance) == 0;
     if (usingVarData) {
         *length = randomData(varData, sizeLowerBound, sizeUpperBound);
     } else {
