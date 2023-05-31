@@ -120,11 +120,11 @@ void initRadixSpline(sbitsState *state, uint64_t size, size_t radixSize) {
     spline *spl = (spline *)malloc(sizeof(spline));
     state->spl = spl;
 
-    splineInit(state->spl, size, state->indexMaxError);
+    splineInit(state->spl, size, state->indexMaxError, state->keySize);
 
     radixspline *rsidx = (radixspline *)malloc(sizeof(radixspline));
     state->rdix = rsidx;
-    radixsplineInit(state->rdix, state->spl, radixSize);
+    radixsplineInit(state->rdix, state->spl, radixSize, state->keySize);
 }
 
 /**
@@ -359,7 +359,7 @@ int8_t sbitsInit(sbitsState *state, size_t indexMaxError) {
             initRadixSpline(state, numPages, RADIX_BITS);
         } else {
             state->spl = malloc(sizeof(spline));
-            splineInit(state->spl, numPages, indexMaxError);
+            splineInit(state->spl, numPages, indexMaxError, state->keySize);
         }
     }
 
@@ -380,7 +380,7 @@ float sbitsCalculateSlope(sbitsState *state, void *buffer) {
     slopeX2 = SBITS_GET_COUNT(buffer) - 1;
 
     if (state->keySize <= 4) {
-        uint32_t slopeY1, slopeY2;
+        uint32_t slopeY1 = 0, slopeY2 = 0;
 
         // check if both points are the same
         if (slopeX1 == slopeX2) {
@@ -394,7 +394,7 @@ float sbitsCalculateSlope(sbitsState *state, void *buffer) {
         // return slope of keys
         return (float)(slopeY2 - slopeY1) / (float)(slopeX2 - slopeX1);
     } else {
-        uint64_t slopeY1, slopeY2;
+        uint64_t slopeY1 = 0, slopeY2 = 0;
 
         // check if both points are the same
         if (slopeX1 == slopeX2) {
@@ -418,7 +418,7 @@ float sbitsCalculateSlope(sbitsState *state, void *buffer) {
 int32_t getMaxError(sbitsState *state, void *buffer) {
     if (state->keySize <= 4) {
         int32_t maxError = 0, currentError;
-        uint32_t minKey, currentKey;
+        uint32_t minKey = 0, currentKey = 0;
         memcpy(&minKey, sbitsGetMinKey(state, buffer), state->keySize);
 
         // get slope of keys within page
@@ -449,7 +449,7 @@ int32_t getMaxError(sbitsState *state, void *buffer) {
         return maxError;
     } else {
         int32_t maxError = 0, currentError;
-        uint64_t currentKey, minKey;
+        uint64_t currentKey = 0, minKey = 0;
         memcpy(&minKey, sbitsGetMinKey(state, buffer), state->keySize);
 
         // get slope of keys within page
@@ -487,12 +487,10 @@ int32_t getMaxError(sbitsState *state, void *buffer) {
  */
 void indexPage(sbitsState *state) {
     if (SEARCH_METHOD == 2) {
-        uint64_t minKey;
-        memcpy(&minKey, sbitsGetMinKey(state, state->buffer), state->keySize);
         if (USE_RADIX) {
-            radixsplineAddPoint(state->rdix, &minKey);
+            radixsplineAddPoint(state->rdix, sbitsGetMinKey(state, state->buffer));
         } else {
-            splineAdd(state->spl, &minKey);
+            splineAdd(state->spl, sbitsGetMinKey(state, state->buffer));
         }
     }
 }
@@ -547,11 +545,11 @@ int8_t sbitsPut(sbitsState *state, void *key, void *data) {
             numBlocks = 1;
 
         if (state->keySize <= 4) {
-            uint32_t maxKey;
+            uint32_t maxKey = 0;
             memcpy(&maxKey, sbitsGetMaxKey(state, state->buffer), state->keySize);
             state->avgKeyDiff = (maxKey - state->minKey) / numBlocks / state->maxRecordsPerPage;
         } else {
-            uint64_t maxKey;
+            uint64_t maxKey = 0;
             memcpy(&maxKey, sbitsGetMaxKey(state, state->buffer), state->keySize);
             state->avgKeyDiff = (maxKey - state->minKey) / numBlocks / state->maxRecordsPerPage;
         }
@@ -643,7 +641,7 @@ int8_t sbitsPutVar(sbitsState *state, void *key, void *data, void *variableData,
             if (state->currentVarLoc % state->pageSize > state->pageSize - 4) {
                 writeVariablePage(state, buf);
                 initBufferPage(state, SBITS_VAR_WRITE_BUFFER(state->parameters));
-                // Move data writing location to the beginning of the next page, leaving the first 4 bytes for a header
+                // Move data writing location to the beginning of the next page, leaving the first `keySize` bytes for a header
                 state->currentVarLoc += state->pageSize - state->currentVarLoc % state->pageSize + state->keySize;
             }
 
@@ -713,7 +711,7 @@ int16_t sbitsEstimateKeyLocation(sbitsState *state, void *buffer, void *key) {
     // return estimated location of the key
     float slope = sbitsCalculateSlope(state, buffer);
 
-    uint64_t minKey, thisKey;
+    uint64_t minKey = 0, thisKey = 0;
     memcpy(&minKey, sbitsGetMinKey(state, buffer), state->keySize);
     memcpy(&thisKey, key, state->keySize);
 
@@ -787,13 +785,16 @@ int8_t linearSearch(sbitsState *state, int16_t *numReads, void *buf, void *key, 
         if (physPageId >= state->endDataPage)
             physPageId = physPageId - state->endDataPage;
 
-        if (pageId > high || pageId < low || low > high)
+        if (pageId > high || pageId < low || low > high) {
+            printf("Error: Page id out of range. Page id: %d, low: %d, high: %d\n", pageId, low, high);
             return -1;
+        }
 
         // printf("Page id: %d  \n", pageId);
         /* Read page into buffer */
-        if (readPage(state, physPageId) != 0)
+        if (readPage(state, physPageId) != 0) {
             return -1;
+        }
         (*numReads)++;
 
         if (state->compareKey(key, sbitsGetMinKey(state, buf)) < 0) { /* Key is less than smallest record in block. */
@@ -824,7 +825,7 @@ int8_t sbitsGet(sbitsState *state, void *key, void *data) {
     void *buf;
     int16_t numReads = 0;
 
-    uint64_t thisKey;
+    uint64_t thisKey = 0;
     memcpy(&thisKey, key, state->keySize);
 
     // For spline
@@ -869,7 +870,7 @@ int8_t sbitsGet(sbitsState *state, void *key, void *data) {
 
         if (state->compareKey(key, sbitsGetMinKey(state, buf)) < 0) { /* Key is less than smallest record in block. */
             last = pageId - 1;
-            int64_t minKey;
+            int64_t minKey = 0;
             memcpy(&minKey, sbitsGetMinKey(state, buf), state->keySize);
             offset = (thisKey - minKey) / state->maxRecordsPerPage / ((int32_t)state->avgKeyDiff) - 1;
             if (pageId + offset < first)
@@ -878,7 +879,7 @@ int8_t sbitsGet(sbitsState *state, void *key, void *data) {
 
         } else if (state->compareKey(key, sbitsGetMaxKey(state, buf)) > 0) { /* Key is larger than largest record in block. */
             first = pageId + 1;
-            int64_t maxKey;
+            int64_t maxKey = 0;
             memcpy(&maxKey, sbitsGetMaxKey(state, buf), state->keySize);
             offset = (thisKey - maxKey) / (state->maxRecordsPerPage * state->avgKeyDiff) + 1;
             if (pageId + offset > last)
@@ -922,9 +923,9 @@ int8_t sbitsGet(sbitsState *state, void *key, void *data) {
     // NEXT STEP: Make it so that a point is only added when a new spline point is added, not for every point
     id_t location;
     if (USE_RADIX) {
-        radixsplineFind(state->rdix, /*thisKey*/, &location, &lowbound, &highbound);
+        radixsplineFind(state->rdix, key, state->compareKey, &location, &lowbound, &highbound);
     } else {
-        splineFind(state->spl, /*thisKey*/, &location, &lowbound, &highbound);
+        splineFind(state->spl, key, state->compareKey, &location, &lowbound, &highbound);
     }
 
     pageId = location;
@@ -1008,7 +1009,7 @@ int8_t sbitsGetVar(sbitsState *state, void *key, void *data, void **varData, uin
             return -1;
         }
         // Skip past the header
-        bufPos = 4;
+        bufPos = state->keySize;
     }
 
     // Allocate memory in the return pointer **TODO: Implement returning an iterator instead**
@@ -1032,7 +1033,7 @@ int8_t sbitsGetVar(sbitsState *state, void *key, void *data, void **varData, uin
                 return -1;
             }
             // Skip past the header
-            bufPos = 4;
+            bufPos = state->keySize;
         }
     }
 
@@ -1396,7 +1397,6 @@ id_t writeIndexPage(sbitsState *state, void *buffer) {
  * @return	Return page number if success, -1 if error.
  */
 id_t writeVariablePage(sbitsState *state, void *buffer) {
-    // printf("Wring var page\n");
     if (state->varFile == NULL) {
         return -1;
     }

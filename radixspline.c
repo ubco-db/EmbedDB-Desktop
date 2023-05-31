@@ -45,20 +45,22 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 /**
  * @brief   Build the radix table
  * @param   rsdix       Radix spline structure
- * @param   data        Data points to be indexed
- * @param   dataSize    Size of data
+ * @param   keys        Data points to be indexed
+ * @param   numKeys     Number of data items
  */
-void radixsplineBuild(radixspline *rsidx, int32_t *data, uint32_t dataSize) {
-    // radixsplinePrint(rsidx);
+void radixsplineBuild(radixspline *rsidx, void **keys, uint32_t numKeys) {
     rsidx->pointsSeen = 0;
     rsidx->prevPrefix = 0;
 
-    for (id_t i = 0; i < dataSize; i++) {
-        radixsplineAddPoint(rsidx, data[i]);
+    for (uint32_t i = 0; i < numKeys; i++) {
+        void *key;
+        memcpy(&key, keys + i, sizeof(void *));
+        radixsplineAddPoint(rsidx, key);
     }
 }
 
@@ -74,10 +76,11 @@ void radixsplineRebuild(radixspline *rsidx, int8_t radixSize, int8_t shiftAmount
     rsidx->prevPrefix = rsidx->prevPrefix >> shiftAmount;
 
     for (id_t i = 0; i < rsidx->size / pow(2, shiftAmount); i++) {
-        rsidx->table[i] = rsidx->table[(i << shiftAmount)];
+        memcpy((int8_t *)rsidx->table + i * rsidx->keySize, (int8_t *)rsidx->table + (i << shiftAmount) * rsidx->keySize, rsidx->keySize);
     }
+    uint64_t maxKey = UINT64_MAX;
     for (id_t i = rsidx->size / pow(2, shiftAmount); i < rsidx->size; i++) {
-        rsidx->table[i] = INT32_MAX;
+        memcpy((int8_t *)rsidx->table + i * rsidx->keySize, &maxKey, rsidx->keySize);
     }
 }
 
@@ -86,7 +89,7 @@ void radixsplineRebuild(radixspline *rsidx, int8_t radixSize, int8_t shiftAmount
  * @param	rsdix	Radix spline structure
  * @param	key		New point to be indexed by radix spline
  */
-void radixsplineAddPoint(radixspline *rsidx, uint32_t key) {
+void radixsplineAddPoint(radixspline *rsidx, void *key) {
     splineAdd(rsidx->spl, key);
 
     // Return if not using Radix table
@@ -95,61 +98,67 @@ void radixsplineAddPoint(radixspline *rsidx, uint32_t key) {
     }
 
     // Add spline point
-    uint32_t lastKey = rsidx->spl->lastKey;
+    void *lastKey = rsidx->spl->lastKey;
 
     // Determine if need to update radix table based on adding point to spline
     if (rsidx->spl->count <= rsidx->pointsSeen)
         return; // Nothing to do
 
     // take the last point that was added to spline
-    key = rsidx->spl->points[rsidx->spl->count - 1].x;
+    key = rsidx->spl->points[rsidx->spl->count - 1].key;
 
     // Initialize table and minKey on first key added
     if (rsidx->pointsSeen == 0) {
-        rsidx->table = (uint32_t *)malloc((sizeof(uint32_t)) * rsidx->size);
-        int32_t counter;
-        for (counter = 1; counter < rsidx->size; counter++) {
-            rsidx->table[counter] = INT32_MAX;
+        rsidx->table = malloc(sizeof(id_t) * rsidx->size);
+        uint64_t maxKey = UINT64_MAX;
+        for (int32_t counter = 1; counter < rsidx->size; counter++) {
+            memcpy(rsidx->table + counter, &maxKey, sizeof(id_t));
         }
         rsidx->minKey = key;
     }
 
-    // Check if prefix will fit in 32 bits
-    uint32_t prefixSize = __builtin_clz(key - rsidx->minKey);
-    int8_t newShiftSize;
-    if (32 - prefixSize < (uint32_t)rsidx->radixSize) // 32-bit key
-        newShiftSize = 0;
-    else
-        newShiftSize = (32 - prefixSize) - rsidx->radixSize;
+    // Check if prefix will fit in radix table
+    uint64_t keyDiff;
+    if (rsidx->keySize <= 4) {
+        uint32_t keyVal = 0, minKeyVal = 0;
+        memcpy(&keyVal, key, rsidx->keySize);
+        memcpy(&minKeyVal, rsidx->minKey, rsidx->keySize);
+        keyDiff = keyVal - minKeyVal;
+    } else {
+        uint64_t keyVal = 0, minKeyVal = 0;
+        memcpy(&keyVal, key, rsidx->keySize);
+        memcpy(&minKeyVal, rsidx->minKey, rsidx->keySize);
+        keyDiff = keyVal - minKeyVal;
+    }
 
-    // if the shift size changes, need to remake table from scratch using new
-    // shift size
+    uint8_t bitsToRepresentKey = ceil(log2f((float)keyDiff));
+    int8_t newShiftSize;
+    if (bitsToRepresentKey < rsidx->radixSize) {
+        newShiftSize = 0;
+    } else {
+        newShiftSize = bitsToRepresentKey - rsidx->radixSize;
+    }
+
+    // if the shift size changes, need to remake table from scratch using new shift size
     if (newShiftSize > rsidx->shiftSize) {
-        radixsplineRebuild(rsidx, rsidx->radixSize,
-                           newShiftSize - rsidx->shiftSize);
+        radixsplineRebuild(rsidx, rsidx->radixSize, newShiftSize - rsidx->shiftSize);
         rsidx->shiftSize = newShiftSize;
     }
 
-    id_t prefix;
-    prefix = (key - rsidx->minKey) >> rsidx->shiftSize;
-    if (prefix !=
-        rsidx->prevPrefix) { // printf("New prefix: %lu \t"TO_BINARY_PATTERN"
-        // "TO_BINARY_PATTERN"\n", prefix,
-        // TO_BINARY((uint8_t)(prefix>>8)),
-        // TO_BINARY((uint8_t) prefix));
-        id_t pr;
-        for (pr = rsidx->prevPrefix; pr < prefix; pr++)
-            rsidx->table[pr] = rsidx->pointsSeen;
+    id_t prefix = keyDiff >> rsidx->shiftSize;
+    if (prefix != rsidx->prevPrefix) {
+        // Make all new rows in the radix table point to the last point seen
+        for (id_t pr = rsidx->prevPrefix; pr < prefix; pr++) {
+            memcpy(rsidx->table + pr, &rsidx->pointsSeen, sizeof(id_t));
+        }
 
         rsidx->prevPrefix = prefix;
     }
 
-    rsidx->table[prefix] = rsidx->pointsSeen;
+    memcpy(rsidx->table + prefix, &rsidx->pointsSeen, sizeof(id_t));
 
     rsidx->pointsSeen++;
-    rsidx->dataSize = rsidx->spl->currentPointLoc;
-
-    // radixsplinePrint((*rsidx));
+    rsidx->numPoints = rsidx->spl->currentPointLoc;
 }
 
 /**
@@ -157,16 +166,18 @@ void radixsplineAddPoint(radixspline *rsidx, uint32_t key) {
  * @param	rsdix		Radix spline structure
  * @param	spl			Spline structure
  * @param	radixSize	Size of radix table
+ * @param	keySize		Size of keys to be stored in radix table
  */
-void radixsplineInit(radixspline *rsidx, spline *spl, int8_t radixSize) {
+void radixsplineInit(radixspline *rsidx, spline *spl, int8_t radixSize, uint8_t keySize) {
     rsidx->spl = spl;
     rsidx->radixSize = radixSize;
-    rsidx->dataSize = 0;
+    rsidx->keySize = keySize;
+    rsidx->numPoints = 0;
     rsidx->shiftSize = 0;
     rsidx->size = pow(2, radixSize);
 
     /* Determine the prefix size (shift bits) based on min and max keys */
-    rsidx->minKey = spl->points[0].x;
+    rsidx->minKey = spl->points[0].key;
 
     /* Initialize points seen */
     rsidx->pointsSeen = 0;
@@ -174,24 +185,28 @@ void radixsplineInit(radixspline *rsidx, spline *spl, int8_t radixSize) {
 }
 
 /**
- * @brief	Performs a recursive binary search for a given value
- * @param	arr		Array to search through
- * @param	low		Lower search bound
- * @param	high	Higher search bound
- * @param	x		Search term
+ * @brief	Performs a recursive binary search on the spine points for a key
+ * @param	rsidx		Array to search through
+ * @param	low		    Lower search bound (Index of spline point)
+ * @param	high	    Higher search bound (Index of spline point)
+ * @param	key		    Key to search for
+ * @param	compareKey	Function to compare keys
+ * @return	Index of spline point that is the upper end of the spline segment that contains the key
  */
-size_t radixBinarySearch(point *arr, int low, int high, int x) {
+size_t radixBinarySearch(radixspline *rsidx, int low, int high, void *key, int8_t compareKey(void *, void *)) {
+    point *arr = rsidx->spl->points;
+
     int32_t mid;
     if (high >= low) {
         mid = low + (high - low) / 2;
 
-        if (arr[mid].x >= x && arr[mid - 1].x <= x)
+        if (compareKey(arr[mid].key, key) >= 0 && compareKey(arr[mid - 1].key, key) <= 0)
             return mid;
 
-        if (arr[mid].x > x)
-            return radixBinarySearch(arr, low, mid - 1, x);
+        if (compareKey(arr[mid].key, key) > 0)
+            return radixBinarySearch(rsidx, low, mid - 1, key, compareKey);
 
-        return radixBinarySearch(arr, mid + 1, high, x);
+        return radixBinarySearch(rsidx, mid + 1, high, key, compareKey);
     }
 
     mid = low + (high - low) / 2;
@@ -207,37 +222,41 @@ size_t radixBinarySearch(point *arr, int low, int high, int x) {
  * @param	rsdix		Radix spline structure
  * @param	spl			Spline structure
  * @param	radixSize	Size of radix table
- * @param	data		Data points to be indexed
- * @param	dataSize	Size of data
+ * @param	keys		Keys to be indexed
+ * @param	numKeys 	Number of keys in `keys`
+ * @param	keySize		Size of keys to be stored in radix table
  */
-void radixsplineInitBuild(radixspline *rsidx, spline *spl, uint32_t radixSize,
-                          int32_t *data, uint32_t dataSize) {
-    radixsplineInit(rsidx, spl, radixSize);
-    radixsplineBuild(rsidx, data, dataSize);
+void radixsplineInitBuild(radixspline *rsidx, spline *spl, uint32_t radixSize, void **keys, uint32_t numKeys, uint8_t keySize) {
+    radixsplineInit(rsidx, spl, radixSize, keySize);
+    radixsplineBuild(rsidx, keys, numKeys);
 }
 
 /**
- * @brief	Returns the radix index that is end of spline segment containing
- * key using radix table.
- * @param	rsidx	Radix spline structure
- * @param	key		Search key
+ * @brief	Returns the radix index that is end of spline segment containing key using radix table.
+ * @param	rsidx	    Radix spline structure
+ * @param	key		    Search key
+ * @param	compareKey	Function to compare keys
+ * @return	Index of spline point that is the upper end of the spline segment that contains the key
  */
-size_t radixsplineGetEntry(radixspline *rsidx, id_t key) {
+size_t radixsplineGetEntry(radixspline *rsidx, void *key, int8_t compareKey(void *, void *)) {
     /* Use radix table to find range of spline points */
-    id_t prefix = (key - rsidx->minKey) >> rsidx->shiftSize;
 
-    uint32_t begin;
-    uint32_t end;
+    uint64_t keyVal = 0, minKeyVal = 0;
+    memcpy(&keyVal, key, rsidx->keySize);
+    memcpy(&minKeyVal, rsidx->minKey, rsidx->keySize);
 
-    // Determine end, use next higher radix point if within bounds, unless key
-    // is exactly prefix
-    if (key == (prefix << rsidx->shiftSize)) {
-        end = rsidx->table[prefix];
+    uint32_t prefix = (keyVal - minKeyVal) >> rsidx->shiftSize;
+
+    uint32_t begin, end;
+
+    // Determine end, use next higher radix point if within bounds, unless key is exactly prefix
+    if (keyVal == ((uint64_t)prefix << rsidx->shiftSize)) {
+        memcpy(&end, rsidx->table + prefix, sizeof(id_t));
     } else {
         if ((prefix + 1) < rsidx->size) {
-            end = rsidx->table[prefix + 1];
+            memcpy(&end, rsidx->table + (prefix + 1), sizeof(id_t));
         } else {
-            end = rsidx->table[rsidx->size - 1];
+            memcpy(&end, rsidx->table + (rsidx->size - 1), sizeof(id_t));
         }
     }
 
@@ -250,68 +269,81 @@ size_t radixsplineGetEntry(radixspline *rsidx, id_t key) {
     if (prefix == 0) {
         begin = 0;
     } else {
-        begin = rsidx->table[prefix - 1];
+        memcpy(&begin, rsidx->table + (prefix - 1), sizeof(id_t));
     }
 
-    return radixBinarySearch(rsidx->spl->points, begin, end, key);
+    return radixBinarySearch(rsidx, begin, end, key, compareKey);
 }
 
 /**
- * @brief	Returns the radix index that is end of spline segment containing
- * key using binary search.
- * @param	rsidx	Radix spline structure
- * @param	key		Search key
+ * @brief	Returns the radix index that is end of spline segment containing key using binary search.
+ * @param	rsidx	    Radix spline structure
+ * @param	key		    Search key
+ * @param	compareKey	Function to compare keys
+ * @return  Index of spline point that is the upper end of the spline segment that contains the key
  */
-size_t radixsplineGetEntryBinarySearch(radixspline *rsidx, id_t key) {
-    return radixBinarySearch(rsidx->spl->points, 0, rsidx->spl->count - 1, key);
+size_t radixsplineGetEntryBinarySearch(radixspline *rsidx, void *key, int8_t compareKey(void *, void *)) {
+    return radixBinarySearch(rsidx, 0, rsidx->spl->count - 1, key, compareKey);
 }
 
 /**
  * @brief	Estimate location of key in data using spline points.
  * @param	rsidx	Radix spline structure
  * @param	key		Search key
- * @param	index	Spline index entry
+ * @param	compareKey	Function to compare keys
+ * @return	Estimated page number that contains key
  */
-size_t radixsplineEstimateLocation(radixspline *rsidx, id_t key) {
-    if (key < rsidx->minKey)
+size_t radixsplineEstimateLocation(radixspline *rsidx, void *key, int8_t compareKey(void *, void *)) {
+    uint64_t keyVal = 0, minKeyVal = 0;
+    memcpy(&keyVal, key, rsidx->keySize);
+    memcpy(&minKeyVal, rsidx->minKey, rsidx->keySize);
+
+    if (keyVal < minKeyVal)
         return 0;
 
     size_t index;
     if (rsidx->radixSize == 0) {
         /* Get index using binary search */
-        index = radixsplineGetEntryBinarySearch(rsidx, key);
+        index = radixsplineGetEntryBinarySearch(rsidx, key, compareKey);
     } else {
         /* Get index using radix table */
-        index = radixsplineGetEntry(rsidx, key);
+        index = radixsplineGetEntry(rsidx, key, compareKey);
     }
 
     /* Interpolate between two spline points */
-    point down = rsidx->spl->points[index - 1];
-    point up = rsidx->spl->points[index];
+    point down, up;
+    memcpy(&down, rsidx->spl->points + (index - 1), sizeof(point));
+    memcpy(&up, rsidx->spl->points + index, sizeof(point));
+
+    uint64_t downKey = 0, upKey = 0;
+    memcpy(&downKey, down.key, rsidx->keySize);
+    memcpy(&upKey, up.key, rsidx->keySize);
 
     /* Keydiff * slope + y */
-    size_t val = (key - down.x) * ((double)(up.y - down.y) / (up.x - down.x)) + down.y;
-    return val > up.y ? up.y : val;
+    uint32_t estimatedPage = (uint32_t)((keyVal - downKey) * ((up.page - down.page) / (long double)(upKey - downKey)) + down.page);
+    return estimatedPage > up.page ? up.page : estimatedPage;
 }
 
 /**
  * @brief	Finds a value using index. Returns predicted location and low and high error bounds.
- * @param	rsidx	Radix spline structure
- * @param	key		Search key
- * @param	loc		Predicted location
- * @param	low		Low bound on predicted location
- * @param	high	High bound on predicted location
+ * @param	rsidx	    Radix spline structure
+ * @param	key		    Search key
+ * @param   compareKey  Function to compare keys
+ * @param	loc		    Return of predicted location
+ * @param	low		    Return of low bound on predicted location
+ * @param	high	    Return of high bound on predicted location
  */
-id_t radixsplineFind(radixspline *rsidx, void *key, id_t *loc, id_t *low, id_t *high) {
+void radixsplineFind(radixspline *rsidx, void *key, int8_t compareKey(void *, void *), id_t *loc, id_t *low, id_t *high) {
     /* Estimate location */
-    *loc = radixsplineEstimateLocation(rsidx, key);
+    *loc = radixsplineEstimateLocation(rsidx, key, compareKey);
 
     /* Set error bounds based on maxError from spline construction */
     *low = (rsidx->spl->maxError > *loc) ? 0 : *loc - rsidx->spl->maxError;
-    point lastSplinePoint = rsidx->spl->points[rsidx->spl->count - 1];
-    *high = (*loc + rsidx->spl->maxError > lastSplinePoint.x) ? lastSplinePoint.x : *loc + rsidx->spl->maxError;
-
-    return *loc;
+    point lastSplinePoint;
+    memcpy(&lastSplinePoint, rsidx->spl->points + (rsidx->spl->count - 1), sizeof(point));
+    uint64_t lastKey = 0;
+    memcpy(&lastKey, lastSplinePoint.key, rsidx->keySize);
+    *high = (*loc + rsidx->spl->maxError > lastKey) ? lastKey : *loc + rsidx->spl->maxError;
 }
 
 /**
@@ -326,9 +358,13 @@ void radixsplinePrint(radixspline *rsidx) {
 
     printf("Radix table (%lu):\n", rsidx->size);
     // for (id_t i=0; i < 20; i++)
+    uint64_t minKeyVal = 0;
+    id_t tableVal;
+    memcpy(&minKeyVal, rsidx->minKey, rsidx->keySize);
     for (id_t i = 0; i < rsidx->size; i++) {
         printf("[" TO_BINARY_PATTERN "] ", TO_BINARY((uint8_t)(i)));
-        printf("(%lu): --> %lu\n", (i << rsidx->shiftSize) + rsidx->minKey, rsidx->table[i]);
+        memcpy(&tableVal, rsidx->table + i, sizeof(id_t));
+        printf("(%lu): --> %lu\n", (i << rsidx->shiftSize) + minKeyVal, tableVal);
     }
     printf("\n");
 }
