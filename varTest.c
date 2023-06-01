@@ -382,7 +382,7 @@ void main() {
 
                 // Retrieve image
                 if (varData != NULL) {
-                    if (TEST_TYPE) {
+                    if (TEST_TYPE == 1) {
                         retrieveImageData(&varData, length, i, "test", ".png");
                     }
                     free(varData);
@@ -462,7 +462,7 @@ void main() {
 
                         // Retrieve image
                         if (varData != NULL) {
-                            if (TEST_TYPE) {
+                            if (TEST_TYPE == 1) {
                                 retrieveImageData(&varData, length, *key, "test", ".png");
                             }
                             free(varData);
@@ -511,7 +511,7 @@ void main() {
                     }
 
                     // Retrieve image
-                    if (length != -1 && TEST_TYPE) {
+                    if (length != -1 && TEST_TYPE == 1) {
                         retrieveImageData(&varData, length, key, "test", ".png");
                     }
 
