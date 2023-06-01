@@ -218,7 +218,7 @@ size_t radixBinarySearch(radixspline *rsidx, int low, int high, void *key, int8_
 }
 
 /**
- * @brief	Initialize a radix spline index of given size using pre-built spline structure.
+ * @brief	Initialize and build a radix spline index of given size using pre-built spline structure.
  * @param	rsdix		Radix spline structure
  * @param	spl			Spline structure
  * @param	radixSize	Size of radix table
@@ -320,7 +320,7 @@ size_t radixsplineEstimateLocation(radixspline *rsidx, void *key, int8_t compare
     memcpy(&upKey, up.key, rsidx->keySize);
 
     /* Keydiff * slope + y */
-    uint32_t estimatedPage = (uint32_t)((keyVal - downKey) * ((up.page - down.page) / (long double)(upKey - downKey)) + down.page);
+    uint32_t estimatedPage = (uint32_t)((keyVal - downKey) * (up.page - down.page) / (long double)(upKey - downKey)) + down.page;
     return estimatedPage > up.page ? up.page : estimatedPage;
 }
 

@@ -98,7 +98,7 @@ void radixsplineBuild(radixspline *rsidx, void **keys, uint32_t numKeys);
 void radixsplineInit(radixspline *rsidx, spline *spl, int8_t radixSize, uint8_t keySize);
 
 /**
- * @brief	Initialize a radix spline index of given size using pre-built spline structure.
+ * @brief	Initialize and build a radix spline index of given size using pre-built spline structure.
  * @param	rsdix		Radix spline structure
  * @param	spl			Spline structure
  * @param	radixSize	Size of radix table

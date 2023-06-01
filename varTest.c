@@ -8,8 +8,13 @@
 
 #define NUM_STEPS 10
 #define NUM_RUNS 1
-#define IMAGE_TEST 0
 #define VALIDATE_VAR_DATA 1
+/**
+ * 0 = Random data
+ * 1 = Image data
+ * 2 = Set length string
+ */
+#define TEST_TYPE 0
 
 // Cursed linkedList for tracking data
 typedef struct Node {
@@ -183,8 +188,8 @@ void main() {
         uint32_t start = clock();
 
         int32_t i;
+        char vardata[15] = "Testing 000...";
         if (seqdata == 1) {
-            char vardata[15] = "Testing 000...";
             for (i = 0; i < numRecords; i++) {
                 // Key = i, fixed data = i % 100
                 *((int32_t *)recordBuffer) = i;
@@ -194,10 +199,11 @@ void main() {
                 void *variableData = NULL;
                 uint8_t hasVarData = 0;
                 uint32_t length;
-                if (IMAGE_TEST) {
+                if (TEST_TYPE == 0) {
+                    randomVarData(10, 10, 100, &hasVarData, &length, &variableData);
+                } else if (TEST_TYPE == 1) {
                     imageVarData(0.05, "test.png", &hasVarData, &length, &variableData);
-                } else {
-                    // randomVarData(10, 10, 100, &hasVarData, &length, &variableData);
+                } else if (TEST_TYPE == 2) {
                     hasVarData = 1;
                     length = 15;
                     vardata[10] = (char)(i % 10) + '0';
@@ -260,10 +266,18 @@ void main() {
                     void *variableData = NULL;
                     uint8_t hasVarData = 0;
                     uint32_t length = 0;
-                    if (IMAGE_TEST) {
-                        imageVarData(0.01, "test.png", &hasVarData, &length, &variableData);
-                    } else {
-                        randomVarData(10000, 10, 100, &hasVarData, &length, &variableData);
+                    if (TEST_TYPE == 0) {
+                        randomVarData(10, 10, 100, &hasVarData, &length, &variableData);
+                    } else if (TEST_TYPE == 1) {
+                        imageVarData(0.05, "test.png", &hasVarData, &length, &variableData);
+                    } else if (TEST_TYPE == 2) {
+                        hasVarData = 1;
+                        length = 15;
+                        vardata[10] = (char)(i % 10) + '0';
+                        vardata[9] = (char)((i / 10) % 10) + '0';
+                        vardata[8] = (char)((i / 100) % 10) + '0';
+                        variableData = malloc(length);
+                        memcpy(variableData, vardata, length);
                     }
 
                     // Put variable length data
@@ -368,7 +382,7 @@ void main() {
 
                 // Retrieve image
                 if (varData != NULL) {
-                    if (IMAGE_TEST) {
+                    if (TEST_TYPE) {
                         retrieveImageData(&varData, length, i, "test", ".png");
                     }
                     free(varData);
@@ -448,7 +462,7 @@ void main() {
 
                         // Retrieve image
                         if (varData != NULL) {
-                            if (IMAGE_TEST) {
+                            if (TEST_TYPE) {
                                 retrieveImageData(&varData, length, *key, "test", ".png");
                             }
                             free(varData);
@@ -497,7 +511,7 @@ void main() {
                     }
 
                     // Retrieve image
-                    if (length != -1 && IMAGE_TEST) {
+                    if (length != -1 && TEST_TYPE) {
                         retrieveImageData(&varData, length, key, "test", ".png");
                     }
 
@@ -950,7 +964,7 @@ int retrieveData(sbitsState *state, int32_t key, int8_t *recordBuffer) {
     }
 
     // Retrieve image
-    if (length != -1 && IMAGE_TEST) {
+    if (length != -1 && TEST_TYPE) {
         retrieveImageData(&varData, length, key, "test", ".png");
     }
 

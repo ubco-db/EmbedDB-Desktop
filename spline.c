@@ -104,8 +104,7 @@ void splineAdd(spline *spl, void *key) {
         return;
     }
 
-    /* Check if there is only one spline point (need to initialize upper and
-     * lower limits using 2nd point) */
+    /* Check if there is only one spline point (need to initialize upper and lower limits using 2nd point) */
     if (spl->currentPointLoc == 1) {
         /* Initialize upper and lower limits using second (unique) data point */
         spl->lower.key = key;
