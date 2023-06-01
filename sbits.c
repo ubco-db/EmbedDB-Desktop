@@ -729,7 +729,6 @@ int8_t linearSearch(sbitsState *state, int16_t *numReads, void *buf, void *key, 
             physPageId = physPageId - state->endDataPage;
 
         if (pageId > high || pageId < low || low > high) {
-            printf("Error: Page id out of range. Page id: %d, low: %d, high: %d\n", pageId, low, high);
             return -1;
         }
 
