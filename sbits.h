@@ -140,7 +140,7 @@ typedef struct {
     id_t firstIdxPage;                          /* First data page number (physical location) */
     id_t erasedEndPage;                         /* Physical page number of last erased page */
     id_t erasedEndIdxPage;                      /* Physical page number of last erased index page */
-    id_t minVarRecordId;                        /* Minimum record id that we still have variable data for */
+    uint64_t minVarRecordId;                    /* Minimum record id that we still have variable data for */
     int8_t wrappedMemory;                       /* 1 if have wrapped around in memory, 0 otherwise */
     int8_t wrappedIdxMemory;                    /* 1 if have wrapped around in index memory, 0 otherwise */
     int8_t wrappedVariableMemory;               /* 1 if have wrapped around in variable data memory, 0 otherwise */
@@ -168,8 +168,8 @@ typedef struct {
     void (*extractData)(void *data);            /* Given a record, function that extracts the data (key) value from that record */
     void (*updateBitmap)(void *data, void *bm); /* Given a record, updates bitmap based on its data (key) value */
     int8_t (*inBitmap)(void *data, void *bm);   /* Returns 1 if data (key) value is a valid value given the bitmap */
-    int32_t minKey;                             /* Minimum key */
-    int32_t maxKey;                             /* Maximum key */
+    uint64_t minKey;                            /* Minimum key */
+    uint64_t maxKey;                            /* Maximum key */
     int32_t maxError;                           /* Maximum key error */
     id_t numWrites;                             /* Number of page writes */
     id_t numReads;                              /* Number of page reads */
