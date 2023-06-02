@@ -1,3 +1,3 @@
-# BUILD INFORMATION
+# Build Information
 
-There are two different ways to build and run this project. The first is that you can configure it to launch in your IDE environment. Alternatively, it can be run using the included make file by executing the `make` command.
+To build this project, please configure it locally in your IDE, or build and run the project using the command line.
