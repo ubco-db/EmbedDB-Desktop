@@ -133,7 +133,7 @@ if __name__ == '__main__':
         """Takes as input the collection of *.testpass and *.testfail result
         files, and converts them to a JUnit formatted XML.""")
     parser.add_argument('targets_dir', metavar='result_file_directory',
-                        type=str, nargs='?', default='./build/results',
+                        type=str, nargs='?', default='../build/results',
                         help="""The location of your results files.
                         Defaults to current directory if not specified.""")
     parser.add_argument('root_path', nargs='?',

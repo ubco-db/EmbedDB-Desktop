@@ -35,13 +35,9 @@ CFLAGS=-I. -I$(PATHU) -I$(PATHS) -DTEST
 
 RESULTS = $(patsubst $(PATHT)Test%.c,$(PATHR)Test%.testpass,$(SRCT) )
 
-PASSED = `grep -s PASS $(PATHR)*.testpass`
-FAIL = `grep -s FAIL $(PATHR)*.testpass`
-IGNORE = `grep -s IGNORE $(PATHR)*.testpass`
-
 test: $(BUILD_PATHS) $(RESULTS)
 	pip install -r requirements.txt
-	python ./scripts/stylize_as_junit.py
+	python /scripts/stylize_as_junit.py
 
 $(PATHR)%.testpass: $(PATHB)%.$(TARGET_EXTENSION)
 	-./$< > $@ 2>&1
