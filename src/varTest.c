@@ -14,7 +14,7 @@
  * 1 = Image data
  * 2 = Set length string
  */
-#define TEST_TYPE 0
+#define TEST_TYPE 1
 
 // Cursed linkedList for tracking data
 typedef struct Node {
@@ -64,7 +64,7 @@ void main() {
     uint32_t rhits[NUM_STEPS][NUM_RUNS];
 
     /* Determines if generated, sequential data is used, or data from an input file*/
-    int8_t seqdata = 1;
+    int8_t seqdata = 0;
 
     // Files for non-sequentioal data
     FILE *infile = NULL, *infileRandom = NULL;
@@ -123,7 +123,7 @@ void main() {
         // numRecords = 100001;
         // testRecords = 100001;
 
-        infile = fopen("data/uwa500K.bin", "r+b");
+        infile = fopen("./data/uwa500K.bin", "r+b");
         // infileRandom =
         // fopen("data/uwa_data_only_2000_500KSorted_randomized.bin", "r+b");
         minRange = 946713600;
@@ -140,8 +140,8 @@ void main() {
     for (r = 0; r < NUM_RUNS; r++) {
         sbitsState *state = (sbitsState *)malloc(sizeof(sbitsState));
 
-        state->keySize = 6;
-        state->dataSize = 4;
+        state->keySize = 4;
+        state->dataSize = 12;
         state->pageSize = 512;
         state->bitmapSize = 0;
         state->bufferSizeInBlocks = M;
@@ -202,7 +202,7 @@ void main() {
                 if (TEST_TYPE == 0) {
                     randomVarData(10, 10, 100, &hasVarData, &length, &variableData);
                 } else if (TEST_TYPE == 1) {
-                    imageVarData(0.05, "test.png", &hasVarData, &length, &variableData);
+                    imageVarData(0.05, "./data/test.png", &hasVarData, &length, &variableData);
                 } else if (TEST_TYPE == 2) {
                     hasVarData = 1;
                     length = 15;
@@ -269,7 +269,7 @@ void main() {
                     if (TEST_TYPE == 0) {
                         randomVarData(10, 10, 100, &hasVarData, &length, &variableData);
                     } else if (TEST_TYPE == 1) {
-                        imageVarData(0.05, "test.png", &hasVarData, &length, &variableData);
+                        imageVarData(0.05, "./data/test.png", &hasVarData, &length, &variableData);
                     } else if (TEST_TYPE == 2) {
                         hasVarData = 1;
                         length = 15;

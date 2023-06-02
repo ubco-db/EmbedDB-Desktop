@@ -3,3 +3,5 @@ indexfile.bin
 varFile.bin
 *.exe
 *.o
+.vscode/
+build/
