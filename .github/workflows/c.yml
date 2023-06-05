@@ -12,6 +12,12 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v3
+
+      - name: Install ClangFormat
+        run: sudo apt-get install -y clang-format
+
       - name: Lint
         uses: wearerequired/lint-action@v2
         with:
