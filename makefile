@@ -26,6 +26,8 @@ PATHR = build/results/
 
 BUILD_PATHS = $(PATHB) $(PATHD) $(PATHO) $(PATHR)
 
+OBJECTS = $(PATHO)sbits.o $(PATHO)spline.o $(PATHO)radixspline.o
+
 SRCT = $(wildcard $(PATHT)*.c)
 
 COMPILE=gcc -c
@@ -37,12 +39,12 @@ RESULTS = $(patsubst $(PATHT)Test%.c,$(PATHR)Test%.testpass,$(SRCT) )
 
 test: $(BUILD_PATHS) $(RESULTS)
 	pip install -r requirements.txt
-	python scripts/stylize_as_junit.py
+	python stylize_as_junit.py
 
 $(PATHR)%.testpass: $(PATHB)%.$(TARGET_EXTENSION)
 	-./$< > $@ 2>&1
 
-$(PATHB)Test%.$(TARGET_EXTENSION): $(PATHO)Test%.o $(PATHO)%.o $(PATHO)unity.o #$(PATHD)Test%.d
+$(PATHB)Test%.$(TARGET_EXTENSION): $(PATHO)Test%.o $(OBJECTS) $(PATHO)unity.o #$(PATHD)Test%.d
 	$(LINK) -o $@ $^
 
 $(PATHO)%.o:: $(PATHT)%.c

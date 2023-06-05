@@ -5,3 +5,4 @@ varFile.bin
 *.o
 .vscode/
 build/
+result.xml

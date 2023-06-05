@@ -85,8 +85,14 @@ class UnityTestSummary:
                     else:
                         file_name = result_file.strip("./")
                     tmp_tc = TestCase(name=tmp_tc_line['tc_name'], classname=file_name)
+
+                    # This variable has been added as some of our methods have printed output and an additional
+                    # check was needed to ensure it was not parsed into the test results.
+                    skip = True
+
                     if 'tc_status' in tmp_tc_line:
                         if str(tmp_tc_line['tc_status']) == 'IGNORE':
+                            skip = False
                             if 'tc_msg' in tmp_tc_line:
                                 tmp_tc.add_skipped_info(message=tmp_tc_line['tc_msg'],
                                                         output=r'[File]={0}, [Line]={1}'.format(
@@ -94,14 +100,18 @@ class UnityTestSummary:
                             else:
                                 tmp_tc.add_skipped_info(message=" ")
                         elif str(tmp_tc_line['tc_status']) == 'FAIL':
+                            skip = False
                             if 'tc_msg' in tmp_tc_line:
                                 tmp_tc.add_failure_info(message=tmp_tc_line['tc_msg'],
                                                         output=r'[File]={0}, [Line]={1}'.format(
                                                             tmp_tc_line['tc_file_name'], tmp_tc_line['tc_line_nr']))
                             else:
                                 tmp_tc.add_failure_info(message=" ")
+                        elif str(tmp_tc_line['tc_status']) == 'PASS':
+                            skip = False
 
-                    tc_list.append((str(result_file), tmp_tc))
+                    if not skip:
+                        tc_list.append((str(result_file), tmp_tc))
 
             for k, v in tc_list:
                 try:
@@ -133,7 +143,7 @@ if __name__ == '__main__':
         """Takes as input the collection of *.testpass and *.testfail result
         files, and converts them to a JUnit formatted XML.""")
     parser.add_argument('targets_dir', metavar='result_file_directory',
-                        type=str, nargs='?', default='../build/results',
+                        type=str, nargs='?', default='./build/results',
                         help="""The location of your results files.
                         Defaults to current directory if not specified.""")
     parser.add_argument('root_path', nargs='?',
