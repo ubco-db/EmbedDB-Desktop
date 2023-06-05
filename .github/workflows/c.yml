@@ -7,6 +7,16 @@ on:
     branches: [ "main" ]
 
 jobs:
+  run-linters:
+    name: Run Linter
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Lint
+        uses: wearerequired/lint-action@v2
+        with:
+          clang_format: true
+
   build:
     name: Build and Run Tests
     runs-on: windows-latest
