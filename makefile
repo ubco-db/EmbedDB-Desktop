@@ -16,7 +16,7 @@ endif
 .PHONY: clean
 .PHONY: test
 
-PATHU = lib/unity
+PATHU = lib/unity/
 PATHS = src/
 PATHT = test/
 PATHB = build/
@@ -37,7 +37,7 @@ RESULTS = $(patsubst $(PATHT)Test%.c,$(PATHR)Test%.testpass,$(SRCT) )
 
 test: $(BUILD_PATHS) $(RESULTS)
 	pip install -r requirements.txt
-	python ./scripts/stylize_as_junit.py
+	python scripts/stylize_as_junit.py
 
 $(PATHR)%.testpass: $(PATHB)%.$(TARGET_EXTENSION)
 	-./$< > $@ 2>&1
