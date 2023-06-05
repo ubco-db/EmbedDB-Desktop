@@ -30,4 +30,3 @@ jobs:
         github_token: ${{ github.token }}
         files: ./*.xml
         check_name: Unit Test Results
-        comment_on_pr: true
