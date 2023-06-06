@@ -19,7 +19,7 @@ jobs:
         run: sudo apt-get install -y clang-format
 
       - name: Lint
-        run: clang-format -n --Werror
+        run: clang-format -n --Werror .
 
   build:
     name: Build and Run Tests
