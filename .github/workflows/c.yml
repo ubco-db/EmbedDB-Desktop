@@ -18,7 +18,7 @@ jobs:
       - name: Check Format
         uses: jidicula/clang-format-action@v4.11.0
         with:
-          clang-format-version: '13'
+          clang-format-version: '17'
           check-path: 'src'
 
   build:
