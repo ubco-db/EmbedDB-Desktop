@@ -520,8 +520,7 @@ void runalltests_sbits() {
             i = 0;
             int8_t queryType = 1;
 
-            if (queryType ==
-                1) { /* Query each record from original data set. */
+            if (queryType == 1) { /* Query each record from original data set. */
                 if (useRandom) {
                     fseek(infileRandom, 0, SEEK_SET);
                 } else {
@@ -531,12 +530,10 @@ void runalltests_sbits() {
                 while (1) {
                     /* Read page */
                     if (useRandom) {
-                        if (0 == fread(infileBuffer, state->pageSize, 1,
-                                       infileRandom))
+                        if (0 == fread(infileBuffer, state->pageSize, 1, infileRandom))
                             break;
                     } else {
-                        if (0 ==
-                            fread(infileBuffer, state->pageSize, 1, infile))
+                        if (0 == fread(infileBuffer, state->pageSize, 1, infile))
                             break;
                     }
 
@@ -544,18 +541,14 @@ void runalltests_sbits() {
                     /* Process all records on page */
                     int16_t count = *((int16_t *)(infileBuffer + 4));
                     for (int j = 0; j < count; j++) {
-                        void *buf =
-                            (infileBuffer + headerSize + j * state->recordSize);
+                        void *buf = (infileBuffer + headerSize + j * state->recordSize);
                         int32_t *key = (int32_t *)buf;
 
                         int8_t result = sbitsGet(state, key, recordBuffer);
                         if (result != 0)
-                            printf("ERROR: Failed to find key: %lu, i: %lu\n",
-                                   *key, i);
-                        if (*((int32_t *)recordBuffer) !=
-                            *((int32_t *)((int8_t *)buf + 4))) {
-                            printf(
-                                "ERROR: Wrong data for: Key: %lu Data: %lu\n",
+                            printf("ERROR: Failed to find key: %lu, i: %lu\n", *key, i);
+                        if (*((int32_t *)recordBuffer) != *((int32_t *)((int8_t *)buf + 4))) {
+                            printf("ERROR: Wrong data for: Key: %lu Data: %lu\n",
                                 *key, *((int32_t *)recordBuffer));
                             printf("%lu %d %d %d\n", *((uint32_t *)buf),
                                    *((int32_t *)((int8_t *)buf + 4)),
@@ -569,18 +562,16 @@ void runalltests_sbits() {
                             l = i / stepSize - 1;
                             printf("Num: %lu KEY: %lu\n", i, *key);
                             if (l < numSteps && l >= 0) {
-                                rtimes[l][r] =
-                                    ((clock() - start) * 1000) / CLOCKS_PER_SEC;
+                                rtimes[l][r] = ((clock() - start) * 1000) / CLOCKS_PER_SEC;
                                 rreads[l][r] = state->numReads;
                                 rhits[l][r] = state->bufferHits;
                             }
                         }
                         i++;
-                        if (i == numRecords ||
-                            i == testRecords) /* Allows ending test after set
-                                                 number of records rather than
-                                                 processing entire file */
+						/* Allows ending test after set number of records rather than processing entire file */
+                        if (i == numRecords || i == testRecords) {
                             goto donetest;
+						}
                     }
                 }
             donetest:
@@ -591,8 +582,7 @@ void runalltests_sbits() {
                 int32_t num = maxRange - minRange;
                 printf("Rge: %d Rand max: %d\n", num, RAND_MAX);
                 while (i < numRecords) {
-                    double scaled =
-                        ((double)rand() * (double)rand()) / RAND_MAX / RAND_MAX;
+                    double scaled = ((double)rand() * (double)rand()) / RAND_MAX / RAND_MAX;
                     int32_t key = (num + 1) * scaled + minRange;
 
                     // printf("Key :%d\n", key);
@@ -606,8 +596,7 @@ void runalltests_sbits() {
                         l = i / stepSize - 1;
                         printf("Num: %lu KEY: %lu\n", i, key);
                         if (l < numSteps && l >= 0) {
-                            rtimes[l][r] =
-                                ((clock() - start) * 1000) / CLOCKS_PER_SEC;
+                            rtimes[l][r] = ((clock() - start) * 1000) / CLOCKS_PER_SEC;
                             rreads[l][r] = state->numReads;
                             rhits[l][r] = state->bufferHits;
                         }
@@ -654,20 +643,13 @@ void runalltests_sbits() {
                     }
                     // printf("Read records: %d\n", rec);
                     // printStats(state);
-                    printf(
-                        "Num: %lu KEY: %lu Perc: %d Records: %d Reads: %d \n",
-                        i, mv,
-                        ((state->numReads - reads) * 1000 /
-                         (state->nextPageWriteId - 1)),
-                        rec, (state->numReads - reads));
+                    printf("Num: %lu KEY: %lu Perc: %d Records: %d Reads: %d \n", i, mv, ((state->numReads - reads) * 1000 / (state->nextPageWriteId - 1)), rec, (state->numReads - reads));
 
                     if (i % 100 == 0) {
                         l = i / 100 - 1;
-                        printf("Num: %lu KEY: %lu Records: %d Reads: %d\n", i,
-                               mv, rec, (state->numReads - reads));
+                        printf("Num: %lu KEY: %lu Records: %d Reads: %d\n", i, mv, rec, (state->numReads - reads));
                         if (l < numSteps && l >= 0) {
-                            rtimes[l][r] =
-                                ((clock() - start) * 1000) / CLOCKS_PER_SEC;
+                            rtimes[l][r] = ((clock() - start) * 1000) / CLOCKS_PER_SEC;
                             rreads[l][r] = state->numReads;
                             rhits[l][r] = state->bufferHits;
                         }
