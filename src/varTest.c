@@ -41,7 +41,7 @@ uint8_t dataEquals(void *varData, uint32_t length, Node *node);
 void randomVarData(uint32_t chance, uint32_t sizeLowerBound, uint32_t sizeUpperBound, uint8_t *usingVarData, uint32_t *length, void **varData);
 int retrieveData(sbitsState *state, int32_t key, int8_t *recordBuffer);
 
-void main() {
+int main() {
     printf("\nSTARTING SBITS VARIABLE DATA TESTS.\n");
 
     // Two extra bufferes required for variable data
@@ -171,7 +171,7 @@ void main() {
 
         if (sbitsInit(state, splineMaxError) != 0) {
             printf("Initialization error.\n");
-            return;
+            return 1;
         } else {
             printf("Initialization success.\n");
         }
@@ -202,7 +202,7 @@ void main() {
                 if (TEST_TYPE == 0) {
                     randomVarData(10, 10, 100, &hasVarData, &length, &variableData);
                 } else if (TEST_TYPE == 1) {
-                    imageVarData(0.05, "test.png", &hasVarData, &length, &variableData);
+                    imageVarData(0.05, "data/test.png", &hasVarData, &length, &variableData);
                 } else if (TEST_TYPE == 2) {
                     hasVarData = 1;
                     length = 15;
@@ -269,7 +269,7 @@ void main() {
                     if (TEST_TYPE == 0) {
                         randomVarData(10, 10, 100, &hasVarData, &length, &variableData);
                     } else if (TEST_TYPE == 1) {
-                        imageVarData(0.05, "test.png", &hasVarData, &length, &variableData);
+                        imageVarData(0.05, "data/test.png", &hasVarData, &length, &variableData);
                     } else if (TEST_TYPE == 2) {
                         hasVarData = 1;
                         length = 15;
@@ -372,7 +372,7 @@ void main() {
                     }
                     if (validationHead == NULL) {
                         printf("ERROR: No validation data for: %lu\n", i);
-                        return;
+                        return 1;
                     }
                     // Check that the var data is correct
                     if (!dataEquals(varData, length, validationHead)) {
@@ -452,7 +452,7 @@ void main() {
                             }
                             if (validationHead == NULL) {
                                 printf("ERROR: No validation data for: %lu\n", *key);
-                                return;
+                                return 1;
                             }
                             // Check that the var data is correct
                             if (!dataEquals(varData, length, validationHead)) {
@@ -686,6 +686,7 @@ void main() {
         }
         printf("\t%lu\n", sum / r);
     }
+    return 0;
 }
 
 /* A bitmap with 8 buckets (bits). Range 0 to 100. */
@@ -906,7 +907,6 @@ void imageVarData(float chance, char *filename, uint8_t *usingVarData, uint32_t 
     *usingVarData = (rand() % 100) / 100.0 < chance;
     if (usingVarData) {
         *length = readImageFromFile(varData, filename);
-        // printf("Length from file: %i\n", *length);
         if (*length == -1) {
             printf("ERROR: Failed to read image '%s'\n", filename);
             exit(-1);
@@ -933,14 +933,17 @@ void randomVarData(uint32_t chance, uint32_t sizeLowerBound, uint32_t sizeUpperB
 void retrieveImageData(void **varData, uint32_t length, int32_t key, char *filename, char *filetype) {
     int numDigits = log10(key) + 1;
     char *keyAsString = calloc(numDigits, sizeof(char));
+    char destinationFolder[17] = "build/artifacts/";
     itoa(key, keyAsString, 10);
+    uint32_t destinationFolderLength = strlen(destinationFolder);
     uint32_t filenameLength = strlen(filename);
     uint32_t filetypeLength = strlen(filetype);
-    uint32_t totalLength = filenameLength + numDigits + filetypeLength;
+    uint32_t totalLength = filenameLength + numDigits + filetypeLength + destinationFolderLength + 1;
     char *file = calloc(totalLength, sizeof(char));
-    strncpy(file, filename, filenameLength);
-    strncpy(file + filenameLength, keyAsString, numDigits);
-    strncpy(file + filenameLength + numDigits, filetype, filetypeLength);
+    strncpy(file, destinationFolder, destinationFolderLength);
+    strncpy(file + destinationFolderLength, filename, filenameLength);
+    strncpy(file + filenameLength + destinationFolderLength, keyAsString, numDigits);
+    strncpy(file + filenameLength + numDigits + destinationFolderLength, filetype, filetypeLength);
     strncpy(file + totalLength, "\0", 1);
     writeDataToFile(*varData, file, length);
 }
