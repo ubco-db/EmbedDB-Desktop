@@ -7,19 +7,21 @@ on:
     branches: [ "main" ]
 
 jobs:
-  run-formatting-check:
-    name: Formating Check
+  run-linters:
+    name: Run Linter
     runs-on: ubuntu-latest
 
     steps:
       - name: Check out Git repository
         uses: actions/checkout@v3
 
-      - name: Check Format
-        uses: jidicula/clang-format-action@v4.11.0
+      - name: Install ClangFormat
+        run: sudo apt-get install -y clang-format
+
+      - name: Lint
+        uses: wearerequired/lint-action@v2
         with:
-          clang-format-version: '17'
-          check-path: 'src'
+          clang_format: true
 
   build:
     name: Build and Run Tests
