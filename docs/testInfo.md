@@ -9,6 +9,9 @@ This project is tested using the [Unity](https://github.com/ThrowTheSwitch/Unity
 - pip:
   - 23.0
 
+- GNU Make:
+  - 4.4
+
 #### Executing the tests
 
 To run the tests, you must run the [makefile](../makefile) using the command `make`. Depending on your operating system, you may have to install make, and the command may be different.

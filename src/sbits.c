@@ -214,7 +214,7 @@ int8_t sbitsInit(sbitsState *state, size_t indexMaxError) {
     state->avgKeyDiff = 1;
 
     /* Setup data file. */
-    state->file = fopen("datafile.bin", "w+b");
+    state->file = fopen("build/artifacts/datafile.bin", "w+b");
     if (state->file == NULL) {
         printf("Error: Can't open file!\n");
         return -1;
@@ -226,7 +226,7 @@ int8_t sbitsInit(sbitsState *state, size_t indexMaxError) {
             state->parameters -= SBITS_USE_INDEX;
         } else {
             /* Setup index file. */
-            state->indexFile = fopen("indexfile.bin", "w+b");
+            state->indexFile = fopen("build/artifacts/indexfile.bin", "w+b");
             if (state->indexFile == NULL) {
                 printf("Error: Can't open index file!\n");
                 return -1;
@@ -271,7 +271,7 @@ int8_t sbitsInit(sbitsState *state, size_t indexMaxError) {
             state->parameters -= SBITS_USE_VDATA;
         } else {
             // SETUP FILE
-            state->varFile = fopen("varFile.bin", "w+b");
+            state->varFile = fopen("build/artifacts/varFile.bin", "w+b");
             if (state->varFile == NULL) {
                 printf("Error: Can't open variable data file!\n");
                 return -1;
