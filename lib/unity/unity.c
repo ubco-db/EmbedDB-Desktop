@@ -752,47 +752,47 @@ void UnityAssertEqualIntArray(UNITY_INTERNAL_PTR expected,
         UNITY_INT actual_val;
 
         switch (length) {
-        case 1:
-            expect_val = *(UNITY_PTR_ATTRIBUTE const UNITY_INT8 *)expected;
-            actual_val = *(UNITY_PTR_ATTRIBUTE const UNITY_INT8 *)actual;
-            if (style & (UNITY_DISPLAY_RANGE_UINT | UNITY_DISPLAY_RANGE_HEX)) {
-                expect_val &= 0x000000FF;
-                actual_val &= 0x000000FF;
-            }
-            increment = sizeof(UNITY_INT8);
-            break;
+            case 1:
+                expect_val = *(UNITY_PTR_ATTRIBUTE const UNITY_INT8 *)expected;
+                actual_val = *(UNITY_PTR_ATTRIBUTE const UNITY_INT8 *)actual;
+                if (style & (UNITY_DISPLAY_RANGE_UINT | UNITY_DISPLAY_RANGE_HEX)) {
+                    expect_val &= 0x000000FF;
+                    actual_val &= 0x000000FF;
+                }
+                increment = sizeof(UNITY_INT8);
+                break;
 
-        case 2:
-            expect_val = *(UNITY_PTR_ATTRIBUTE const UNITY_INT16 *)expected;
-            actual_val = *(UNITY_PTR_ATTRIBUTE const UNITY_INT16 *)actual;
-            if (style & (UNITY_DISPLAY_RANGE_UINT | UNITY_DISPLAY_RANGE_HEX)) {
-                expect_val &= 0x0000FFFF;
-                actual_val &= 0x0000FFFF;
-            }
-            increment = sizeof(UNITY_INT16);
-            break;
+            case 2:
+                expect_val = *(UNITY_PTR_ATTRIBUTE const UNITY_INT16 *)expected;
+                actual_val = *(UNITY_PTR_ATTRIBUTE const UNITY_INT16 *)actual;
+                if (style & (UNITY_DISPLAY_RANGE_UINT | UNITY_DISPLAY_RANGE_HEX)) {
+                    expect_val &= 0x0000FFFF;
+                    actual_val &= 0x0000FFFF;
+                }
+                increment = sizeof(UNITY_INT16);
+                break;
 
 #ifdef UNITY_SUPPORT_64
-        case 8:
-            expect_val = *(UNITY_PTR_ATTRIBUTE const UNITY_INT64 *)expected;
-            actual_val = *(UNITY_PTR_ATTRIBUTE const UNITY_INT64 *)actual;
-            increment = sizeof(UNITY_INT64);
-            break;
+            case 8:
+                expect_val = *(UNITY_PTR_ATTRIBUTE const UNITY_INT64 *)expected;
+                actual_val = *(UNITY_PTR_ATTRIBUTE const UNITY_INT64 *)actual;
+                increment = sizeof(UNITY_INT64);
+                break;
 #endif
 
-        default: /* default is length 4 bytes */
-        case 4:
-            expect_val = *(UNITY_PTR_ATTRIBUTE const UNITY_INT32 *)expected;
-            actual_val = *(UNITY_PTR_ATTRIBUTE const UNITY_INT32 *)actual;
+            default: /* default is length 4 bytes */
+            case 4:
+                expect_val = *(UNITY_PTR_ATTRIBUTE const UNITY_INT32 *)expected;
+                actual_val = *(UNITY_PTR_ATTRIBUTE const UNITY_INT32 *)actual;
 #ifdef UNITY_SUPPORT_64
-            if (style & (UNITY_DISPLAY_RANGE_UINT | UNITY_DISPLAY_RANGE_HEX)) {
-                expect_val &= 0x00000000FFFFFFFF;
-                actual_val &= 0x00000000FFFFFFFF;
-            }
+                if (style & (UNITY_DISPLAY_RANGE_UINT | UNITY_DISPLAY_RANGE_HEX)) {
+                    expect_val &= 0x00000000FFFFFFFF;
+                    actual_val &= 0x00000000FFFFFFFF;
+                }
 #endif
-            increment = sizeof(UNITY_INT32);
-            length = 4;
-            break;
+                increment = sizeof(UNITY_INT32);
+                length = 4;
+                break;
         }
 
         if (expect_val != actual_val) {
@@ -1020,29 +1020,29 @@ void UnityAssertFloatSpecial(const UNITY_FLOAT actual,
     RETURN_IF_FAIL_OR_IGNORE;
 
     switch (style) {
-    case UNITY_FLOAT_IS_INF:
-    case UNITY_FLOAT_IS_NOT_INF:
-        is_trait = isinf(actual) && (actual > 0);
-        break;
-    case UNITY_FLOAT_IS_NEG_INF:
-    case UNITY_FLOAT_IS_NOT_NEG_INF:
-        is_trait = isinf(actual) && (actual < 0);
-        break;
+        case UNITY_FLOAT_IS_INF:
+        case UNITY_FLOAT_IS_NOT_INF:
+            is_trait = isinf(actual) && (actual > 0);
+            break;
+        case UNITY_FLOAT_IS_NEG_INF:
+        case UNITY_FLOAT_IS_NOT_NEG_INF:
+            is_trait = isinf(actual) && (actual < 0);
+            break;
 
-    case UNITY_FLOAT_IS_NAN:
-    case UNITY_FLOAT_IS_NOT_NAN:
-        is_trait = isnan(actual) ? 1 : 0;
-        break;
+        case UNITY_FLOAT_IS_NAN:
+        case UNITY_FLOAT_IS_NOT_NAN:
+            is_trait = isnan(actual) ? 1 : 0;
+            break;
 
-    case UNITY_FLOAT_IS_DET: /* A determinate number is non infinite and not NaN. */
-    case UNITY_FLOAT_IS_NOT_DET:
-        is_trait = !isinf(actual) && !isnan(actual);
-        break;
+        case UNITY_FLOAT_IS_DET: /* A determinate number is non infinite and not NaN. */
+        case UNITY_FLOAT_IS_NOT_DET:
+            is_trait = !isinf(actual) && !isnan(actual);
+            break;
 
-    default: /* including UNITY_FLOAT_INVALID_TRAIT */
-        trait_index = 0;
-        trait_names[0] = UnityStrInvalidFloatTrait;
-        break;
+        default: /* including UNITY_FLOAT_INVALID_TRAIT */
+            trait_index = 0;
+            trait_names[0] = UnityStrInvalidFloatTrait;
+            break;
     }
 
     if (is_trait != should_be_trait) {
@@ -1235,29 +1235,29 @@ void UnityAssertDoubleSpecial(const UNITY_DOUBLE actual,
     RETURN_IF_FAIL_OR_IGNORE;
 
     switch (style) {
-    case UNITY_FLOAT_IS_INF:
-    case UNITY_FLOAT_IS_NOT_INF:
-        is_trait = isinf(actual) && (actual > 0);
-        break;
-    case UNITY_FLOAT_IS_NEG_INF:
-    case UNITY_FLOAT_IS_NOT_NEG_INF:
-        is_trait = isinf(actual) && (actual < 0);
-        break;
+        case UNITY_FLOAT_IS_INF:
+        case UNITY_FLOAT_IS_NOT_INF:
+            is_trait = isinf(actual) && (actual > 0);
+            break;
+        case UNITY_FLOAT_IS_NEG_INF:
+        case UNITY_FLOAT_IS_NOT_NEG_INF:
+            is_trait = isinf(actual) && (actual < 0);
+            break;
 
-    case UNITY_FLOAT_IS_NAN:
-    case UNITY_FLOAT_IS_NOT_NAN:
-        is_trait = isnan(actual) ? 1 : 0;
-        break;
+        case UNITY_FLOAT_IS_NAN:
+        case UNITY_FLOAT_IS_NOT_NAN:
+            is_trait = isnan(actual) ? 1 : 0;
+            break;
 
-    case UNITY_FLOAT_IS_DET: /* A determinate number is non infinite and not NaN. */
-    case UNITY_FLOAT_IS_NOT_DET:
-        is_trait = !isinf(actual) && !isnan(actual);
-        break;
+        case UNITY_FLOAT_IS_DET: /* A determinate number is non infinite and not NaN. */
+        case UNITY_FLOAT_IS_NOT_DET:
+            is_trait = !isinf(actual) && !isnan(actual);
+            break;
 
-    default: /* including UNITY_FLOAT_INVALID_TRAIT */
-        trait_index = 0;
-        trait_names[0] = UnityStrInvalidFloatTrait;
-        break;
+        default: /* including UNITY_FLOAT_INVALID_TRAIT */
+            trait_index = 0;
+            trait_names[0] = UnityStrInvalidFloatTrait;
+            break;
     }
 
     if (is_trait != should_be_trait) {
@@ -1355,61 +1355,61 @@ void UnityAssertNumbersArrayWithin(const UNITY_UINT delta,
         UNITY_INT actual_val;
 
         switch (length) {
-        case 1:
-            /* fixing problems with signed overflow on unsigned numbers */
-            if ((style & UNITY_DISPLAY_RANGE_INT) == UNITY_DISPLAY_RANGE_INT) {
-                expect_val = *(UNITY_PTR_ATTRIBUTE const UNITY_INT8 *)expected;
-                actual_val = *(UNITY_PTR_ATTRIBUTE const UNITY_INT8 *)actual;
-                increment = sizeof(UNITY_INT8);
-            } else {
-                expect_val = (UNITY_INT) * (UNITY_PTR_ATTRIBUTE const UNITY_UINT8 *)expected;
-                actual_val = (UNITY_INT) * (UNITY_PTR_ATTRIBUTE const UNITY_UINT8 *)actual;
-                increment = sizeof(UNITY_UINT8);
-            }
-            break;
+            case 1:
+                /* fixing problems with signed overflow on unsigned numbers */
+                if ((style & UNITY_DISPLAY_RANGE_INT) == UNITY_DISPLAY_RANGE_INT) {
+                    expect_val = *(UNITY_PTR_ATTRIBUTE const UNITY_INT8 *)expected;
+                    actual_val = *(UNITY_PTR_ATTRIBUTE const UNITY_INT8 *)actual;
+                    increment = sizeof(UNITY_INT8);
+                } else {
+                    expect_val = (UNITY_INT) * (UNITY_PTR_ATTRIBUTE const UNITY_UINT8 *)expected;
+                    actual_val = (UNITY_INT) * (UNITY_PTR_ATTRIBUTE const UNITY_UINT8 *)actual;
+                    increment = sizeof(UNITY_UINT8);
+                }
+                break;
 
-        case 2:
-            /* fixing problems with signed overflow on unsigned numbers */
-            if ((style & UNITY_DISPLAY_RANGE_INT) == UNITY_DISPLAY_RANGE_INT) {
-                expect_val = *(UNITY_PTR_ATTRIBUTE const UNITY_INT16 *)expected;
-                actual_val = *(UNITY_PTR_ATTRIBUTE const UNITY_INT16 *)actual;
-                increment = sizeof(UNITY_INT16);
-            } else {
-                expect_val = (UNITY_INT) * (UNITY_PTR_ATTRIBUTE const UNITY_UINT16 *)expected;
-                actual_val = (UNITY_INT) * (UNITY_PTR_ATTRIBUTE const UNITY_UINT16 *)actual;
-                increment = sizeof(UNITY_UINT16);
-            }
-            break;
+            case 2:
+                /* fixing problems with signed overflow on unsigned numbers */
+                if ((style & UNITY_DISPLAY_RANGE_INT) == UNITY_DISPLAY_RANGE_INT) {
+                    expect_val = *(UNITY_PTR_ATTRIBUTE const UNITY_INT16 *)expected;
+                    actual_val = *(UNITY_PTR_ATTRIBUTE const UNITY_INT16 *)actual;
+                    increment = sizeof(UNITY_INT16);
+                } else {
+                    expect_val = (UNITY_INT) * (UNITY_PTR_ATTRIBUTE const UNITY_UINT16 *)expected;
+                    actual_val = (UNITY_INT) * (UNITY_PTR_ATTRIBUTE const UNITY_UINT16 *)actual;
+                    increment = sizeof(UNITY_UINT16);
+                }
+                break;
 
 #ifdef UNITY_SUPPORT_64
-        case 8:
-            /* fixing problems with signed overflow on unsigned numbers */
-            if ((style & UNITY_DISPLAY_RANGE_INT) == UNITY_DISPLAY_RANGE_INT) {
-                expect_val = *(UNITY_PTR_ATTRIBUTE const UNITY_INT64 *)expected;
-                actual_val = *(UNITY_PTR_ATTRIBUTE const UNITY_INT64 *)actual;
-                increment = sizeof(UNITY_INT64);
-            } else {
-                expect_val = (UNITY_INT) * (UNITY_PTR_ATTRIBUTE const UNITY_UINT64 *)expected;
-                actual_val = (UNITY_INT) * (UNITY_PTR_ATTRIBUTE const UNITY_UINT64 *)actual;
-                increment = sizeof(UNITY_UINT64);
-            }
-            break;
+            case 8:
+                /* fixing problems with signed overflow on unsigned numbers */
+                if ((style & UNITY_DISPLAY_RANGE_INT) == UNITY_DISPLAY_RANGE_INT) {
+                    expect_val = *(UNITY_PTR_ATTRIBUTE const UNITY_INT64 *)expected;
+                    actual_val = *(UNITY_PTR_ATTRIBUTE const UNITY_INT64 *)actual;
+                    increment = sizeof(UNITY_INT64);
+                } else {
+                    expect_val = (UNITY_INT) * (UNITY_PTR_ATTRIBUTE const UNITY_UINT64 *)expected;
+                    actual_val = (UNITY_INT) * (UNITY_PTR_ATTRIBUTE const UNITY_UINT64 *)actual;
+                    increment = sizeof(UNITY_UINT64);
+                }
+                break;
 #endif
 
-        default: /* default is length 4 bytes */
-        case 4:
-            /* fixing problems with signed overflow on unsigned numbers */
-            if ((style & UNITY_DISPLAY_RANGE_INT) == UNITY_DISPLAY_RANGE_INT) {
-                expect_val = *(UNITY_PTR_ATTRIBUTE const UNITY_INT32 *)expected;
-                actual_val = *(UNITY_PTR_ATTRIBUTE const UNITY_INT32 *)actual;
-                increment = sizeof(UNITY_INT32);
-            } else {
-                expect_val = (UNITY_INT) * (UNITY_PTR_ATTRIBUTE const UNITY_UINT32 *)expected;
-                actual_val = (UNITY_INT) * (UNITY_PTR_ATTRIBUTE const UNITY_UINT32 *)actual;
-                increment = sizeof(UNITY_UINT32);
-            }
-            length = 4;
-            break;
+            default: /* default is length 4 bytes */
+            case 4:
+                /* fixing problems with signed overflow on unsigned numbers */
+                if ((style & UNITY_DISPLAY_RANGE_INT) == UNITY_DISPLAY_RANGE_INT) {
+                    expect_val = *(UNITY_PTR_ATTRIBUTE const UNITY_INT32 *)expected;
+                    actual_val = *(UNITY_PTR_ATTRIBUTE const UNITY_INT32 *)actual;
+                    increment = sizeof(UNITY_INT32);
+                } else {
+                    expect_val = (UNITY_INT) * (UNITY_PTR_ATTRIBUTE const UNITY_UINT32 *)expected;
+                    actual_val = (UNITY_INT) * (UNITY_PTR_ATTRIBUTE const UNITY_UINT32 *)actual;
+                    increment = sizeof(UNITY_UINT32);
+                }
+                length = 4;
+                break;
         }
 
         if ((style & UNITY_DISPLAY_RANGE_INT) == UNITY_DISPLAY_RANGE_INT) {
@@ -1665,23 +1665,23 @@ static union {
 
 UNITY_INTERNAL_PTR UnityNumToPtr(const UNITY_INT num, const UNITY_UINT8 size) {
     switch (size) {
-    case 1:
-        UnityQuickCompare.i8 = (UNITY_INT8)num;
-        return (UNITY_INTERNAL_PTR)(&UnityQuickCompare.i8);
+        case 1:
+            UnityQuickCompare.i8 = (UNITY_INT8)num;
+            return (UNITY_INTERNAL_PTR)(&UnityQuickCompare.i8);
 
-    case 2:
-        UnityQuickCompare.i16 = (UNITY_INT16)num;
-        return (UNITY_INTERNAL_PTR)(&UnityQuickCompare.i16);
+        case 2:
+            UnityQuickCompare.i16 = (UNITY_INT16)num;
+            return (UNITY_INTERNAL_PTR)(&UnityQuickCompare.i16);
 
 #ifdef UNITY_SUPPORT_64
-    case 8:
-        UnityQuickCompare.i64 = (UNITY_INT64)num;
-        return (UNITY_INTERNAL_PTR)(&UnityQuickCompare.i64);
+        case 8:
+            UnityQuickCompare.i64 = (UNITY_INT64)num;
+            return (UNITY_INTERNAL_PTR)(&UnityQuickCompare.i64);
 #endif
 
-    default: /* 4 bytes */
-        UnityQuickCompare.i32 = (UNITY_INT32)num;
-        return (UNITY_INTERNAL_PTR)(&UnityQuickCompare.i32);
+        default: /* 4 bytes */
+            UnityQuickCompare.i32 = (UNITY_INT32)num;
+            return (UNITY_INTERNAL_PTR)(&UnityQuickCompare.i32);
     }
 }
 
@@ -1716,58 +1716,58 @@ enum UnityLengthModifier {
 #define UNITY_EXTRACT_ARG(NUMBER_T, NUMBER, LENGTH_MOD, VA, ARG_T) \
     do {                                                           \
         switch (LENGTH_MOD) {                                      \
-        case UNITY_LENGTH_MODIFIER_LONG_LONG: {                    \
-            NUMBER = (NUMBER_T)va_arg(VA, long long ARG_T);        \
-            break;                                                 \
-        }                                                          \
-        case UNITY_LENGTH_MODIFIER_LONG: {                         \
-            NUMBER = (NUMBER_T)va_arg(VA, long ARG_T);             \
-            break;                                                 \
-        }                                                          \
-        case UNITY_LENGTH_MODIFIER_NONE:                           \
-        default: {                                                 \
-            NUMBER = (NUMBER_T)va_arg(VA, ARG_T);                  \
-            break;                                                 \
-        }                                                          \
+            case UNITY_LENGTH_MODIFIER_LONG_LONG: {                \
+                NUMBER = (NUMBER_T)va_arg(VA, long long ARG_T);    \
+                break;                                             \
+            }                                                      \
+            case UNITY_LENGTH_MODIFIER_LONG: {                     \
+                NUMBER = (NUMBER_T)va_arg(VA, long ARG_T);         \
+                break;                                             \
+            }                                                      \
+            case UNITY_LENGTH_MODIFIER_NONE:                       \
+            default: {                                             \
+                NUMBER = (NUMBER_T)va_arg(VA, ARG_T);              \
+                break;                                             \
+            }                                                      \
         }                                                          \
     } while (0)
 
 static enum UnityLengthModifier UnityLengthModifierGet(const char *pch, int *length) {
     enum UnityLengthModifier length_mod;
     switch (pch[0]) {
-    case 'l': {
-        if (pch[1] == 'l') {
-            *length = 2;
-            length_mod = UNITY_LENGTH_MODIFIER_LONG_LONG;
-        } else {
-            *length = 1;
-            length_mod = UNITY_LENGTH_MODIFIER_LONG;
+        case 'l': {
+            if (pch[1] == 'l') {
+                *length = 2;
+                length_mod = UNITY_LENGTH_MODIFIER_LONG_LONG;
+            } else {
+                *length = 1;
+                length_mod = UNITY_LENGTH_MODIFIER_LONG;
+            }
+            break;
         }
-        break;
-    }
-    case 'h': {
-        // short and char are converted to int
-        length_mod = UNITY_LENGTH_MODIFIER_NONE;
-        if (pch[1] == 'h') {
-            *length = 2;
-        } else {
-            *length = 1;
+        case 'h': {
+            // short and char are converted to int
+            length_mod = UNITY_LENGTH_MODIFIER_NONE;
+            if (pch[1] == 'h') {
+                *length = 2;
+            } else {
+                *length = 1;
+            }
+            break;
         }
-        break;
-    }
-    case 'j':
-    case 'z':
-    case 't':
-    case 'L': {
-        // Not supported, but should gobble up the length specifier anyway
-        length_mod = UNITY_LENGTH_MODIFIER_NONE;
-        *length = 1;
-        break;
-    }
-    default: {
-        length_mod = UNITY_LENGTH_MODIFIER_NONE;
-        *length = 0;
-    }
+        case 'j':
+        case 'z':
+        case 't':
+        case 'L': {
+            // Not supported, but should gobble up the length specifier anyway
+            length_mod = UNITY_LENGTH_MODIFIER_NONE;
+            *length = 1;
+            break;
+        }
+        default: {
+            length_mod = UNITY_LENGTH_MODIFIER_NONE;
+            *length = 0;
+        }
     }
     return length_mod;
 }
@@ -1789,72 +1789,72 @@ static void UnityPrintFVA(const char *format, va_list va) {
                     pch += length_mod_size;
 
                     switch (*pch) {
-                    case 'd':
-                    case 'i': {
-                        UNITY_INT number;
-                        UNITY_EXTRACT_ARG(UNITY_INT, number, length_mod, va, int);
-                        UnityPrintNumber((UNITY_INT)number);
-                        break;
-                    }
+                        case 'd':
+                        case 'i': {
+                            UNITY_INT number;
+                            UNITY_EXTRACT_ARG(UNITY_INT, number, length_mod, va, int);
+                            UnityPrintNumber((UNITY_INT)number);
+                            break;
+                        }
 #ifndef UNITY_EXCLUDE_FLOAT_PRINT
-                    case 'f':
-                    case 'g': {
-                        const double number = va_arg(va, double);
-                        UnityPrintFloat((UNITY_DOUBLE)number);
-                        break;
-                    }
+                        case 'f':
+                        case 'g': {
+                            const double number = va_arg(va, double);
+                            UnityPrintFloat((UNITY_DOUBLE)number);
+                            break;
+                        }
 #endif
-                    case 'u': {
-                        UNITY_UINT number;
-                        UNITY_EXTRACT_ARG(UNITY_UINT, number, length_mod, va, unsigned int);
-                        UnityPrintNumberUnsigned(number);
-                        break;
-                    }
-                    case 'b': {
-                        UNITY_UINT number;
-                        UNITY_EXTRACT_ARG(UNITY_UINT, number, length_mod, va, unsigned int);
-                        const UNITY_UINT mask = (UNITY_UINT)0 - (UNITY_UINT)1;
-                        UNITY_OUTPUT_CHAR('0');
-                        UNITY_OUTPUT_CHAR('b');
-                        UnityPrintMask(mask, number);
-                        break;
-                    }
-                    case 'x':
-                    case 'X': {
-                        UNITY_UINT number;
-                        UNITY_EXTRACT_ARG(UNITY_UINT, number, length_mod, va, unsigned int);
-                        UNITY_OUTPUT_CHAR('0');
-                        UNITY_OUTPUT_CHAR('x');
-                        UnityPrintNumberHex(number, 8);
-                        break;
-                    }
-                    case 'p': {
-                        const unsigned int number = va_arg(va, unsigned int);
-                        UNITY_OUTPUT_CHAR('0');
-                        UNITY_OUTPUT_CHAR('x');
-                        UnityPrintNumberHex((UNITY_UINT)number, 8);
-                        break;
-                    }
-                    case 'c': {
-                        const int ch = va_arg(va, int);
-                        UnityPrintChar((const char *)&ch);
-                        break;
-                    }
-                    case 's': {
-                        const char *string = va_arg(va, const char *);
-                        UnityPrint(string);
-                        break;
-                    }
-                    case '%': {
-                        UnityPrintChar(pch);
-                        break;
-                    }
-                    default: {
-                        /* print the unknown format character */
-                        UNITY_OUTPUT_CHAR('%');
-                        UnityPrintChar(pch);
-                        break;
-                    }
+                        case 'u': {
+                            UNITY_UINT number;
+                            UNITY_EXTRACT_ARG(UNITY_UINT, number, length_mod, va, unsigned int);
+                            UnityPrintNumberUnsigned(number);
+                            break;
+                        }
+                        case 'b': {
+                            UNITY_UINT number;
+                            UNITY_EXTRACT_ARG(UNITY_UINT, number, length_mod, va, unsigned int);
+                            const UNITY_UINT mask = (UNITY_UINT)0 - (UNITY_UINT)1;
+                            UNITY_OUTPUT_CHAR('0');
+                            UNITY_OUTPUT_CHAR('b');
+                            UnityPrintMask(mask, number);
+                            break;
+                        }
+                        case 'x':
+                        case 'X': {
+                            UNITY_UINT number;
+                            UNITY_EXTRACT_ARG(UNITY_UINT, number, length_mod, va, unsigned int);
+                            UNITY_OUTPUT_CHAR('0');
+                            UNITY_OUTPUT_CHAR('x');
+                            UnityPrintNumberHex(number, 8);
+                            break;
+                        }
+                        case 'p': {
+                            const unsigned int number = va_arg(va, unsigned int);
+                            UNITY_OUTPUT_CHAR('0');
+                            UNITY_OUTPUT_CHAR('x');
+                            UnityPrintNumberHex((UNITY_UINT)number, 8);
+                            break;
+                        }
+                        case 'c': {
+                            const int ch = va_arg(va, int);
+                            UnityPrintChar((const char *)&ch);
+                            break;
+                        }
+                        case 's': {
+                            const char *string = va_arg(va, const char *);
+                            UnityPrint(string);
+                            break;
+                        }
+                        case '%': {
+                            UnityPrintChar(pch);
+                            break;
+                        }
+                        default: {
+                            /* print the unknown format character */
+                            UNITY_OUTPUT_CHAR('%');
+                            UnityPrintChar(pch);
+                            break;
+                        }
                     }
                 }
             }
@@ -2038,42 +2038,42 @@ int UnityParseOptions(int argc, char **argv) {
     for (i = 1; i < argc; i++) {
         if (argv[i][0] == '-') {
             switch (argv[i][1]) {
-            case 'l': /* list tests */
-                return -1;
-            case 'n': /* include tests with name including this string */
-            case 'f': /* an alias for -n */
-                if (argv[i][2] == '=') {
-                    UnityOptionIncludeNamed = &argv[i][3];
-                } else if (++i < argc) {
-                    UnityOptionIncludeNamed = argv[i];
-                } else {
-                    UnityPrint("ERROR: No Test String to Include Matches For");
+                case 'l': /* list tests */
+                    return -1;
+                case 'n': /* include tests with name including this string */
+                case 'f': /* an alias for -n */
+                    if (argv[i][2] == '=') {
+                        UnityOptionIncludeNamed = &argv[i][3];
+                    } else if (++i < argc) {
+                        UnityOptionIncludeNamed = argv[i];
+                    } else {
+                        UnityPrint("ERROR: No Test String to Include Matches For");
+                        UNITY_PRINT_EOL();
+                        return 1;
+                    }
+                    break;
+                case 'q': /* quiet */
+                    UnityVerbosity = 0;
+                    break;
+                case 'v': /* verbose */
+                    UnityVerbosity = 2;
+                    break;
+                case 'x': /* exclude tests with name including this string */
+                    if (argv[i][2] == '=') {
+                        UnityOptionExcludeNamed = &argv[i][3];
+                    } else if (++i < argc) {
+                        UnityOptionExcludeNamed = argv[i];
+                    } else {
+                        UnityPrint("ERROR: No Test String to Exclude Matches For");
+                        UNITY_PRINT_EOL();
+                        return 1;
+                    }
+                    break;
+                default:
+                    UnityPrint("ERROR: Unknown Option ");
+                    UNITY_OUTPUT_CHAR(argv[i][1]);
                     UNITY_PRINT_EOL();
                     return 1;
-                }
-                break;
-            case 'q': /* quiet */
-                UnityVerbosity = 0;
-                break;
-            case 'v': /* verbose */
-                UnityVerbosity = 2;
-                break;
-            case 'x': /* exclude tests with name including this string */
-                if (argv[i][2] == '=') {
-                    UnityOptionExcludeNamed = &argv[i][3];
-                } else if (++i < argc) {
-                    UnityOptionExcludeNamed = argv[i];
-                } else {
-                    UnityPrint("ERROR: No Test String to Exclude Matches For");
-                    UNITY_PRINT_EOL();
-                    return 1;
-                }
-                break;
-            default:
-                UnityPrint("ERROR: Unknown Option ");
-                UNITY_OUTPUT_CHAR(argv[i][1]);
-                UNITY_PRINT_EOL();
-                return 1;
             }
         }
     }
