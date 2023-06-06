@@ -19,9 +19,7 @@ jobs:
         run: sudo apt-get install -y clang-format
 
       - name: Lint
-        uses: wearerequired/lint-action@v2
-        with:
-          clang_format: true
+        run: clang-format -n --Werror
 
   build:
     name: Build and Run Tests
