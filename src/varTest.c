@@ -48,10 +48,10 @@ int main() {
     int8_t M = 6;
 
     // Initialize to default values
-    int32_t numRecords = 600;  // default values
-    int32_t testRecords = 600; // default values
-    uint8_t useRandom = 0;     // default values
-    size_t splineMaxError = 0; // default values
+    int32_t numRecords = 600;   // default values
+    int32_t testRecords = 600;  // default values
+    uint8_t useRandom = 0;      // default values
+    size_t splineMaxError = 0;  // default values
     uint32_t stepSize = numRecords / NUM_STEPS;
     count_t r, l;
     uint32_t times[NUM_STEPS][NUM_RUNS];
@@ -776,7 +776,7 @@ void updateBitmapInt16(void *data, void *bm) {
     /* Using a demo range of 0 to 100 */
 
     // int16_t stepSize = 100 / 15;
-    int16_t stepSize = 450 / 15; // Temperature data in F. Scaled by 10. */
+    int16_t stepSize = 450 / 15;  // Temperature data in F. Scaled by 10. */
     int16_t minBase = 320;
     int32_t current = minBase;
     uint16_t num = 32768;
