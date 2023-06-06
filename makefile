@@ -23,19 +23,39 @@ PATHB = build/
 PATHD = build/depends/
 PATHO = build/objs/
 PATHR = build/results/
+PATHA = build/artifacts/
 
-BUILD_PATHS = $(PATHB) $(PATHD) $(PATHO) $(PATHR)
+BUILD_PATHS = $(PATHB) $(PATHD) $(PATHO) $(PATHR) $(PATHA)
 
 OBJECTS = $(PATHO)sbits.o $(PATHO)spline.o $(PATHO)radixspline.o
 
 SRCT = $(wildcard $(PATHT)*.c)
+
+VARTEST = $(PATHO)varTest.o
+TEST_SBITS = $(PATHO)test_sbits.o
 
 COMPILE=gcc -c
 LINK=gcc
 DEPEND=gcc -MM -MG -MF
 CFLAGS=-I. -I$(PATHU) -I$(PATHS) -DTEST
 
-RESULTS = $(patsubst $(PATHT)Test%.c,$(PATHR)Test%.testpass,$(SRCT) )
+RESULTS = $(patsubst $(PATHT)Test%.c,$(PATHR)Test%.testpass,$(SRCT))
+
+varTest: $(BUILD_PATHS) $(PATHB)varTest.$(TARGET_EXTENSION)
+	@echo "Running varTest"
+	-./$(PATHB)varTest.$(TARGET_EXTENSION)
+	@echo "Finished running varTest file"
+
+$(PATHB)varTest.$(TARGET_EXTENSION): $(OBJECTS) $(VARTEST)
+	$(LINK) -o $@ $^
+
+test_sbits: $(BUILD_PATHS) $(PATHB)test_sbits.$(TARGET_EXTENSION)
+	@echo "Running test_sbits"
+	-./$(PATHB)test_sbits.$(TARGET_EXTENSION)
+	@echo "Finished running test_sbits file"
+
+$(PATHB)test_sbits.$(TARGET_EXTENSION): $(OBJECTS) $(TEST_SBITS)
+	$(LINK) -o $@ $^
 
 test: $(BUILD_PATHS) $(RESULTS)
 	pip install -r requirements.txt
@@ -71,10 +91,15 @@ $(PATHO):
 $(PATHR):
 	$(MKDIR) $(PATHR)
 
+$(PATHA):
+	$(MKDIR) $(PATHA)
+
 clean:
 	$(CLEANUP) $(PATHO)*.o
 	$(CLEANUP) $(PATHB)*.$(TARGET_EXTENSION)
 	$(CLEANUP) $(PATHR)*.testpass
+	$(CLEANUP) $(PATHA)*.png
+	$(CLEANUP) $(PATHA)*.bin
 
 .PRECIOUS: $(PATHB)Test%.$(TARGET_EXTENSION)
 .PRECIOUS: $(PATHD)%.d
