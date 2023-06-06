@@ -28,5 +28,5 @@ jobs:
       uses: EnricoMi/publish-unit-test-result-action/composite@v2
       with:
         github_token: ${{ github.token }}
-        files: ./*.xml
+        files: ./build/results/*.xml
         check_name: Unit Test Results

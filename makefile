@@ -59,7 +59,7 @@ $(PATHB)test_sbits.$(TARGET_EXTENSION): $(OBJECTS) $(TEST_SBITS)
 
 test: $(BUILD_PATHS) $(RESULTS)
 	pip install -r requirements.txt
-	python stylize_as_junit.py
+	python ./scripts/stylize_as_junit.py
 
 $(PATHR)%.testpass: $(PATHB)%.$(TARGET_EXTENSION)
 	-./$< > $@ 2>&1
@@ -100,6 +100,7 @@ clean:
 	$(CLEANUP) $(PATHR)*.testpass
 	$(CLEANUP) $(PATHA)*.png
 	$(CLEANUP) $(PATHA)*.bin
+	$(CLEANUP) $(PATHR)*.xml
 
 .PRECIOUS: $(PATHB)Test%.$(TARGET_EXTENSION)
 .PRECIOUS: $(PATHD)%.d
