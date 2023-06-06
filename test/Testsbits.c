@@ -5,7 +5,7 @@ sbitsState *state;
 
 void updateBitmapInt16(void *data, void *bm) {
     int32_t val = *((int32_t *)data);
-    uint16_t *bmval = (uint16_t *)bm;
+     uint16_t *bmval = (uint16_t *)bm;
 
     /* Using a demo range of 0 to 100 */
     // int16_t stepSize = 100 / 15;
