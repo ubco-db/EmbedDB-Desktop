@@ -18,6 +18,9 @@ jobs:
       - name: Install ClangFormat
         run: sudo apt-get install -y clang-format
 
+      - name: Check clang version
+        run: clang-format --version
+
       - name: Lint
         uses: wearerequired/lint-action@v2
         with:
