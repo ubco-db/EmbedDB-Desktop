@@ -994,14 +994,10 @@ void sbitsInitIterator(sbitsState *state, sbitsIterator *it) {
     if (SBITS_USING_BMAP(state->parameters)) {
         /* Verify that bitmap index is useful (must have set either min or max data value) */
         if (it->minData != NULL || it->maxData != NULL) {
-            // uint16_t *bm = malloc(sizeof(uint16_t));
-            //  *bm = 0;
-            //  buildBitmapInt16FromRange(state, it->minData, it->maxData, bm);
-            uint64_t *bm = (uint64_t *)malloc(sizeof(uint64_t));
-            *bm = 0;
-            buildBitmapInt64FromRange(state, it->minData, it->maxData, bm);
+            void *bm = malloc(state->bitmapSize);
+            memset(bm, 0, state->bitmapSize);
+            state->buildBitmapFromRange(it->minData, it->maxData, bm);
 
-            // printBitmap((char*) bm);
             it->queryBitmap = bm;
 
             /* Setup for reading index file */
@@ -1009,6 +1005,8 @@ void sbitsInitIterator(sbitsState *state, sbitsIterator *it) {
                 it->lastIdxIterPage = state->firstIdxPage;
                 it->lastIdxIterRec = 10000; /* Force to read next index page */
                 it->wrappedIdxMemory = 0;
+            } else {
+                printf("WARN: Iterator not using index. If this is not intended, ensure that the sbitsState was initialized with an index file\n");
             }
         }
     }
@@ -1443,110 +1441,4 @@ void resetStats(sbitsState *state) {
     state->bufferHits = 0;
     state->numIdxReads = 0;
     state->numIdxWrites = 0;
-}
-
-/**
- * @brief	Builds 16-bit bitmap from (min, max) range.
- * @param	state	SBITS state structure
- * @param	min		minimum value (may be NULL)
- * @param	max		maximum value (may be NULL)
- * @param	bm		bitmap created
- */
-void buildBitmapInt16FromRange(sbitsState *state, void *min, void *max, void *bm) {
-    uint16_t *bmval = (uint16_t *)bm;
-
-    if (min == NULL && max == NULL) {
-        *bmval = 65535; /* Everything */
-        return;
-    }
-
-    int8_t i = 0;
-    uint16_t val = 32768;
-    if (min != NULL) {
-        /* Set bits based on min value */
-        state->updateBitmap(min, bm);
-
-        /* Assume here that bits are set in increasing order based on smallest
-         * value */
-        /* Find first set bit */
-        while ((val & *bmval) == 0 && i < 16) {
-            i++;
-            val = val / 2;
-        }
-        val = val / 2;
-        i++;
-    }
-    if (max != NULL) {
-        /* Set bits based on min value */
-        uint16_t prev = *bmval;
-        state->updateBitmap(max, bm);
-        if (*bmval == prev)
-            return; /* Min and max bit vector are the same */
-
-        while ((val & *bmval) == 0 && i < 16) {
-            i++;
-            *bmval = *bmval + val;
-            val = val / 2;
-        }
-    } else {
-        while (i < 16) {
-            i++;
-            *bmval = *bmval + val;
-            val = val / 2;
-        }
-    }
-}
-
-/**
- * @brief	Builds 64-bit bitmap from (min, max) range.
- * @param	state	SBITS state structure
- * @param	min		minimum value (may be NULL)
- * @param	max		maximum value (may be NULL)
- * @param	bm		bitmap created
- */
-void buildBitmapInt64FromRange(sbitsState *state, void *min, void *max, void *bm) {
-    uint64_t *bmval = (uint64_t *)bm;
-
-    if (min == NULL && max == NULL) {
-        *bmval = UINT64_MAX; /* Everything */
-        return;
-    }
-
-    int8_t i = 0;
-    uint64_t val = (uint64_t)(INT64_MAX) + 1;
-    if (min != NULL) {
-        /* Set bits based on min value */
-        state->updateBitmap(min, bm);
-
-        /* Assume here that bits are set in increasing order based on smallest
-         * value */
-        /* Find first set bit */
-        while ((val & *bmval) == 0 && i < 64) {
-            i++;
-            val = val / 2;
-        }
-        val = val / 2;
-        i++;
-    }
-    if (max != NULL) {
-        /* Set bits based on min value */
-        uint64_t prev = *bmval;
-        state->updateBitmap(max, bm);
-
-        /* Min and max bit vector are the same */
-        if (*bmval == prev)
-            return;
-
-        while ((val & *bmval) == 0 && i < 64) {
-            i++;
-            *bmval = *bmval + val;
-            val = val / 2;
-        }
-    } else {
-        while (i < 64) {
-            i++;
-            *bmval = *bmval + val;
-            val = val / 2;
-        }
-    }
 }
