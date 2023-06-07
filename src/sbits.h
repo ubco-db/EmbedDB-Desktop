@@ -196,6 +196,12 @@ typedef struct {
     void *queryBitmap;
 } sbitsIterator;
 
+typedef struct {
+    uint32_t totalBytes; /* Total number of bytes in the stream */
+    uint32_t readBytes;  /* Number of bytes read so far */
+    uint32_t dataStart;  /* Start of data as an offset in bytes from the beginning of the file */
+} sbitsVarDataStream;
+
 /**
  * @brief	Initialize SBITS structure.
  * @param	state			SBITS algorithm state structure
@@ -259,20 +265,22 @@ void sbitsInitIterator(sbitsState *state, sbitsIterator *it);
  * @brief	Return next key, data pair for iterator.
  * @param	state	SBITS algorithm state structure
  * @param	it		SBITS iterator state structure
- * @param	key		Key for record
- * @param	data	Data for record
+ * @param	key		Return variable for key (Pre-allocated)
+ * @param	data	Return variable for data (Pre-allocated)
+ * @return	1 if successful, 0 if no more records
  */
-int8_t sbitsNext(sbitsState *state, sbitsIterator *it, void **key, void **data);
+int8_t sbitsNext(sbitsState *state, sbitsIterator *it, void *key, void *data);
 
 /**
  * @brief	Return next key, data, variable data set for iterator
  * @param	state	SBITS algorithm state structure
  * @param	it		SBITS iterator state structure
- * @param	key		Key for record
- * @param	data	Data for record
- * @param	varData	Data for variable portion of record
+ * @param	key		Return variable for key (Pre-allocated)
+ * @param	data	Return variable for data (Pre-allocated)
+ * @param	varData	Return variable for variable data as a sbitsVarDataStream (Pre-allocated)
+ * @return	1 if successful, 0 if no more records
  */
-int8_t sbitsNextVar(sbitsState *state, sbitsIterator *it, void **key, void **data, void **varData);
+int8_t sbitsNextVar(sbitsState *state, sbitsIterator *it, void *key, void *data, sbitsVarDataStream *varData);
 
 /**
  * @brief	Flushes output buffer.

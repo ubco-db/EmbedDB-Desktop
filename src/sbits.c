@@ -1056,10 +1056,11 @@ int8_t sbitsFlush(sbitsState *state) {
  * @brief	Return next key, data pair for iterator.
  * @param	state	SBITS algorithm state structure
  * @param	it		SBITS iterator state structure
- * @param	key		Key for record
- * @param	data	Data for record
+ * @param	key		Return variable for key (Pre-allocated)
+ * @param	data	Return variable for data (Pre-allocated)
+ * @return	1 if successful, 0 if no more records
  */
-int8_t sbitsNext(sbitsState *state, sbitsIterator *it, void **key, void **data) {
+int8_t sbitsNext(sbitsState *state, sbitsIterator *it, void *key, void *data) {
     void *buf = (int8_t *)state->buffer + state->pageSize;
     /* Iterate until find a record that matches search criteria */
     while (1) {
@@ -1150,8 +1151,8 @@ int8_t sbitsNext(sbitsState *state, sbitsIterator *it, void **key, void **data) 
         }
 
         /* Get record */
-        *key = (int8_t *)buf + state->headerSize + it->lastIterRec * state->recordSize;
-        *data = (int8_t *)buf + state->headerSize + it->lastIterRec * state->recordSize + state->keySize;
+        memcpy(key, (int8_t *)buf + state->headerSize + it->lastIterRec * state->recordSize, state->keySize);
+        memcpy(data, (int8_t *)buf + state->headerSize + it->lastIterRec * state->recordSize + state->keySize, state->dataSize);
         it->lastIterRec++;
 
         /* Check that record meets filter constraints */
@@ -1165,6 +1166,19 @@ int8_t sbitsNext(sbitsState *state, sbitsIterator *it, void **key, void **data) 
             continue;
         return 1;
     }
+}
+
+/**
+ * @brief	Return next key, data, variable data set for iterator
+ * @param	state	SBITS algorithm state structure
+ * @param	it		SBITS iterator state structure
+ * @param	key		Return variable for key (Pre-allocated)
+ * @param	data	Return variable for data (Pre-allocated)
+ * @param	varData	Return variable for variable data as a sbitsVarDataStream (Pre-allocated)
+ * @return	1 if successful, 0 if no more records
+ */
+int8_t sbitsNextVar(sbitsState *state, sbitsIterator *it, void *key, void *data, sbitsVarDataStream *varData) {
+    return 0;
 }
 
 /**

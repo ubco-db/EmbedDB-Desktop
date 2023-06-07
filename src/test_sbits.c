@@ -583,8 +583,8 @@ void runalltests_sbits() {
                     }
                 }
             } else if (queryType == 3) {
-                int8_t success = 1;
-                int32_t *itKey, *itData;
+                uint32_t itKey;
+                void *itData = calloc(1, state->dataSize);
                 sbitsIterator it;
                 it.minKey = NULL;
                 it.maxKey = NULL;
@@ -599,16 +599,15 @@ void runalltests_sbits() {
                 rec = 0;
                 reads = state->numReads;
                 // printf("Min: %d Max: %d\n", mv, v);
-                while (sbitsNext(state, &it, (void **)&itKey, (void **)&itData)) {
-                    printf("Key: %d  Data: %d\n", *itKey, *itData);
+                while (sbitsNext(state, &it, &itKey, itData)) {
+                    printf("Key: %d  Data: %d\n", itKey, *(uint32_t *)itData);
                     if (*((int32_t *)itData) < *((int32_t *)it.minData) ||
                         *((int32_t *)itData) > *((int32_t *)it.maxData)) {
-                        success = 0;
-                        printf("Key: %d Data: %d Error\n", *itKey, *itData);
+                        printf("Key: %d Data: %d Error\n", itKey, *(uint32_t *)itData);
                     }
                     rec++;
                 }
-                // printf("Read records: %d\n", rec);
+                printf("Read records: %d\n", rec);
                 // printStats(state);
                 printf("Num: %lu KEY: %lu Perc: %d Records: %d Reads: %d \n", i, mv, ((state->numReads - reads) * 1000 / (state->nextPageWriteId - 1)), rec, (state->numReads - reads));
 
