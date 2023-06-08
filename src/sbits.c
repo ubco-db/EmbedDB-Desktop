@@ -186,6 +186,7 @@ int8_t sbitsInit(sbitsState *state, size_t indexMaxError) {
     state->minKey = 0;
     state->bufferedPageId = -1;
     state->bufferedIndexPageId = -1;
+    state->bufferedVarPage = -1;
 
     /* Calculate number of records per page */
     state->maxRecordsPerPage = (state->pageSize - state->headerSize) / state->recordSize;
@@ -1156,13 +1157,13 @@ int8_t sbitsNext(sbitsState *state, sbitsIterator *it, void *key, void *data) {
         it->lastIterRec++;
 
         /* Check that record meets filter constraints */
-        if (it->minKey != NULL && state->compareKey(*key, it->minKey) < 0)
+        if (it->minKey != NULL && state->compareKey(key, it->minKey) < 0)
             continue;
-        if (it->maxKey != NULL && state->compareKey(*key, it->maxKey) > 0)
+        if (it->maxKey != NULL && state->compareKey(key, it->maxKey) > 0)
             return 0;
-        if (it->minData != NULL && state->compareData(*data, it->minData) < 0)
+        if (it->minData != NULL && state->compareData(data, it->minData) < 0)
             continue;
-        if (it->maxData != NULL && state->compareData(*data, it->maxData) > 0)
+        if (it->maxData != NULL && state->compareData(data, it->maxData) > 0)
             continue;
         return 1;
     }
@@ -1174,11 +1175,63 @@ int8_t sbitsNext(sbitsState *state, sbitsIterator *it, void *key, void *data) {
  * @param	it		SBITS iterator state structure
  * @param	key		Return variable for key (Pre-allocated)
  * @param	data	Return variable for data (Pre-allocated)
- * @param	varData	Return variable for variable data as a sbitsVarDataStream (Pre-allocated)
+ * @param	varData	Return variable for variable data as a sbitsVarDataStream (Unallocated). Returns NULL if no variable data. **Be sure to free the stream after you are done with it**
  * @return	1 if successful, 0 if no more records
  */
-int8_t sbitsNextVar(sbitsState *state, sbitsIterator *it, void *key, void *data, sbitsVarDataStream *varData) {
-    return 0;
+int8_t sbitsNextVar(sbitsState *state, sbitsIterator *it, void *key, void *data, sbitsVarDataStream **varData) {
+    if (SBITS_USING_VDATA(state->parameters)) {
+        int8_t r = sbitsNext(state, it, key, data);
+        if (!r) {
+            return 0;
+        }
+
+        // Get the vardata address from the record
+        count_t recordNum = it->lastIterRec - 1;
+        void *dataBuf = (int8_t *)state->buffer + state->pageSize * SBITS_DATA_READ_BUFFER;
+        void *record = (int8_t *)dataBuf + state->headerSize + recordNum * state->recordSize;
+        uint32_t varDataAddr = 0;
+        memcpy(&varDataAddr, (int8_t *)record + state->keySize + state->dataSize, sizeof(uint32_t));
+
+        if (varDataAddr == SBITS_NO_VAR_DATA) {
+            *varData = NULL;
+            return 1;
+        }
+
+        uint32_t pageNum = (varDataAddr / state->pageSize) % state->numVarPages;
+        uint32_t pageOffset = varDataAddr % state->pageSize;
+
+        // Read in page
+        if (readVariablePage(state, pageNum) != 0) {
+            printf("ERROR: sbitsNextVar failed to read variable page\n");
+            return 0;
+        }
+
+        // Get length of variable data
+        void *varBuf = (int8_t *)state->buffer + state->pageSize * SBITS_VAR_READ_BUFFER(state->parameters);
+        uint32_t dataLen = 0;
+        memcpy(&dataLen, (int8_t *)varBuf + pageOffset, sizeof(uint32_t));
+
+        // Move var data address to the beginning of the data, past the data length
+        varDataAddr = (varDataAddr + sizeof(uint32_t)) % (state->numVarPages * state->pageSize);
+
+        // Create varDataStream
+        sbitsVarDataStream *varDataStream = malloc(sizeof(sbitsVarDataStream));
+        if (varDataStream == NULL) {
+            printf("ERROR: Failed to alloc memory for sbitsVarDataStream\n");
+            return 0;
+        }
+
+        varDataStream->dataStart = varDataAddr;
+        varDataStream->totalBytes = dataLen;
+        varDataStream->readBytes = 0;
+
+        *varData = varDataStream;
+
+        return 1;
+    } else {
+        printf("ERROR: sbitsNextVar called when not using variable data\n");
+        return 0;
+    }
 }
 
 /**
@@ -1429,6 +1482,12 @@ int8_t readIndexPage(sbitsState *state, id_t pageNum) {
  * @return 	Return 0 if success, -1 if error
  */
 int8_t readVariablePage(sbitsState *state, id_t pageNum) {
+    // Check if page is currently in buffer
+    if (pageNum == state->bufferedVarPage) {
+        state->bufferHits++;
+        return 0;
+    }
+
     // Get buffer to read into
     void *buf = (int8_t *)state->buffer + SBITS_VAR_READ_BUFFER(state->parameters) * state->pageSize;
 
@@ -1442,6 +1501,7 @@ int8_t readVariablePage(sbitsState *state, id_t pageNum) {
 
     // Track stats
     state->numReads++;
+    state->bufferedVarPage = pageNum;
     return 0;
 }
 

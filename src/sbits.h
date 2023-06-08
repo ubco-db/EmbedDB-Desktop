@@ -179,6 +179,7 @@ typedef struct {
     id_t bufferHits;                                                      /* Number of pages returned from buffer rather than storage */
     id_t bufferedPageId;                                                  /* Page id currently in read buffer */
     id_t bufferedIndexPageId;                                             /* Index page id currently in index read buffer */
+    id_t bufferedVarPage;                                                 /* Variable page id currently in variable read buffer */
     uint8_t recordHasVarData;                                             /* Internal flag to signal that the record currently being written has var data */
 } sbitsState;
 
@@ -277,10 +278,10 @@ int8_t sbitsNext(sbitsState *state, sbitsIterator *it, void *key, void *data);
  * @param	it		SBITS iterator state structure
  * @param	key		Return variable for key (Pre-allocated)
  * @param	data	Return variable for data (Pre-allocated)
- * @param	varData	Return variable for variable data as a sbitsVarDataStream (Pre-allocated)
+ * @param	varData	Return variable for variable data as a sbitsVarDataStream (Unallocated). Returns NULL if no variable data. **Be sure to free the stream after you are done with it**
  * @return	1 if successful, 0 if no more records
  */
-int8_t sbitsNextVar(sbitsState *state, sbitsIterator *it, void *key, void *data, sbitsVarDataStream *varData);
+int8_t sbitsNextVar(sbitsState *state, sbitsIterator *it, void *key, void *data, sbitsVarDataStream **varData);
 
 /**
  * @brief	Flushes output buffer.
