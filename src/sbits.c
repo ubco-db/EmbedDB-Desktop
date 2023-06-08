@@ -1223,7 +1223,7 @@ int8_t sbitsNextVar(sbitsState *state, sbitsIterator *it, void *key, void *data,
 
         varDataStream->dataStart = varDataAddr;
         varDataStream->totalBytes = dataLen;
-        varDataStream->readBytes = 0;
+        varDataStream->bytesRead = 0;
 
         *varData = varDataStream;
 
@@ -1232,6 +1232,53 @@ int8_t sbitsNextVar(sbitsState *state, sbitsIterator *it, void *key, void *data,
         printf("ERROR: sbitsNextVar called when not using variable data\n");
         return 0;
     }
+}
+
+/**
+ * @brief	Reads data from variable data stream into the given buffer.
+ * @param	state	SBITS algorithm state structure
+ * @param	stream	Variable data stream
+ * @param	buffer	Buffer to read data into
+ * @param	length	Number of bytes to read (Must be <= buffer size)
+ * @return	Number of bytes read
+ */
+uint32_t sbitsVarDataStreamRead(sbitsState *state, sbitsVarDataStream *stream, void *buffer, uint32_t length) {
+    if (buffer == NULL) {
+        printf("ERROR: Cannot pass null buffer to sbitsVarDataStreamRead\n");
+        return 0;
+    }
+
+    // Read in var page containing the data to read
+    uint32_t pageNum = ((stream->dataStart + stream->bytesRead) / state->pageSize) % state->numVarPages;
+    uint32_t pageOffset = (stream->dataStart + stream->bytesRead) % state->pageSize;
+
+    if (readVariablePage(state, pageNum) != 0) {
+        printf("ERROR: Couldn't read variable data page %d\n", pageNum);
+        return 0;
+    }
+
+    // Keep reading in data until the buffer is full
+    void *varDataBuf = (int8_t *)state->buffer + state->pageSize * SBITS_VAR_READ_BUFFER(state->parameters);
+    uint32_t amtRead;
+    while (amtRead < length) {
+        uint32_t amtToRead = __min(stream->totalBytes - stream->bytesRead, __min(state->pageSize - pageOffset, length - amtRead));
+        memcpy((int8_t *)buffer + amtRead, (int8_t *)varDataBuf + pageOffset, amtToRead);
+        amtRead += amtToRead;
+        stream->bytesRead += amtRead;
+
+        // If we need to keep reading, read the next page
+        if (amtRead < length) {
+            pageNum = (pageNum + 1) % state->numVarPages;
+            if (readVariablePage(state, pageNum) != 0) {
+                printf("ERROR: Couldn't read variable data page %d\n", pageNum);
+                return 0;
+            }
+            // Skip past the header
+            pageOffset = state->keySize;
+        }
+    }
+
+    return amtRead;
 }
 
 /**

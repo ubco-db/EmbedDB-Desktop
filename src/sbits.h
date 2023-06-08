@@ -199,7 +199,7 @@ typedef struct {
 
 typedef struct {
     uint32_t totalBytes; /* Total number of bytes in the stream */
-    uint32_t readBytes;  /* Number of bytes read so far */
+    uint32_t bytesRead;  /* Number of bytes read so far */
     uint32_t dataStart;  /* Start of data as an offset in bytes from the beginning of the file */
 } sbitsVarDataStream;
 
@@ -282,6 +282,16 @@ int8_t sbitsNext(sbitsState *state, sbitsIterator *it, void *key, void *data);
  * @return	1 if successful, 0 if no more records
  */
 int8_t sbitsNextVar(sbitsState *state, sbitsIterator *it, void *key, void *data, sbitsVarDataStream **varData);
+
+/**
+ * @brief	Reads data from variable data stream into the given buffer.
+ * @param	state	SBITS algorithm state structure
+ * @param	stream	Variable data stream
+ * @param	buffer	Buffer to read data into
+ * @param	length	Number of bytes to read (Must be <= buffer size)
+ * @return	Number of bytes read
+ */
+uint32_t sbitsVarDataStreamRead(sbitsState *state, sbitsVarDataStream *stream, void *buffer, uint32_t length);
 
 /**
  * @brief	Flushes output buffer.
