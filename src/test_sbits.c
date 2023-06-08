@@ -111,7 +111,7 @@ void updateBitmapInt16(void *data, void *bm) {
 
     /* Using a demo range of 0 to 100 */
     // int16_t stepSize = 100 / 15;
-    int16_t stepSize = 450 / 15; // Temperature data in F. Scaled by 10. */
+    int16_t stepSize = 450 / 15;  // Temperature data in F. Scaled by 10. */
     int16_t minBase = 320;
     int32_t current = minBase;
     uint16_t num = 32768;
@@ -173,7 +173,7 @@ void buildBitmapInt16FromRange(void *min, void *max, void *bm) {
 void updateBitmapInt64(void *data, void *bm) {
     int32_t val = *((int32_t *)data);
 
-    int16_t stepSize = 10; // Temperature data in F. Scaled by 10. */
+    int16_t stepSize = 10;  // Temperature data in F. Scaled by 10. */
     int32_t current = 320;
     int8_t bmsize = 63;
     int8_t count = 0;
@@ -315,10 +315,10 @@ uint32_t keyModifier(uint32_t inputKey) { return inputKey * 2; }
 void runalltests_sbits() {
     printf("\nSTARTING SBITS TESTS.\n");
     int8_t M = 4;
-    int32_t numRecords = 10000;   // default values
-    int32_t testRecords = 500000; // default values
-    uint8_t useRandom = 0;        // default values
-    size_t splineMaxError = 0;    // default values
+    int32_t numRecords = 10000;    // default values
+    int32_t testRecords = 500000;  // default values
+    uint8_t useRandom = 0;         // default values
+    size_t splineMaxError = 0;     // default values
     uint32_t numSteps = 10;
     uint32_t stepSize = numRecords / numSteps;
     count_t r, numRuns = 1, l;
@@ -451,7 +451,7 @@ void runalltests_sbits() {
         /* Data record is empty. Only need to reset to 0 once as reusing struct.
          */
         int32_t i;
-        for (i = 0; i < state->recordSize - 4; i++) // 4 is the size of the key
+        for (i = 0; i < state->recordSize - 4; i++)  // 4 is the size of the key
         {
             recordBuffer[i + sizeof(int32_t)] = 0;
         }

@@ -37,11 +37,12 @@
 extern "C" {
 #endif
 
-#include "radixspline.h"
-#include "spline.h"
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+
+#include "radixspline.h"
+#include "spline.h"
 
 /* Define type for page ids (physical and logical). */
 typedef uint32_t id_t;

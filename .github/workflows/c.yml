@@ -7,6 +7,25 @@ on:
     branches: [ "main" ]
 
 jobs:
+  run-linters:
+    name: Run Linter
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v3
+
+      - name: Install ClangFormat
+        run: sudo apt-get install -y clang-format
+
+      - name: Check clang version
+        run: clang-format --version
+
+      - name: Lint
+        uses: wearerequired/lint-action@v2
+        with:
+          clang_format: true
+
   build:
     name: Build and Run Tests
     runs-on: windows-latest
@@ -28,5 +47,5 @@ jobs:
       uses: EnricoMi/publish-unit-test-result-action/composite@v2
       with:
         github_token: ${{ github.token }}
-        files: ./*.xml
+        files: ./build/results/*.xml
         check_name: Unit Test Results

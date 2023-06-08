@@ -43,17 +43,17 @@ uint8_t dataEquals(void *varData, uint32_t length, Node *node);
 void randomVarData(uint32_t chance, uint32_t sizeLowerBound, uint32_t sizeUpperBound, uint8_t *usingVarData, uint32_t *length, void **varData);
 int retrieveData(sbitsState *state, int32_t key, int8_t *recordBuffer);
 
-void main() {
+int main() {
     printf("\nSTARTING SBITS VARIABLE DATA TESTS.\n");
 
     // Two extra bufferes required for variable data
     int8_t M = 6;
 
     // Initialize to default values
-    int32_t numRecords = 600;  // default values
-    int32_t testRecords = 600; // default values
-    uint8_t useRandom = 0;     // default values
-    size_t splineMaxError = 0; // default values
+    int32_t numRecords = 600;   // default values
+    int32_t testRecords = 600;  // default values
+    uint8_t useRandom = 0;      // default values
+    size_t splineMaxError = 0;  // default values
     uint32_t stepSize = numRecords / NUM_STEPS;
     count_t r, l;
     uint32_t times[NUM_STEPS][NUM_RUNS];
@@ -125,7 +125,7 @@ void main() {
         // numRecords = 100001;
         // testRecords = 100001;
 
-        infile = fopen("./data/uwa500K.bin", "r+b");
+        infile = fopen("data/uwa500K.bin", "r+b");
         // infileRandom =
         // fopen("data/uwa_data_only_2000_500KSorted_randomized.bin", "r+b");
         minRange = 946713600;
@@ -142,8 +142,8 @@ void main() {
     for (r = 0; r < NUM_RUNS; r++) {
         sbitsState *state = (sbitsState *)malloc(sizeof(sbitsState));
 
-        state->keySize = 4;
-        state->dataSize = 12;
+        state->keySize = 6;
+        state->dataSize = 4;
         state->pageSize = 512;
         state->bitmapSize = 0;
         state->bufferSizeInBlocks = M;
@@ -179,7 +179,7 @@ void main() {
 
         if (sbitsInit(state, splineMaxError) != 0) {
             printf("Initialization error.\n");
-            return;
+            return 1;
         } else {
             printf("Initialization success.\n");
         }
@@ -210,7 +210,7 @@ void main() {
                 if (TEST_TYPE == 0) {
                     randomVarData(10, 10, 100, &hasVarData, &length, &variableData);
                 } else if (TEST_TYPE == 1) {
-                    imageVarData(0.05, "./data/test.png", &hasVarData, &length, &variableData);
+                    imageVarData(0.05, "data/test.png", &hasVarData, &length, &variableData);
                 } else if (TEST_TYPE == 2) {
                     hasVarData = 1;
                     length = 15;
@@ -277,7 +277,7 @@ void main() {
                     if (TEST_TYPE == 0) {
                         randomVarData(10, 10, 100, &hasVarData, &length, &variableData);
                     } else if (TEST_TYPE == 1) {
-                        imageVarData(0.05, "./data/test.png", &hasVarData, &length, &variableData);
+                        imageVarData(0.05, "data/test.png", &hasVarData, &length, &variableData);
                     } else if (TEST_TYPE == 2) {
                         hasVarData = 1;
                         length = 15;
@@ -415,7 +415,6 @@ void main() {
                     }
                 }
             } else if (queryType == 2) {
-
             } else if (queryType == 3) {
                 uint32_t itKey;
                 void *itData = calloc(1, state->dataSize);
@@ -515,7 +514,7 @@ void main() {
                             }
                             if (validationHead == NULL) {
                                 printf("ERROR: No validation data for: %lu\n", *key);
-                                return;
+                                return 1;
                             }
                             // Check that the var data is correct
                             if (!dataEquals(varData, length, validationHead)) {
@@ -735,6 +734,7 @@ void main() {
         }
         printf("\t%lu\n", sum / r);
     }
+    return 0;
 }
 
 /* A bitmap with 8 buckets (bits). Range 0 to 100. */
@@ -809,7 +809,7 @@ void updateBitmapInt16(void *data, void *bm) {
     /* Using a demo range of 0 to 100 */
 
     // int16_t stepSize = 100 / 15;
-    int16_t stepSize = 450 / 15; // Temperature data in F. Scaled by 10. */
+    int16_t stepSize = 450 / 15;  // Temperature data in F. Scaled by 10. */
     int16_t minBase = 320;
     int32_t current = minBase;
     uint16_t num = 32768;
@@ -1010,7 +1010,6 @@ void imageVarData(float chance, char *filename, uint8_t *usingVarData, uint32_t 
     *usingVarData = (rand() % 100) / 100.0 < chance;
     if (usingVarData) {
         *length = readImageFromFile(varData, filename);
-        // printf("Length from file: %i\n", *length);
         if (*length == -1) {
             printf("ERROR: Failed to read image '%s'\n", filename);
             exit(-1);
@@ -1037,14 +1036,17 @@ void randomVarData(uint32_t chance, uint32_t sizeLowerBound, uint32_t sizeUpperB
 void retrieveImageData(void **varData, uint32_t length, int32_t key, char *filename, char *filetype) {
     int numDigits = log10(key) + 1;
     char *keyAsString = calloc(numDigits, sizeof(char));
+    char destinationFolder[17] = "build/artifacts/";
     itoa(key, keyAsString, 10);
+    uint32_t destinationFolderLength = strlen(destinationFolder);
     uint32_t filenameLength = strlen(filename);
     uint32_t filetypeLength = strlen(filetype);
-    uint32_t totalLength = filenameLength + numDigits + filetypeLength;
+    uint32_t totalLength = filenameLength + numDigits + filetypeLength + destinationFolderLength + 1;
     char *file = calloc(totalLength, sizeof(char));
-    strncpy(file, filename, filenameLength);
-    strncpy(file + filenameLength, keyAsString, numDigits);
-    strncpy(file + filenameLength + numDigits, filetype, filetypeLength);
+    strncpy(file, destinationFolder, destinationFolderLength);
+    strncpy(file + destinationFolderLength, filename, filenameLength);
+    strncpy(file + filenameLength + destinationFolderLength, keyAsString, numDigits);
+    strncpy(file + filenameLength + numDigits + destinationFolderLength, filetype, filetypeLength);
     strncpy(file + totalLength, "\0", 1);
     writeDataToFile(*varData, file, length);
 }
