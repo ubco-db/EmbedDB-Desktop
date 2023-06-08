@@ -1259,8 +1259,8 @@ uint32_t sbitsVarDataStreamRead(sbitsState *state, sbitsVarDataStream *stream, v
 
     // Keep reading in data until the buffer is full
     void *varDataBuf = (int8_t *)state->buffer + state->pageSize * SBITS_VAR_READ_BUFFER(state->parameters);
-    uint32_t amtRead;
-    while (amtRead < length) {
+    uint32_t amtRead = 0;
+    while (amtRead < length && stream->bytesRead < stream->totalBytes) {
         uint32_t amtToRead = __min(stream->totalBytes - stream->bytesRead, __min(state->pageSize - pageOffset, length - amtRead));
         memcpy((int8_t *)buffer + amtRead, (int8_t *)varDataBuf + pageOffset, amtToRead);
         amtRead += amtToRead;

@@ -14,7 +14,7 @@
  * 1 = Image data
  * 2 = Set length string
  */
-#define TEST_TYPE 1
+#define TEST_TYPE 2
 
 // Cursed linkedList for tracking data
 typedef struct Node {
@@ -29,8 +29,10 @@ void buildBitmapInt8BucketWithRange(void *min, void *max, void *bm);
 int8_t inBitmapInt8Bucket(void *data, void *bm);
 void updateBitmapInt16(void *data, void *bm);
 int8_t inBitmapInt16(void *data, void *bm);
+void buildBitmapInt16FromRange(void *min, void *max, void *bm);
 void updateBitmapInt64(void *data, void *bm);
 int8_t inBitmapInt64(void *data, void *bm);
+void buildBitmapInt64FromRange(void *min, void *max, void *bm);
 int8_t int32Comparator(void *a, void *b);
 uint32_t keyModifier(uint32_t inputKey);
 uint32_t readImageFromFile(void **data, char *filename);
@@ -64,7 +66,7 @@ void main() {
     uint32_t rhits[NUM_STEPS][NUM_RUNS];
 
     /* Determines if generated, sequential data is used, or data from an input file*/
-    int8_t seqdata = 0;
+    int8_t seqdata = 1;
 
     // Files for non-sequentioal data
     FILE *infile = NULL, *infileRandom = NULL;
@@ -159,13 +161,19 @@ void main() {
         if (SBITS_USING_INDEX(state->parameters) == 1)
             state->endAddress += state->pageSize * (state->eraseSizeInPages * 2);
         if (SBITS_USING_BMAP(state->parameters))
-            state->bitmapSize = 8;
+            state->bitmapSize = 1;
 
         /* Setup for data and bitmap comparison functions */
-        state->inBitmap = inBitmapInt16;
-        state->updateBitmap = updateBitmapInt16;
-        state->inBitmap = inBitmapInt64;
-        state->updateBitmap = updateBitmapInt64;
+        /* Setup for data and bitmap comparison functions */
+        state->inBitmap = inBitmapInt8Bucket;
+        state->updateBitmap = updateBitmapInt8Bucket;
+        state->buildBitmapFromRange = buildBitmapInt8BucketWithRange;
+        // state->inBitmap = inBitmapInt16;
+        // state->updateBitmap = updateBitmapInt16;
+        // state->buildBitmapFromRange = buildBitmapInt16FromRange;
+        // state->inBitmap = inBitmapInt64;
+        // state->updateBitmap = updateBitmapInt64;
+        // state->buildBitmapFromRange = buildBitmapInt64FromRange;
         state->compareKey = int32Comparator;
         state->compareData = int32Comparator;
 
@@ -349,54 +357,110 @@ void main() {
 
         start = clock();
 
+        /*
+         * 1: Query each record from original data set.
+         * 2: Query random records in the range of original data set.
+         * 3: Query range of records using an iterator.
+         */
+        int8_t queryType = 3;
+
         if (seqdata == 1) {
-            void *keyBuf = calloc(1, state->keySize);
-            for (i = 0; i < numRecords; i++) {
-                *((uint32_t *)keyBuf) = i;
-                void *varData = NULL;
-                uint32_t length = 0;
-                int8_t result = sbitsGetVar(state, keyBuf, recordBuffer, &varData, &length);
+            if (queryType == 1) {
+                void *keyBuf = calloc(1, state->keySize);
+                for (i = 0; i < numRecords; i++) {
+                    *((uint32_t *)keyBuf) = i;
+                    void *varData = NULL;
+                    uint32_t length = 0;
+                    int8_t result = sbitsGetVar(state, keyBuf, recordBuffer, &varData, &length);
 
-                if (result == -1) {
-                    printf("ERROR: Failed to find: %lu\n", i);
-                } else if (result == 1) {
-                    printf("WARN: Variable data associated with key %lu was deleted\n", i);
-                } else if (*((int32_t *)recordBuffer) != i % 100) {
-                    printf("ERROR: Wrong data for: %lu\n", i);
-                } else if (VALIDATE_VAR_DATA && varData != NULL) {
-                    while (validationHead->key != i) {
-                        Node *tmp = validationHead;
-                        validationHead = validationHead->next;
-                        free(tmp->data);
-                        free(tmp);
+                    if (result == -1) {
+                        printf("ERROR: Failed to find: %lu\n", i);
+                    } else if (result == 1) {
+                        printf("WARN: Variable data associated with key %lu was deleted\n", i);
+                    } else if (*((int32_t *)recordBuffer) != i % 100) {
+                        printf("ERROR: Wrong data for: %lu\n", i);
+                    } else if (VALIDATE_VAR_DATA && varData != NULL) {
+                        while (validationHead->key != i) {
+                            Node *tmp = validationHead;
+                            validationHead = validationHead->next;
+                            free(tmp->data);
+                            free(tmp);
+                        }
+                        if (validationHead == NULL) {
+                            printf("ERROR: No validation data for: %lu\n", i);
+                            return;
+                        }
+                        // Check that the var data is correct
+                        if (!dataEquals(varData, length, validationHead)) {
+                            printf("ERROR: Wrong var data for: %lu\n", i);
+                        }
                     }
-                    if (validationHead == NULL) {
-                        printf("ERROR: No validation data for: %lu\n", i);
-                        return;
+
+                    // Retrieve image
+                    if (varData != NULL) {
+                        if (TEST_TYPE == 1) {
+                            retrieveImageData(&varData, length, i, "test", ".png");
+                        }
+                        free(varData);
+                        varData = NULL;
                     }
-                    // Check that the var data is correct
-                    if (!dataEquals(varData, length, validationHead)) {
-                        printf("ERROR: Wrong var data for: %lu\n", i);
+
+                    if (i % stepSize == 0) {
+                        l = i / stepSize - 1;
+                        if (l < NUM_STEPS && l >= 0) {
+                            rtimes[l][r] = ((clock() - start) * 1000) / CLOCKS_PER_SEC;
+                            rreads[l][r] = state->numReads;
+                            rhits[l][r] = state->bufferHits;
+                        }
                     }
                 }
+            } else if (queryType == 2) {
 
-                // Retrieve image
-                if (varData != NULL) {
-                    if (TEST_TYPE == 1) {
-                        retrieveImageData(&varData, length, i, "test", ".png");
-                    }
-                    free(varData);
-                    varData = NULL;
-                }
+            } else if (queryType == 3) {
+                uint32_t itKey;
+                void *itData = calloc(1, state->dataSize);
+                sbitsIterator it;
+                it.minKey = NULL;
+                it.maxKey = NULL;
+                int32_t mv = 26;
+                int32_t v = 49;
+                it.minData = &mv;
+                it.maxData = &v;
+                int32_t rec, reads;
+                sbitsVarDataStream *varStream;
+                uint32_t varBufSize = 8;
+                void *varDataBuf = malloc(varBufSize);
 
-                if (i % stepSize == 0) {
-                    l = i / stepSize - 1;
-                    if (l < NUM_STEPS && l >= 0) {
-                        rtimes[l][r] = ((clock() - start) * 1000) / CLOCKS_PER_SEC;
-                        rreads[l][r] = state->numReads;
-                        rhits[l][r] = state->bufferHits;
+                start = clock();
+                sbitsInitIterator(state, &it);
+                rec = 0;
+                reads = state->numReads;
+                // printf("Min: %d Max: %d\n", mv, v);
+                while (sbitsNextVar(state, &it, &itKey, itData, &varStream)) {
+                    if (*((int32_t *)itData) < *((int32_t *)it.minData) ||
+                        *((int32_t *)itData) > *((int32_t *)it.maxData)) {
+                        printf("Key: %d Data: %d Error\n", itKey, *(uint32_t *)itData);
+                    } else {
+                        printf("Key: %d  Data: %d\n", itKey, *(uint32_t *)itData);
+                        if (varStream != NULL) {
+                            printf("Var data: ");
+                            uint32_t bytesRead;
+                            while ((bytesRead = sbitsVarDataStreamRead(state, varStream, varDataBuf, varBufSize)) > 0) {
+                                printf("%8s", varDataBuf);
+                            }
+                            printf("\n");
+
+                            free(varStream);
+                            varStream = NULL;
+                        }
                     }
+                    rec++;
                 }
+                printf("Read records: %d\n", rec);
+                // printStats(state);
+                printf("Num: %lu KEY: %lu Perc: %d Records: %d Reads: %d \n", i, mv, ((state->numReads - reads) * 1000 / (state->nextPageWriteId - 1)), rec, (state->numReads - reads));
+
+                free(varDataBuf);
             }
         } else {
             /* Data from file */
@@ -404,7 +468,6 @@ void main() {
             char infileBuffer[512];
             int8_t headerSize = 16;
             i = 0;
-            int8_t queryType = 1;
 
             if (queryType == 1) {
                 /* Query each record from original data set. */
@@ -530,59 +593,45 @@ void main() {
                     i++;
                 }
             } else {
-                /* Data value query for given value range */
-                int8_t success = 1;
-                int32_t *itKey, *itData;
+                uint32_t itKey;
+                void *itData = calloc(1, state->dataSize);
                 sbitsIterator it;
                 it.minKey = NULL;
                 it.maxKey = NULL;
-                int32_t mv = 800;
-                int32_t v = 1000;
+                int32_t mv = 26;
+                int32_t v = 49;
                 it.minData = &mv;
                 it.maxData = &v;
                 int32_t rec, reads;
+                sbitsVarDataStream *varStream;
+                uint32_t varBufSize = 8;
+                void *varDataBuf = malloc(varBufSize);
 
                 start = clock();
-                mv = 280;
-                // for (int i = 0; i < 1000; i++)
-                // for (int i = 0; i < 16; i++)
-                for (int i = 0; i < 65; i++) {
-                    // mv = (rand() % 60 + 30) * 10;
-                    // mv += 30;
-                    mv += 10;
-                    v = mv;
-
-                    resetStats(state);
-                    sbitsInitIterator(state, &it);
-                    rec = 0;
-                    reads = state->numReads;
-                    // printf("Min: %d Max: %d\n", mv, v);
-                    while (sbitsNext(state, &it, (void **)&itKey,
-                                     (void **)&itData)) {
-                        // printf("Key: %d  Data: %d\n", *itKey, *itData);
-                        if (*((int32_t *)itData) < *((int32_t *)it.minData) ||
-                            *((int32_t *)itData) > *((int32_t *)it.maxData)) {
-                            success = 0;
-                            printf("Key: %d Data: %d Error\n", *itKey, *itData);
-                        }
-                        rec++;
-                    }
-                    // printf("Read records: %d\n", rec);
-                    // printStats(state);
-                    printf("Num: %lu KEY: %lu Perc: %d Records: %d Reads: %d \n", i, mv, ((state->numReads - reads) * 1000 / (state->nextPageWriteId - 1)), rec, (state->numReads - reads));
-
-                    if (i % 100 == 0) {
-                        l = i / 100 - 1;
-                        printf("Num: %lu KEY: %lu Records: %d Reads: %d\n", i,
-                               mv, rec, (state->numReads - reads));
-                        if (l < NUM_STEPS && l >= 0) {
-                            rtimes[l][r] =
-                                ((clock() - start) * 1000) / CLOCKS_PER_SEC;
-                            rreads[l][r] = state->numReads;
-                            rhits[l][r] = state->bufferHits;
+                sbitsInitIterator(state, &it);
+                rec = 0;
+                reads = state->numReads;
+                // printf("Min: %d Max: %d\n", mv, v);
+                while (sbitsNextVar(state, &it, &itKey, itData, &varStream)) {
+                    if (*((int32_t *)itData) < *((int32_t *)it.minData) ||
+                        *((int32_t *)itData) > *((int32_t *)it.maxData)) {
+                        printf("Key: %d Data: %d Error\n", itKey, *(uint32_t *)itData);
+                    } else {
+                        printf("Key: %d  Data: %d\n", itKey, *(uint32_t *)itData);
+                        if (varStream != NULL) {
+                            while (sbitsVarDataStreamRead(state, varStream, varDataBuf, varBufSize) > 0) {
+                                printf("%8x", varDataBuf);
+                            }
+                            printf("\n");
                         }
                     }
+                    rec++;
                 }
+                printf("Read records: %d\n", rec);
+                // printStats(state);
+                printf("Num: %lu KEY: %lu Perc: %d Records: %d Reads: %d \n", i, mv, ((state->numReads - reads) * 1000 / (state->nextPageWriteId - 1)), rec, (state->numReads - reads));
+
+                free(varDataBuf);
             }
         }
 
@@ -716,44 +765,29 @@ void updateBitmapInt8Bucket(void *data, void *bm) {
  * max value.
  */
 void buildBitmapInt8BucketWithRange(void *min, void *max, void *bm) {
-    /* Note: Assuming int key is right at the start of the data record */
-    uint8_t *bmval = (uint8_t *)bm;
-
     if (min == NULL && max == NULL) {
-        *bmval = 255; /* Everything */
+        *(uint8_t *)bm = 255; /* Everything */
     } else {
-        int8_t i = 0;
-        uint8_t val = 128;
+        uint8_t minMap = 0, maxMap = 0;
         if (min != NULL) {
-            /* Set bits based on min value */
-            updateBitmapInt8Bucket(min, bm);
-
-            /* Assume here that bits are set in increasing order based on
-             * smallest value */
-            /* Find first set bit */
-            while ((val & *bmval) == 0 && i < 8) {
-                i++;
-                val = val / 2;
+            updateBitmapInt8Bucket(min, &minMap);
+            // Turn on all bits below the bit for min value (cause the lsb are for the higher values)
+            minMap = minMap | (minMap - 1);
+            if (max == NULL) {
+                *(uint8_t *)bm = minMap;
+                return;
             }
-            val = val / 2;
-            i++;
         }
         if (max != NULL) {
-            /* Set bits based on min value */
-            updateBitmapInt8Bucket(max, bm);
-
-            while ((val & *bmval) == 0 && i < 8) {
-                i++;
-                *bmval = *bmval + val;
-                val = val / 2;
-            }
-        } else {
-            while (i < 8) {
-                i++;
-                *bmval = *bmval + val;
-                val = val / 2;
+            updateBitmapInt8Bucket(max, &maxMap);
+            // Turn on all bits above the bit for max value (cause the msb are for the lower values)
+            maxMap = ~(maxMap - 1);
+            if (min == NULL) {
+                *(uint8_t *)bm = maxMap;
+                return;
             }
         }
+        *(uint8_t *)bm = minMap & maxMap;
     }
 }
 
@@ -800,6 +834,41 @@ int8_t inBitmapInt16(void *data, void *bm) {
     return tmpbm & *bmval;
 }
 
+/**
+ * @brief	Builds 16-bit bitmap from (min, max) range.
+ * @param	state	SBITS state structure
+ * @param	min		minimum value (may be NULL)
+ * @param	max		maximum value (may be NULL)
+ * @param	bm		bitmap created
+ */
+void buildBitmapInt16FromRange(void *min, void *max, void *bm) {
+    if (min == NULL && max == NULL) {
+        *(uint16_t *)bm = 65535; /* Everything */
+        return;
+    } else {
+        uint16_t minMap = 0, maxMap = 0;
+        if (min != NULL) {
+            updateBitmapInt8Bucket(min, &minMap);
+            // Turn on all bits below the bit for min value (cause the lsb are for the higher values)
+            minMap = minMap | (minMap - 1);
+            if (max == NULL) {
+                *(uint16_t *)bm = minMap;
+                return;
+            }
+        }
+        if (max != NULL) {
+            updateBitmapInt8Bucket(max, &maxMap);
+            // Turn on all bits above the bit for max value (cause the msb are for the lower values)
+            maxMap = ~(maxMap - 1);
+            if (min == NULL) {
+                *(uint16_t *)bm = maxMap;
+                return;
+            }
+        }
+        *(uint16_t *)bm = minMap & maxMap;
+    }
+}
+
 /* A 64-bit bitmap on a 32-bit int value */
 void updateBitmapInt64(void *data, void *bm) {
     int32_t val = *((int32_t *)data);
@@ -830,6 +899,41 @@ int8_t inBitmapInt64(void *data, void *bm) {
 
     // Return a number great than 1 if there is an overlap
     return tmpbm & *bmval;
+}
+
+/**
+ * @brief	Builds 64-bit bitmap from (min, max) range.
+ * @param	state	SBITS state structure
+ * @param	min		minimum value (may be NULL)
+ * @param	max		maximum value (may be NULL)
+ * @param	bm		bitmap created
+ */
+void buildBitmapInt64FromRange(void *min, void *max, void *bm) {
+    if (min == NULL && max == NULL) {
+        *(uint64_t *)bm = UINT64_MAX; /* Everything */
+        return;
+    } else {
+        uint64_t minMap = 0, maxMap = 0;
+        if (min != NULL) {
+            updateBitmapInt8Bucket(min, &minMap);
+            // Turn on all bits below the bit for min value (cause the lsb are for the higher values)
+            minMap = minMap | (minMap - 1);
+            if (max == NULL) {
+                *(uint64_t *)bm = minMap;
+                return;
+            }
+        }
+        if (max != NULL) {
+            updateBitmapInt8Bucket(max, &maxMap);
+            // Turn on all bits above the bit for max value (cause the msb are for the lower values)
+            maxMap = ~(maxMap - 1);
+            if (min == NULL) {
+                *(uint64_t *)bm = maxMap;
+                return;
+            }
+        }
+        *(uint64_t *)bm = minMap & maxMap;
+    }
 }
 
 int8_t int32Comparator(void *a, void *b) {
