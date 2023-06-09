@@ -1222,6 +1222,7 @@ int8_t sbitsNextVar(sbitsState *state, sbitsIterator *it, void *key, void *data,
         varDataStream->dataStart = varDataAddr;
         varDataStream->totalBytes = dataLen;
         varDataStream->bytesRead = 0;
+        varDataStream->pageOffset = UINT16_MAX;
 
         *varData = varDataStream;
 
@@ -1248,7 +1249,14 @@ uint32_t sbitsVarDataStreamRead(sbitsState *state, sbitsVarDataStream *stream, v
 
     // Read in var page containing the data to read
     uint32_t pageNum = ((stream->dataStart + stream->bytesRead) / state->pageSize) % state->numVarPages;
-    uint32_t pageOffset = (stream->dataStart + stream->bytesRead) % state->pageSize;
+    uint32_t pageOffset;
+    if (stream->pageOffset == UINT16_MAX) {
+        pageOffset = stream->dataStart % state->pageSize;
+    } else if (stream->pageOffset % state->pageSize == 0) {
+        pageOffset = state->keySize;
+    } else {
+        pageOffset = stream->pageOffset;
+    }
 
     if (readVariablePage(state, pageNum) != 0) {
         printf("ERROR: Couldn't read variable data page %d\n", pageNum);
@@ -1263,12 +1271,14 @@ uint32_t sbitsVarDataStreamRead(sbitsState *state, sbitsVarDataStream *stream, v
         memcpy((int8_t *)buffer + amtRead, (int8_t *)varDataBuf + pageOffset, amtToRead);
         amtRead += amtToRead;
         stream->bytesRead += amtRead;
+        pageOffset += amtToRead;
 
         // If we need to keep reading, read the next page
-        if (amtRead < length) {
+        if (amtRead < length && stream->bytesRead < stream->totalBytes) {
             pageNum = (pageNum + 1) % state->numVarPages;
             if (readVariablePage(state, pageNum) != 0) {
                 printf("ERROR: Couldn't read variable data page %d\n", pageNum);
+                stream->pageOffset = UINT16_MAX;
                 return 0;
             }
             // Skip past the header
@@ -1276,6 +1286,7 @@ uint32_t sbitsVarDataStreamRead(sbitsState *state, sbitsVarDataStream *stream, v
         }
     }
 
+    stream->pageOffset = pageOffset;
     return amtRead;
 }
 

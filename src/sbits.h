@@ -202,6 +202,7 @@ typedef struct {
     uint32_t totalBytes; /* Total number of bytes in the stream */
     uint32_t bytesRead;  /* Number of bytes read so far */
     uint32_t dataStart;  /* Start of data as an offset in bytes from the beginning of the file */
+    uint16_t pageOffset; /* Where the iterator should start reading data next time (offset from start of page) */
 } sbitsVarDataStream;
 
 /**
