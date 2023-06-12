@@ -609,6 +609,9 @@ void runalltests_sbits() {
                 }
                 printf("Read records: %d\n", rec);
                 printf("Num: %lu KEY: %lu Perc: %d Records: %d Reads: %d \n", i, mv, ((state->numReads - reads) * 1000 / (state->nextPageWriteId - 1)), rec, (state->numReads - reads));
+
+                sbitsCloseIterator(&it);
+                free(itData);
             }
         } else {
             /* Data from file */
@@ -673,7 +676,8 @@ void runalltests_sbits() {
                 }
             donetest:
                 numRecords = i;
-            } else if (queryType == 2) { /* Query random values in range. May not exist in data set. */
+            } else if (queryType == 2) {
+                /* Query random values in range. May not exist in data set. */
                 i = 0;
                 int32_t num = maxRange - minRange;
                 printf("Rge: %d Rand max: %d\n", num, RAND_MAX);
@@ -699,7 +703,8 @@ void runalltests_sbits() {
                     }
                     i++;
                 }
-            } else { /* Data value query for given value range */
+            } else {
+                /* Data value query for given value range */
                 int8_t success = 1;
                 int32_t *itKey, *itData;
                 sbitsIterator it;
@@ -715,7 +720,6 @@ void runalltests_sbits() {
                 sbitsInitIterator(state, &it);
                 rec = 0;
                 reads = state->numReads;
-                // printf("Min: %d Max: %d\n", mv, v);
                 while (sbitsNext(state, &it, (void **)&itKey, (void **)&itData)) {
                     printf("Key: %d  Data: %d\n", *itKey, *itData);
                     if (*((int32_t *)itData) < *((int32_t *)it.minData) ||
@@ -725,8 +729,6 @@ void runalltests_sbits() {
                     }
                     rec++;
                 }
-                // printf("Read records: %d\n", rec);
-                // printStats(state);
                 printf("Num: %lu KEY: %lu Perc: %d Records: %d Reads: %d \n", i, mv, ((state->numReads - reads) * 1000 / (state->nextPageWriteId - 1)), rec, (state->numReads - reads));
 
                 if (i % 100 == 0) {
@@ -738,6 +740,8 @@ void runalltests_sbits() {
                         rhits[l][r] = state->bufferHits;
                     }
                 }
+
+                sbitsCloseIterator(&it);
             }
         }
 

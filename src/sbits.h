@@ -265,6 +265,12 @@ int8_t sbitsGetVar(sbitsState *state, void *key, void *data, void **varData, uin
 void sbitsInitIterator(sbitsState *state, sbitsIterator *it);
 
 /**
+ * @brief	Close iterator after use.
+ * @param	it		SBITS iterator structure
+ */
+void sbitsCloseIterator(sbitsIterator *it);
+
+/**
  * @brief	Return next key, data pair for iterator.
  * @param	state	SBITS algorithm state structure
  * @param	it		SBITS iterator state structure

@@ -425,7 +425,7 @@ int main() {
                 it.minData = &mv;
                 it.maxData = &v;
                 int32_t rec, reads;
-                sbitsVarDataStream *varStream;
+                sbitsVarDataStream *varStream = NULL;
                 uint32_t varBufSize = 8;
                 void *varDataBuf = malloc(varBufSize);
 
@@ -456,7 +456,9 @@ int main() {
                 printf("Read records: %d\n", rec);
                 printf("Num: %lu KEY: %lu Perc: %d Records: %d Reads: %d \n", i, mv, ((state->numReads - reads) * 1000 / (state->nextPageWriteId - 1)), rec, (state->numReads - reads));
 
+                sbitsCloseIterator(&it);
                 free(varDataBuf);
+                free(itData);
             }
         } else {
             /* Data from file */
@@ -599,7 +601,7 @@ int main() {
                 it.minData = &mv;
                 it.maxData = &v;
                 int32_t rec, reads;
-                sbitsVarDataStream *varStream;
+                sbitsVarDataStream *varStream = NULL;
                 uint32_t varBufSize = 8;
                 void *varDataBuf = malloc(varBufSize);
 
@@ -619,15 +621,19 @@ int main() {
                                 printf("%8x", varDataBuf);
                             }
                             printf("\n");
+
+                            free(varStream);
+                            varStream = NULL;
                         }
                     }
                     rec++;
                 }
                 printf("Read records: %d\n", rec);
-                // printStats(state);
                 printf("Num: %lu KEY: %lu Perc: %d Records: %d Reads: %d \n", i, mv, ((state->numReads - reads) * 1000 / (state->nextPageWriteId - 1)), rec, (state->numReads - reads));
 
+                sbitsCloseIterator(&it);
                 free(varDataBuf);
+                free(itData);
             }
         }
 

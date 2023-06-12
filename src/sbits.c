@@ -1017,6 +1017,16 @@ void sbitsInitIterator(sbitsState *state, sbitsIterator *it) {
 }
 
 /**
+ * @brief	Close iterator after use.
+ * @param	it		SBITS iterator structure
+ */
+void sbitsCloseIterator(sbitsIterator *it) {
+    if (it->queryBitmap != NULL) {
+        free(it->queryBitmap);
+    }
+}
+
+/**
  * @brief	Flushes output buffer.
  * @param	state	algorithm state structure
  */
