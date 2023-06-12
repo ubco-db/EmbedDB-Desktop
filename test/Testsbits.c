@@ -1,9 +1,9 @@
 #include <math.h>
 #include <string.h>
 
-#include "unity.h"
 #include "../src/sbits/sbits.h"
 #include "../src/sbits/utilityFunctions.h"
+#include "unity.h"
 
 void setUp(void) {
 }
