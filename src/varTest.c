@@ -4,7 +4,7 @@
 #include <string.h>
 #include <time.h>
 
-#include "sbits.h"
+#include "sbits/sbits.h"
 
 #define NUM_STEPS 10
 #define NUM_RUNS 1

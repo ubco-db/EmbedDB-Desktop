@@ -39,7 +39,7 @@
 #include <string.h>
 #include <time.h>
 
-#include "sbits.h"
+#include "sbits/sbits.h"
 
 /* A bitmap with 8 buckets (bits). Range 0 to 100. */
 void updateBitmapInt8(void *data, void *bm) {
