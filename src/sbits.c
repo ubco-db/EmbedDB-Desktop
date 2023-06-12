@@ -1222,7 +1222,7 @@ int8_t sbitsNextVar(sbitsState *state, sbitsIterator *it, void *key, void *data,
         varDataStream->dataStart = varDataAddr;
         varDataStream->totalBytes = dataLen;
         varDataStream->bytesRead = 0;
-        varDataStream->pageOffset = UINT16_MAX;
+        varDataStream->pageOffset = UINT16_MAX;  // Set flag that the next read is the first read
 
         *varData = varDataStream;
 

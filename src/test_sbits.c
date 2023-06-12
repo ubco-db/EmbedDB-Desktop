@@ -608,25 +608,16 @@ void runalltests_sbits() {
                     rec++;
                 }
                 printf("Read records: %d\n", rec);
-                // printStats(state);
                 printf("Num: %lu KEY: %lu Perc: %d Records: %d Reads: %d \n", i, mv, ((state->numReads - reads) * 1000 / (state->nextPageWriteId - 1)), rec, (state->numReads - reads));
-
-                // if (i % 100 == 0) {
-                //     l = i / 100 - 1;
-                //     printf("Num: %lu KEY: %lu Records: %d Reads: %d\n", i, mv, rec, (state->numReads - reads));
-                //     if (l < numSteps && l >= 0) {
-                //         rtimes[l][r] = ((clock() - start) * 1000) / CLOCKS_PER_SEC;
-                //         rreads[l][r] = state->numReads;
-                //         rhits[l][r] = state->bufferHits;
-                //     }
-                // }
             }
-        } else { /* Data from file */
+        } else {
+            /* Data from file */
             char infileBuffer[512];
             int8_t headerSize = 16;
             i = 0;
 
-            if (queryType == 1) { /* Query each record from original data set. */
+            if (queryType == 1) {
+                /* Query each record from original data set. */
                 if (useRandom) {
                     fseek(infileRandom, 0, SEEK_SET);
                 } else {
