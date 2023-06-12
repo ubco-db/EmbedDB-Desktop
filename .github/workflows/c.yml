@@ -39,6 +39,9 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
+    - name: Get Submodules
+      run: git submodule update --init --recursive
+
     - name: Build and Run
       run: make test
 
