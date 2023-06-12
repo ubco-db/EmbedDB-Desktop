@@ -433,7 +433,6 @@ int main() {
                 sbitsInitIterator(state, &it);
                 rec = 0;
                 reads = state->numReads;
-                // printf("Min: %d Max: %d\n", mv, v);
                 while (sbitsNextVar(state, &it, &itKey, itData, &varStream)) {
                     if (*((int32_t *)itData) < *((int32_t *)it.minData) ||
                         *((int32_t *)itData) > *((int32_t *)it.maxData)) {
@@ -455,7 +454,6 @@ int main() {
                     rec++;
                 }
                 printf("Read records: %d\n", rec);
-                // printStats(state);
                 printf("Num: %lu KEY: %lu Perc: %d Records: %d Reads: %d \n", i, mv, ((state->numReads - reads) * 1000 / (state->nextPageWriteId - 1)), rec, (state->numReads - reads));
 
                 free(varDataBuf);
