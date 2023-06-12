@@ -16,8 +16,10 @@ endif
 .PHONY: clean
 .PHONY: test
 
-PATHU = lib/unity/
+PATHU = Unity/src/
 PATHS = src/
+PATHSBITS = src/sbits/
+PATHSPLINE = src/spline/
 PATHT = test/
 PATHB = build/
 PATHD = build/depends/
@@ -27,7 +29,7 @@ PATHA = build/artifacts/
 
 BUILD_PATHS = $(PATHB) $(PATHD) $(PATHO) $(PATHR) $(PATHA)
 
-OBJECTS = $(PATHO)sbits.o $(PATHO)spline.o $(PATHO)radixspline.o
+OBJECTS = $(PATHO)sbits.o $(PATHO)spline.o $(PATHO)radixspline.o $(PATHO)utilityFunctions.o
 
 SRCT = $(wildcard $(PATHT)*.c)
 
@@ -71,6 +73,12 @@ $(PATHO)%.o:: $(PATHT)%.c
 	$(COMPILE) $(CFLAGS) $< -o $@
 
 $(PATHO)%.o:: $(PATHS)%.c
+	$(COMPILE) $(CFLAGS) $< -o $@
+
+$(PATHO)%.o:: $(PATHSPLINE)%.c
+	$(COMPILE) $(CFLAGS) $< -o $@
+
+$(PATHO)%.o:: $(PATHSBITS)%.c
 	$(COMPILE) $(CFLAGS) $< -o $@
 
 $(PATHO)%.o:: $(PATHU)%.c $(PATHU)%.h
