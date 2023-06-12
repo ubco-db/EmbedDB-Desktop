@@ -1,5 +1,5 @@
-#include "../lib/unity/unity.h"
-#include "../src/radixspline.h"
+#include "../src/spline/radixspline.h"
+#include "unity.h"
 
 void setUp(void) {}
 
