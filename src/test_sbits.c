@@ -42,7 +42,7 @@
 #include "sbits.h"
 
 /* A bitmap with 8 buckets (bits). Range 0 to 100. */
-void updateBitmapInt8Bucket(void *data, void *bm) {
+void updateBitmapInt8(void *data, void *bm) {
     // Note: Assuming int key is right at the start of the data record
     int32_t val = *((int16_t *)data);
     uint8_t *bmval = (uint8_t *)bm;
@@ -67,53 +67,38 @@ void updateBitmapInt8Bucket(void *data, void *bm) {
 
 /* A bitmap with 8 buckets (bits). Range 0 to 100. Build bitmap based on min and
  * max value. */
-void buildBitmapInt8BucketWithRange(void *min, void *max, void *bm) {
-    /* Note: Assuming int key is right at the start of the data record */
-    uint8_t *bmval = (uint8_t *)bm;
-
+void buildBitmapInt8FromRange(void *min, void *max, void *bm) {
     if (min == NULL && max == NULL) {
-        *bmval = 255; /* Everything */
+        *(uint8_t *)bm = 255; /* Everything */
     } else {
-        int8_t i = 0;
-        uint8_t val = 128;
+        uint8_t minMap = 0, maxMap = 0;
         if (min != NULL) {
-            /* Set bits based on min value */
-            updateBitmapInt8Bucket(min, bm);
-
-            /* Assume here that bits are set in increasing order based on
-             * smallest value */
-            /* Find first set bit */
-            while ((val & *bmval) == 0 && i < 8) {
-                i++;
-                val = val / 2;
+            updateBitmapInt8(min, &minMap);
+            // Turn on all bits below the bit for min value (cause the lsb are for the higher values)
+            minMap = minMap | (minMap - 1);
+            if (max == NULL) {
+                *(uint8_t *)bm = minMap;
+                return;
             }
-            val = val / 2;
-            i++;
         }
         if (max != NULL) {
-            /* Set bits based on min value */
-            updateBitmapInt8Bucket(max, bm);
-
-            while ((val & *bmval) == 0 && i < 8) {
-                i++;
-                *bmval = *bmval + val;
-                val = val / 2;
-            }
-        } else {
-            while (i < 8) {
-                i++;
-                *bmval = *bmval + val;
-                val = val / 2;
+            updateBitmapInt8(max, &maxMap);
+            // Turn on all bits above the bit for max value (cause the msb are for the lower values)
+            maxMap = ~(maxMap - 1);
+            if (min == NULL) {
+                *(uint8_t *)bm = maxMap;
+                return;
             }
         }
+        *(uint8_t *)bm = minMap & maxMap;
     }
 }
 
-int8_t inBitmapInt8Bucket(void *data, void *bm) {
+int8_t inBitmapInt8(void *data, void *bm) {
     uint8_t *bmval = (uint8_t *)bm;
 
     uint8_t tmpbm = 0;
-    updateBitmapInt8Bucket(data, &tmpbm);
+    updateBitmapInt8(data, &tmpbm);
 
     // Return a number great than 1 if there is an overlap
     return tmpbm & *bmval;
@@ -149,6 +134,41 @@ int8_t inBitmapInt16(void *data, void *bm) {
     return tmpbm & *bmval;
 }
 
+/**
+ * @brief	Builds 16-bit bitmap from (min, max) range.
+ * @param	state	SBITS state structure
+ * @param	min		minimum value (may be NULL)
+ * @param	max		maximum value (may be NULL)
+ * @param	bm		bitmap created
+ */
+void buildBitmapInt16FromRange(void *min, void *max, void *bm) {
+    if (min == NULL && max == NULL) {
+        *(uint16_t *)bm = 65535; /* Everything */
+        return;
+    } else {
+        uint16_t minMap = 0, maxMap = 0;
+        if (min != NULL) {
+            updateBitmapInt8(min, &minMap);
+            // Turn on all bits below the bit for min value (cause the lsb are for the higher values)
+            minMap = minMap | (minMap - 1);
+            if (max == NULL) {
+                *(uint16_t *)bm = minMap;
+                return;
+            }
+        }
+        if (max != NULL) {
+            updateBitmapInt8(max, &maxMap);
+            // Turn on all bits above the bit for max value (cause the msb are for the lower values)
+            maxMap = ~(maxMap - 1);
+            if (min == NULL) {
+                *(uint16_t *)bm = maxMap;
+                return;
+            }
+        }
+        *(uint16_t *)bm = minMap & maxMap;
+    }
+}
+
 /* A 64-bit bitmap on a 32-bit int value */
 void updateBitmapInt64(void *data, void *bm) {
     int32_t val = *((int32_t *)data);
@@ -177,6 +197,41 @@ int8_t inBitmapInt64(void *data, void *bm) {
 
     // Return a number great than 1 if there is an overlap
     return tmpbm & *bmval;
+}
+
+/**
+ * @brief	Builds 64-bit bitmap from (min, max) range.
+ * @param	state	SBITS state structure
+ * @param	min		minimum value (may be NULL)
+ * @param	max		maximum value (may be NULL)
+ * @param	bm		bitmap created
+ */
+void buildBitmapInt64FromRange(void *min, void *max, void *bm) {
+    if (min == NULL && max == NULL) {
+        *(uint64_t *)bm = UINT64_MAX; /* Everything */
+        return;
+    } else {
+        uint64_t minMap = 0, maxMap = 0;
+        if (min != NULL) {
+            updateBitmapInt8(min, &minMap);
+            // Turn on all bits below the bit for min value (cause the lsb are for the higher values)
+            minMap = minMap | (minMap - 1);
+            if (max == NULL) {
+                *(uint64_t *)bm = minMap;
+                return;
+            }
+        }
+        if (max != NULL) {
+            updateBitmapInt8(max, &maxMap);
+            // Turn on all bits above the bit for max value (cause the msb are for the lower values)
+            maxMap = ~(maxMap - 1);
+            if (min == NULL) {
+                *(uint64_t *)bm = maxMap;
+                return;
+            }
+        }
+        *(uint64_t *)bm = minMap & maxMap;
+    }
 }
 
 int8_t int32Comparator(void *a, void *b) {
@@ -260,13 +315,13 @@ uint32_t keyModifier(uint32_t inputKey) { return inputKey * 2; }
 void runalltests_sbits() {
     printf("\nSTARTING SBITS TESTS.\n");
     int8_t M = 4;
-    int32_t numRecords = 500000;   // default values
+    int32_t numRecords = 10000;    // default values
     int32_t testRecords = 500000;  // default values
     uint8_t useRandom = 0;         // default values
     size_t splineMaxError = 0;     // default values
     uint32_t numSteps = 10;
     uint32_t stepSize = numRecords / numSteps;
-    count_t r, numRuns = 20, l;
+    count_t r, numRuns = 1, l;
     uint32_t times[numSteps][numRuns];
     uint32_t reads[numSteps][numRuns];
     uint32_t writes[numSteps][numRuns];
@@ -372,13 +427,18 @@ void runalltests_sbits() {
             state->endAddress +=
                 state->pageSize * (state->eraseSizeInPages * 2);
         if (SBITS_USING_BMAP(state->parameters))
-            state->bitmapSize = 8;
+            state->bitmapSize = 1;
 
         /* Setup for data and bitmap comparison functions */
-        state->inBitmap = inBitmapInt16;
-        state->updateBitmap = updateBitmapInt16;
-        state->inBitmap = inBitmapInt64;
-        state->updateBitmap = updateBitmapInt64;
+        state->inBitmap = inBitmapInt8;
+        state->updateBitmap = updateBitmapInt8;
+        state->buildBitmapFromRange = buildBitmapInt8FromRange;
+        // state->inBitmap = inBitmapInt16;
+        // state->updateBitmap = updateBitmapInt16;
+        // state->buildBitmapFromRange = buildBitmapInt16FromRange;
+        // state->inBitmap = inBitmapInt64;
+        // state->updateBitmap = updateBitmapInt64;
+        // state->buildBitmapFromRange = buildBitmapInt64FromRange;
         state->compareKey = int32Comparator;
         state->compareData = int32Comparator;
 
@@ -490,38 +550,74 @@ void runalltests_sbits() {
         /* Verify that all values can be found and test query performance */
         start = clock();
 
+        /*
+         * 1: Query each record from original data set.
+         * 2: Query random records in the range of original data set.
+         * 3: Query range of records using an iterator.
+         */
+        int8_t queryType = 3;
+
         if (seqdata == 1) {
-            for (i = 0; i < numRecords; i++) {
-                int32_t key = i;
-                int8_t result = sbitsGet(state, &key, recordBuffer);
+            if (queryType == 1) {
+                for (i = 0; i < numRecords; i++) {
+                    int32_t key = i;
+                    int8_t result = sbitsGet(state, &key, recordBuffer);
 
-                if (result != 0)
-                    printf("ERROR: Failed to find: %lu\n", key);
-                if (seqdata == 1 && *((int32_t *)recordBuffer) != key % 100) {
-                    printf("ERROR: Wrong data for: %lu\n", key);
-                    printf("Key: %lu Data: %lu\n", key,
-                           *((int32_t *)recordBuffer));
-                    return;
-                }
+                    if (result != 0)
+                        printf("ERROR: Failed to find: %lu\n", key);
+                    if (seqdata == 1 && *((int32_t *)recordBuffer) != key % 100) {
+                        printf("ERROR: Wrong data for: %lu\n", key);
+                        printf("Key: %lu Data: %lu\n", key,
+                               *((int32_t *)recordBuffer));
+                        return;
+                    }
 
-                if (i % stepSize == 0) {
-                    l = i / stepSize - 1;
-                    if (l < numSteps && l >= 0) {
-                        rtimes[l][r] =
-                            ((clock() - start) * 1000) / CLOCKS_PER_SEC;
-                        rreads[l][r] = state->numReads;
-                        rhits[l][r] = state->bufferHits;
+                    if (i % stepSize == 0) {
+                        l = i / stepSize - 1;
+                        if (l < numSteps && l >= 0) {
+                            rtimes[l][r] =
+                                ((clock() - start) * 1000) / CLOCKS_PER_SEC;
+                            rreads[l][r] = state->numReads;
+                            rhits[l][r] = state->bufferHits;
+                        }
                     }
                 }
+            } else if (queryType == 3) {
+                uint32_t itKey;
+                void *itData = calloc(1, state->dataSize);
+                sbitsIterator it;
+                it.minKey = NULL;
+                it.maxKey = NULL;
+                int32_t mv = 26;
+                int32_t v = 49;
+                it.minData = &mv;
+                it.maxData = &v;
+                int32_t rec, reads;
+
+                start = clock();
+                sbitsInitIterator(state, &it);
+                rec = 0;
+                reads = state->numReads;
+                // printf("Min: %d Max: %d\n", mv, v);
+                while (sbitsNext(state, &it, &itKey, itData)) {
+                    printf("Key: %d  Data: %d\n", itKey, *(uint32_t *)itData);
+                    if (*((int32_t *)itData) < *((int32_t *)it.minData) ||
+                        *((int32_t *)itData) > *((int32_t *)it.maxData)) {
+                        printf("Key: %d Data: %d Error\n", itKey, *(uint32_t *)itData);
+                    }
+                    rec++;
+                }
+                printf("Read records: %d\n", rec);
+                printf("Num: %lu KEY: %lu Perc: %d Records: %d Reads: %d \n", i, mv, ((state->numReads - reads) * 1000 / (state->nextPageWriteId - 1)), rec, (state->numReads - reads));
             }
-        } else { /* Data from file */
+        } else {
+            /* Data from file */
             char infileBuffer[512];
             int8_t headerSize = 16;
             i = 0;
-            int8_t queryType = 1;
 
-            if (queryType ==
-                1) { /* Query each record from original data set. */
+            if (queryType == 1) {
+                /* Query each record from original data set. */
                 if (useRandom) {
                     fseek(infileRandom, 0, SEEK_SET);
                 } else {
@@ -531,12 +627,10 @@ void runalltests_sbits() {
                 while (1) {
                     /* Read page */
                     if (useRandom) {
-                        if (0 == fread(infileBuffer, state->pageSize, 1,
-                                       infileRandom))
+                        if (0 == fread(infileBuffer, state->pageSize, 1, infileRandom))
                             break;
                     } else {
-                        if (0 ==
-                            fread(infileBuffer, state->pageSize, 1, infile))
+                        if (0 == fread(infileBuffer, state->pageSize, 1, infile))
                             break;
                     }
 
@@ -544,19 +638,15 @@ void runalltests_sbits() {
                     /* Process all records on page */
                     int16_t count = *((int16_t *)(infileBuffer + 4));
                     for (int j = 0; j < count; j++) {
-                        void *buf =
-                            (infileBuffer + headerSize + j * state->recordSize);
+                        void *buf = (infileBuffer + headerSize + j * state->recordSize);
                         int32_t *key = (int32_t *)buf;
 
                         int8_t result = sbitsGet(state, key, recordBuffer);
                         if (result != 0)
-                            printf("ERROR: Failed to find key: %lu, i: %lu\n",
-                                   *key, i);
-                        if (*((int32_t *)recordBuffer) !=
-                            *((int32_t *)((int8_t *)buf + 4))) {
-                            printf(
-                                "ERROR: Wrong data for: Key: %lu Data: %lu\n",
-                                *key, *((int32_t *)recordBuffer));
+                            printf("ERROR: Failed to find key: %lu, i: %lu\n", *key, i);
+                        if (*((int32_t *)recordBuffer) != *((int32_t *)((int8_t *)buf + 4))) {
+                            printf("ERROR: Wrong data for: Key: %lu Data: %lu\n",
+                                   *key, *((int32_t *)recordBuffer));
                             printf("%lu %d %d %d\n", *((uint32_t *)buf),
                                    *((int32_t *)((int8_t *)buf + 4)),
                                    *((int32_t *)((int8_t *)buf + 8)),
@@ -569,30 +659,26 @@ void runalltests_sbits() {
                             l = i / stepSize - 1;
                             printf("Num: %lu KEY: %lu\n", i, *key);
                             if (l < numSteps && l >= 0) {
-                                rtimes[l][r] =
-                                    ((clock() - start) * 1000) / CLOCKS_PER_SEC;
+                                rtimes[l][r] = ((clock() - start) * 1000) / CLOCKS_PER_SEC;
                                 rreads[l][r] = state->numReads;
                                 rhits[l][r] = state->bufferHits;
                             }
                         }
                         i++;
-                        if (i == numRecords ||
-                            i == testRecords) /* Allows ending test after set
-                                                 number of records rather than
-                                                 processing entire file */
+                        /* Allows ending test after set number of records rather than processing entire file */
+                        if (i == numRecords || i == testRecords) {
                             goto donetest;
+                        }
                     }
                 }
             donetest:
                 numRecords = i;
-            } else if (queryType == 2) { /* Query random values in range. May
-                                            not exist in data set. */
+            } else if (queryType == 2) { /* Query random values in range. May not exist in data set. */
                 i = 0;
                 int32_t num = maxRange - minRange;
                 printf("Rge: %d Rand max: %d\n", num, RAND_MAX);
                 while (i < numRecords) {
-                    double scaled =
-                        ((double)rand() * (double)rand()) / RAND_MAX / RAND_MAX;
+                    double scaled = ((double)rand() * (double)rand()) / RAND_MAX / RAND_MAX;
                     int32_t key = (num + 1) * scaled + minRange;
 
                     // printf("Key :%d\n", key);
@@ -606,8 +692,7 @@ void runalltests_sbits() {
                         l = i / stepSize - 1;
                         printf("Num: %lu KEY: %lu\n", i, key);
                         if (l < numSteps && l >= 0) {
-                            rtimes[l][r] =
-                                ((clock() - start) * 1000) / CLOCKS_PER_SEC;
+                            rtimes[l][r] = ((clock() - start) * 1000) / CLOCKS_PER_SEC;
                             rreads[l][r] = state->numReads;
                             rhits[l][r] = state->bufferHits;
                         }
@@ -620,57 +705,37 @@ void runalltests_sbits() {
                 sbitsIterator it;
                 it.minKey = NULL;
                 it.maxKey = NULL;
-                int32_t mv = 800;
-                int32_t v = 1000;
+                int32_t mv = 26;
+                int32_t v = 50;
                 it.minData = &mv;
                 it.maxData = &v;
                 int32_t rec, reads;
 
                 start = clock();
-                mv = 280;
-                // for (int i = 0; i < 1000; i++)
-                // for (int i = 0; i < 16; i++)
-                for (int i = 0; i < 65; i++)  // 65
-                {
-                    // mv = (rand() % 60 + 30) * 10;
-                    // mv += 30;
-                    mv += 10;
-                    v = mv;
-
-                    resetStats(state);
-                    sbitsInitIterator(state, &it);
-                    rec = 0;
-                    reads = state->numReads;
-                    // printf("Min: %d Max: %d\n", mv, v);
-                    while (sbitsNext(state, &it, (void **)&itKey,
-                                     (void **)&itData)) {
-                        // printf("Key: %d  Data: %d\n", *itKey, *itData);
-                        if (*((int32_t *)itData) < *((int32_t *)it.minData) ||
-                            *((int32_t *)itData) > *((int32_t *)it.maxData)) {
-                            success = 0;
-                            printf("Key: %d Data: %d Error\n", *itKey, *itData);
-                        }
-                        rec++;
+                sbitsInitIterator(state, &it);
+                rec = 0;
+                reads = state->numReads;
+                // printf("Min: %d Max: %d\n", mv, v);
+                while (sbitsNext(state, &it, (void **)&itKey, (void **)&itData)) {
+                    printf("Key: %d  Data: %d\n", *itKey, *itData);
+                    if (*((int32_t *)itData) < *((int32_t *)it.minData) ||
+                        *((int32_t *)itData) > *((int32_t *)it.maxData)) {
+                        success = 0;
+                        printf("Key: %d Data: %d Error\n", *itKey, *itData);
                     }
-                    // printf("Read records: %d\n", rec);
-                    // printStats(state);
-                    printf(
-                        "Num: %lu KEY: %lu Perc: %d Records: %d Reads: %d \n",
-                        i, mv,
-                        ((state->numReads - reads) * 1000 /
-                         (state->nextPageWriteId - 1)),
-                        rec, (state->numReads - reads));
+                    rec++;
+                }
+                // printf("Read records: %d\n", rec);
+                // printStats(state);
+                printf("Num: %lu KEY: %lu Perc: %d Records: %d Reads: %d \n", i, mv, ((state->numReads - reads) * 1000 / (state->nextPageWriteId - 1)), rec, (state->numReads - reads));
 
-                    if (i % 100 == 0) {
-                        l = i / 100 - 1;
-                        printf("Num: %lu KEY: %lu Records: %d Reads: %d\n", i,
-                               mv, rec, (state->numReads - reads));
-                        if (l < numSteps && l >= 0) {
-                            rtimes[l][r] =
-                                ((clock() - start) * 1000) / CLOCKS_PER_SEC;
-                            rreads[l][r] = state->numReads;
-                            rhits[l][r] = state->bufferHits;
-                        }
+                if (i % 100 == 0) {
+                    l = i / 100 - 1;
+                    printf("Num: %lu KEY: %lu Records: %d Reads: %d\n", i, mv, rec, (state->numReads - reads));
+                    if (l < numSteps && l >= 0) {
+                        rtimes[l][r] = ((clock() - start) * 1000) / CLOCKS_PER_SEC;
+                        rreads[l][r] = state->numReads;
+                        rhits[l][r] = state->bufferHits;
                     }
                 }
             }
