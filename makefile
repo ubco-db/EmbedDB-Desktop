@@ -58,7 +58,7 @@ $(PATHB)test_sbits.$(TARGET_EXTENSION): $(OBJECTS) $(TEST_SBITS)
 	$(LINK) -o $@ $^
 
 test: $(BUILD_PATHS) $(RESULTS)
-	pip install -r requirements.txt
+	pip install -r requirements.txt -q
 	python ./scripts/stylize_as_junit.py
 
 $(PATHR)%.testpass: $(PATHB)%.$(TARGET_EXTENSION)
