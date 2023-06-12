@@ -382,6 +382,7 @@ size_t radixsplineSize(radixspline *rsidx) {
  * @param	rsidx	Radix spline structure
  */
 void radixsplineClose(radixspline *rsidx) {
-    free(rsidx->spl->points);
+    splineClose(rsidx->spl);
+    free(rsidx->spl);
     free(rsidx->table);
 }
