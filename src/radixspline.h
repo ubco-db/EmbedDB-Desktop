@@ -138,6 +138,12 @@ void radixsplinePrint(radixspline *rsidx);
  */
 size_t radixsplineSize(radixspline *rsidx);
 
+/**
+ * @brief	Closes and frees space for radix spline index structure
+ * @param	rsidx	Radix spline structure
+ */
+void radixsplineClose(radixspline *rsidx);
+
 #ifdef __cplusplus
 }
 #endif

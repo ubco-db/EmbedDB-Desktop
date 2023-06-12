@@ -118,6 +118,12 @@ uint32_t splineSize(spline *spl);
  */
 void splineFind(spline *spl, void *key, int8_t compareKey(void *, void *), id_t *loc, id_t *low, id_t *high);
 
+/**
+ * @brief    Free memory allocated for spline structure.
+ * @param    spl        Spline structure
+ */
+void splineClose(spline *spl);
+
 #ifdef __cplusplus
 }
 #endif
