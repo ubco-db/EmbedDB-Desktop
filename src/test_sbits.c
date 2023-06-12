@@ -608,7 +608,6 @@ void runalltests_sbits() {
                     rec++;
                 }
                 printf("Read records: %d\n", rec);
-                // printStats(state);
                 printf("Num: %lu KEY: %lu Perc: %d Records: %d Reads: %d \n", i, mv, ((state->numReads - reads) * 1000 / (state->nextPageWriteId - 1)), rec, (state->numReads - reads));
 
                 // if (i % 100 == 0) {
