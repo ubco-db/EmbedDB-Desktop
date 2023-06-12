@@ -1,4 +1,4 @@
-#include "../lib/unity/unity.h"
+#include "../Unity/src/unity.h"
 #include "../src/spline.h"
 
 void setUp(void) {}

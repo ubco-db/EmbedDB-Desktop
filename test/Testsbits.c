@@ -1,7 +1,7 @@
 #include <math.h>
 #include <string.h>
 
-#include "../lib/unity/unity.h"
+#include "../Unity/src/unity.h"
 #include "../src/sbits.h"
 
 /* A bitmap with 8 buckets (bits). Range 0 to 100. */
