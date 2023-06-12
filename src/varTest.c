@@ -5,6 +5,7 @@
 #include <time.h>
 
 #include "sbits/sbits.h"
+#include "sbits/utilityFunctions.h"
 
 #define NUM_STEPS 10
 #define NUM_RUNS 1
@@ -24,17 +25,6 @@ typedef struct Node {
     struct Node *next;
 } Node;
 
-void updateBitmapInt8(void *data, void *bm);
-void buildBitmapInt8FromRange(void *min, void *max, void *bm);
-int8_t inBitmapInt8(void *data, void *bm);
-void updateBitmapInt16(void *data, void *bm);
-int8_t inBitmapInt16(void *data, void *bm);
-void buildBitmapInt16FromRange(void *min, void *max, void *bm);
-void updateBitmapInt64(void *data, void *bm);
-int8_t inBitmapInt64(void *data, void *bm);
-void buildBitmapInt64FromRange(void *min, void *max, void *bm);
-int8_t int32Comparator(void *a, void *b);
-uint32_t keyModifier(uint32_t inputKey);
 uint32_t readImageFromFile(void **data, char *filename);
 void writeDataToFile(void *data, char *filename, uint32_t length);
 void imageVarData(float chance, char *filename, uint8_t *usingVarData, uint32_t *length, void **varData);
@@ -734,216 +724,6 @@ int main() {
     return 0;
 }
 
-/* A bitmap with 8 buckets (bits). Range 0 to 100. */
-void updateBitmapInt8(void *data, void *bm) {
-    // Note: Assuming int key is right at the start of the data record
-    int32_t val = *((int16_t *)data);
-    uint8_t *bmval = (uint8_t *)bm;
-
-    if (val < 10)
-        *bmval = *bmval | 128;
-    else if (val < 20)
-        *bmval = *bmval | 64;
-    else if (val < 30)
-        *bmval = *bmval | 32;
-    else if (val < 40)
-        *bmval = *bmval | 16;
-    else if (val < 50)
-        *bmval = *bmval | 8;
-    else if (val < 60)
-        *bmval = *bmval | 4;
-    else if (val < 100)
-        *bmval = *bmval | 2;
-    else
-        *bmval = *bmval | 1;
-}
-
-/* A bitmap with 8 buckets (bits). Range 0 to 100. Build bitmap based on min and
- * max value.
- */
-void buildBitmapInt8FromRange(void *min, void *max, void *bm) {
-    if (min == NULL && max == NULL) {
-        *(uint8_t *)bm = 255; /* Everything */
-    } else {
-        uint8_t minMap = 0, maxMap = 0;
-        if (min != NULL) {
-            updateBitmapInt8(min, &minMap);
-            // Turn on all bits below the bit for min value (cause the lsb are for the higher values)
-            minMap = minMap | (minMap - 1);
-            if (max == NULL) {
-                *(uint8_t *)bm = minMap;
-                return;
-            }
-        }
-        if (max != NULL) {
-            updateBitmapInt8(max, &maxMap);
-            // Turn on all bits above the bit for max value (cause the msb are for the lower values)
-            maxMap = ~(maxMap - 1);
-            if (min == NULL) {
-                *(uint8_t *)bm = maxMap;
-                return;
-            }
-        }
-        *(uint8_t *)bm = minMap & maxMap;
-    }
-}
-
-int8_t inBitmapInt8(void *data, void *bm) {
-    uint8_t *bmval = (uint8_t *)bm;
-
-    uint8_t tmpbm = 0;
-    updateBitmapInt8(data, &tmpbm);
-
-    // Return a number great than 1 if there is an overlap
-    return tmpbm & *bmval;
-}
-
-/* A 16-bit bitmap on a 32-bit int value */
-void updateBitmapInt16(void *data, void *bm) {
-    int32_t val = *((int32_t *)data);
-    uint16_t *bmval = (uint16_t *)bm;
-
-    /* Using a demo range of 0 to 100 */
-
-    // int16_t stepSize = 100 / 15;
-    int16_t stepSize = 450 / 15;  // Temperature data in F. Scaled by 10. */
-    int16_t minBase = 320;
-    int32_t current = minBase;
-    uint16_t num = 32768;
-    while (val > current) {
-        current += stepSize;
-        num = num / 2;
-    }
-
-    /* Always set last bit if value bigger than largest cutoff */
-    if (num == 0)
-        num = 1;
-    *bmval = *bmval | num;
-}
-
-int8_t inBitmapInt16(void *data, void *bm) {
-    uint16_t *bmval = (uint16_t *)bm;
-
-    uint16_t tmpbm = 0;
-    updateBitmapInt16(data, &tmpbm);
-
-    // Return a number great than 1 if there is an overlap
-    return tmpbm & *bmval;
-}
-
-/**
- * @brief	Builds 16-bit bitmap from (min, max) range.
- * @param	state	SBITS state structure
- * @param	min		minimum value (may be NULL)
- * @param	max		maximum value (may be NULL)
- * @param	bm		bitmap created
- */
-void buildBitmapInt16FromRange(void *min, void *max, void *bm) {
-    if (min == NULL && max == NULL) {
-        *(uint16_t *)bm = 65535; /* Everything */
-        return;
-    } else {
-        uint16_t minMap = 0, maxMap = 0;
-        if (min != NULL) {
-            updateBitmapInt8(min, &minMap);
-            // Turn on all bits below the bit for min value (cause the lsb are for the higher values)
-            minMap = minMap | (minMap - 1);
-            if (max == NULL) {
-                *(uint16_t *)bm = minMap;
-                return;
-            }
-        }
-        if (max != NULL) {
-            updateBitmapInt8(max, &maxMap);
-            // Turn on all bits above the bit for max value (cause the msb are for the lower values)
-            maxMap = ~(maxMap - 1);
-            if (min == NULL) {
-                *(uint16_t *)bm = maxMap;
-                return;
-            }
-        }
-        *(uint16_t *)bm = minMap & maxMap;
-    }
-}
-
-/* A 64-bit bitmap on a 32-bit int value */
-void updateBitmapInt64(void *data, void *bm) {
-    int32_t val = *((int32_t *)data);
-
-    // Temperature data in F. Scaled by 10. */
-    int16_t stepSize = 10;
-
-    int32_t current = 320;
-    int8_t bmsize = 63;
-    int8_t count = 0;
-
-    while (val > current && count < 63) {
-        current += stepSize;
-        count++;
-    }
-    uint8_t b = 128;
-    int8_t offset = count / 8;
-    b = b >> (count & 7);
-
-    *((char *)((char *)bm + offset)) = *((char *)((char *)bm + offset)) | b;
-}
-
-int8_t inBitmapInt64(void *data, void *bm) {
-    uint64_t *bmval = (uint64_t *)bm;
-
-    uint64_t tmpbm = 0;
-    updateBitmapInt64(data, &tmpbm);
-
-    // Return a number great than 1 if there is an overlap
-    return tmpbm & *bmval;
-}
-
-/**
- * @brief	Builds 64-bit bitmap from (min, max) range.
- * @param	state	SBITS state structure
- * @param	min		minimum value (may be NULL)
- * @param	max		maximum value (may be NULL)
- * @param	bm		bitmap created
- */
-void buildBitmapInt64FromRange(void *min, void *max, void *bm) {
-    if (min == NULL && max == NULL) {
-        *(uint64_t *)bm = UINT64_MAX; /* Everything */
-        return;
-    } else {
-        uint64_t minMap = 0, maxMap = 0;
-        if (min != NULL) {
-            updateBitmapInt8(min, &minMap);
-            // Turn on all bits below the bit for min value (cause the lsb are for the higher values)
-            minMap = minMap | (minMap - 1);
-            if (max == NULL) {
-                *(uint64_t *)bm = minMap;
-                return;
-            }
-        }
-        if (max != NULL) {
-            updateBitmapInt8(max, &maxMap);
-            // Turn on all bits above the bit for max value (cause the msb are for the lower values)
-            maxMap = ~(maxMap - 1);
-            if (min == NULL) {
-                *(uint64_t *)bm = maxMap;
-                return;
-            }
-        }
-        *(uint64_t *)bm = minMap & maxMap;
-    }
-}
-
-int8_t int32Comparator(void *a, void *b) {
-    uint32_t a1, a2;
-    memcpy(&a1, a, sizeof(uint32_t));
-    memcpy(&a2, b, sizeof(uint32_t));
-    if (a1 < a2)
-        return -1;
-    if (a1 > a2)
-        return 1;
-    return 0;
-}
-
 uint32_t randomData(void **data, uint32_t sizeLowerBound, uint32_t sizeUpperBound) {
     uint32_t size = rand() % (sizeUpperBound - sizeLowerBound) + sizeLowerBound;
     *data = malloc(size);
@@ -1063,7 +843,6 @@ int retrieveData(sbitsState *state, int32_t key, int8_t *recordBuffer) {
         printf("WARN: Variable data associated with key %lu was deleted\n", key);
     } else if (*((int32_t *)recordBuffer) != key % 100) {
         printf("ERROR: Wrong data for: %lu\n", key);
-        // printf("Key: %lu Data: %lu Var length: %d\n", key, *((int32_t*)recordBuffer), length);
     }
 
     // Retrieve image
@@ -1071,7 +850,6 @@ int retrieveData(sbitsState *state, int32_t key, int8_t *recordBuffer) {
         retrieveImageData(&varData, length, key, "test", ".png");
     }
 
-    // printf("Key: %lu Data: %lu Var: %s\n", key, *((int32_t *)recordBuffer), varData);
     free(varData);
     return 0;
 }
