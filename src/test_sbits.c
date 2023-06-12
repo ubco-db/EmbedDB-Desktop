@@ -757,8 +757,8 @@ void runalltests_sbits() {
         // printStats(state);
 
         free(recordBuffer);
-        fclose(state->file);
         free(state->buffer);
+        sbitsClose(state);
         free(state);
     }
 

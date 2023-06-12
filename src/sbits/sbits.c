@@ -294,10 +294,10 @@ int8_t sbitsInit(sbitsState *state, size_t indexMaxError) {
 
     if (SEARCH_METHOD == 2) {
         if (USE_RADIX) {
-            initRadixSpline(state, numPages, RADIX_BITS);
+            initRadixSpline(state, 1000, RADIX_BITS);
         } else {
             state->spl = malloc(sizeof(spline));
-            splineInit(state->spl, numPages, indexMaxError, state->keySize);
+            splineInit(state->spl, 1000, indexMaxError, state->keySize);
         }
     }
 
@@ -1571,4 +1571,33 @@ void resetStats(sbitsState *state) {
     state->bufferHits = 0;
     state->numIdxReads = 0;
     state->numIdxWrites = 0;
+}
+
+/**
+ * @brief	Closes structure and frees any dynamic space.
+ * @param	state	SBITS state structure
+ */
+void sbitsClose(sbitsState *state) {
+    if (state->file != NULL) {
+        fclose(state->file);
+    }
+    if (state->indexFile != NULL) {
+        fclose(state->indexFile);
+    }
+    if (state->varFile != NULL) {
+        fclose(state->varFile);
+    }
+    if (SEARCH_METHOD == 2) {  // Spline
+        if (USE_RADIX) {
+            radixsplineClose(state->rdix);
+            free(state->rdix);
+            state->rdix = NULL;
+            // Spl already freed by radixsplineClose
+            state->spl = NULL;
+        } else {
+            splineClose(state->spl);
+            free(state->spl);
+            state->spl = NULL;
+        }
+    }
 }

@@ -361,6 +361,12 @@ void printStats(sbitsState *state);
  */
 void resetStats(sbitsState *state);
 
+/**
+ * @brief	Closes structure and frees any dynamic space.
+ * @param	state	SBITS state structure
+ */
+void sbitsClose(sbitsState *state);
+
 #ifdef __cplusplus
 }
 #endif

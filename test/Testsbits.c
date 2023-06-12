@@ -180,33 +180,23 @@ void tearDown(void) {
 void sbtisInitShouldInitState(void) {
     sbitsState *state = (sbitsState *)malloc(sizeof(sbitsState));
     int8_t M = 4;
-    int32_t numRecords = 500000;   // default values
-    int32_t testRecords = 500000;  // default values
+    int32_t numRecords = 500000;
+    int32_t testRecords = 500000;
 
-    state->recordSize = 16;
     state->keySize = 4;
     state->dataSize = 12;
     state->pageSize = 512;
-    state->bitmapSize = 0;
     state->bufferSizeInBlocks = M;
-    state->buffer =
-        malloc((size_t)state->bufferSizeInBlocks * state->pageSize);
+    state->buffer = malloc((size_t)state->bufferSizeInBlocks * state->pageSize);
     int8_t *recordBuffer = (int8_t *)malloc(state->recordSize);
 
     /* Address level parameters */
     state->startAddress = 0;
-    state->endAddress =
-        state->pageSize * numRecords /
-        10; /* Modify this value lower to test wrap around */
+    state->endAddress = state->pageSize * numRecords / 10;
     state->eraseSizeInPages = 4;
-    // state->parameters = SBITS_USE_MAX_MIN | SBITS_USE_BMAP |
-    // SBITS_USE_INDEX;
     state->parameters = SBITS_USE_BMAP | SBITS_USE_INDEX;
-    // state->parameters =  0;
-    if (SBITS_USING_INDEX(state->parameters) == 1)
-        state->endAddress += state->pageSize * (state->eraseSizeInPages * 2);
-    if (SBITS_USING_BMAP(state->parameters))
-        state->bitmapSize = 8;
+    state->endAddress += state->pageSize * (state->eraseSizeInPages * 2);
+    state->bitmapSize = 8;
 
     /* Setup for data and bitmap comparison functions */
     state->inBitmap = inBitmapInt16;
@@ -217,6 +207,57 @@ void sbtisInitShouldInitState(void) {
     state->compareData = int32Comparator;
     int result = sbitsInit(state, 1);
     TEST_ASSERT_EQUAL_INT_MESSAGE(0, result, "There was an error with sbitsInit. Sbits was not initalized correctly.");
+
+    TEST_ASSERT_EQUAL_INT8_MESSAGE(4, state->keySize, "Key size was changed during init");
+    TEST_ASSERT_EQUAL_INT8_MESSAGE(12, state->dataSize, "Data size was changed during init");
+    TEST_ASSERT_EQUAL_INT8_MESSAGE(state->keySize + state->dataSize, state->recordSize, "Record size is not 4 (key) + 12 (data) = 16");
+
+    TEST_ASSERT_NOT_NULL_MESSAGE(state->file, "sbitsInit did not open the data file");
+    TEST_ASSERT_NOT_NULL_MESSAGE(state->indexFile, "sbitsInit did not open the index file");
+
+    sbitsClose(state);
+    free(state);
+}
+
+void sbtisInitShouldInitVarState(void) {
+    sbitsState *state = (sbitsState *)malloc(sizeof(sbitsState));
+    int8_t M = 4;
+    int32_t numRecords = 500000;
+    int32_t testRecords = 500000;
+
+    state->keySize = 4;
+    state->dataSize = 12;
+    state->pageSize = 512;
+    state->bufferSizeInBlocks = M;
+    state->buffer = malloc((size_t)state->bufferSizeInBlocks * state->pageSize);
+    int8_t *recordBuffer = (int8_t *)malloc(state->recordSize);
+
+    /* Address level parameters */
+    state->startAddress = 0;
+    state->endAddress = state->pageSize * numRecords / 10;
+    state->eraseSizeInPages = 4;
+    state->parameters = SBITS_USE_BMAP | SBITS_USE_INDEX;
+    state->endAddress += state->pageSize * (state->eraseSizeInPages * 2);
+    state->bitmapSize = 8;
+
+    /* Setup for data and bitmap comparison functions */
+    state->inBitmap = inBitmapInt16;
+    state->updateBitmap = updateBitmapInt16;
+    state->inBitmap = inBitmapInt64;
+    state->updateBitmap = updateBitmapInt64;
+    state->compareKey = int32Comparator;
+    state->compareData = int32Comparator;
+    int result = sbitsInit(state, 1);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(0, result, "There was an error with sbitsInit. Sbits was not initalized correctly.");
+
+    TEST_ASSERT_EQUAL_INT8_MESSAGE(4, state->keySize, "Key size was changed during init");
+    TEST_ASSERT_EQUAL_INT8_MESSAGE(12, state->dataSize, "Data size was changed during init");
+    TEST_ASSERT_EQUAL_INT8_MESSAGE(state->keySize + state->dataSize, state->recordSize, "Record size is not 4 (key) + 12 (data) = 16");
+
+    TEST_ASSERT_NOT_NULL_MESSAGE(state->file, "sbitsInit did not open the data file");
+    TEST_ASSERT_NOT_NULL_MESSAGE(state->indexFile, "sbitsInit did not open the index file");
+
+    sbitsClose(state);
     free(state);
 }
 
@@ -410,6 +451,7 @@ void iteratorReturnsCorrectVarRecords(void) {
 int main(void) {
     UNITY_BEGIN();
     RUN_TEST(sbtisInitShouldInitState);
+    RUN_TEST(sbtisInitShouldInitVarState);
     RUN_TEST(iteratorReturnsCorrectRecords);
     RUN_TEST(iteratorReturnsCorrectVarRecords);
     return UNITY_END();
