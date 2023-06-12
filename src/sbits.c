@@ -1572,3 +1572,28 @@ void resetStats(sbitsState *state) {
     state->numIdxReads = 0;
     state->numIdxWrites = 0;
 }
+
+/**
+ * @brief	Closes structure and frees any dynamic space.
+ * @param	state	SBITS state structure
+ */
+void sbitsClose(sbitsState *state) {
+    if (state->file != NULL) {
+        fclose(state->file);
+    }
+    if (state->indexFile != NULL) {
+        fclose(state->indexFile);
+    }
+    if (state->varFile != NULL) {
+        fclose(state->varFile);
+    }
+    if (SEARCH_METHOD == 2) {  // Spline
+        if (USE_RADIX) {
+            radixsplineClose(state->rdix);
+            free(state->rdix);
+        } else {
+            splineClose(state->spl);
+        }
+        free(state->spl);
+    }
+}

@@ -376,3 +376,12 @@ void radixsplinePrint(radixspline *rsidx) {
 size_t radixsplineSize(radixspline *rsidx) {
     return sizeof(rsidx) + rsidx->size * sizeof(uint32_t) + splineSize(rsidx->spl);
 }
+
+/**
+ * @brief	Closes and frees space for radix spline index structure
+ * @param	rsidx	Radix spline structure
+ */
+void radixsplineClose(radixspline *rsidx) {
+    free(rsidx->spl->points);
+    free(rsidx->table);
+}

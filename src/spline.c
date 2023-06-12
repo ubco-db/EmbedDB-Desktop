@@ -326,3 +326,17 @@ void splineFind(spline *spl, void *key, int8_t compareKey(void *, void *), id_t 
     point lastSplinePoint = spl->points[spl->count - 1];
     *high = (*loc + spl->maxError > lastSplinePoint.page) ? lastSplinePoint.page : *loc + spl->maxError;
 }
+
+/**
+ * @brief    Free memory allocated for spline structure.
+ * @param    spl        Spline structure
+ */
+void splineClose(spline *spl) {
+    for (id_t i = 0; i < spl->size; i++) {
+        free(spl->points[i].key);
+    }
+    free(spl->points);
+    free(spl->lastKey);
+    free(spl->lower.key);
+    free(spl->upper.key);
+}
