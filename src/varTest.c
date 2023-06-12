@@ -414,7 +414,6 @@ int main() {
                         }
                     }
                 }
-            } else if (queryType == 2) {
             } else if (queryType == 3) {
                 uint32_t itKey;
                 void *itData = calloc(1, state->dataSize);
