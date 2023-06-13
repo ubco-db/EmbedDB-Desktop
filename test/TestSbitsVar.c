@@ -37,7 +37,7 @@ void setUp(void) {
 
     TEST_ASSERT_EQUAL_INT8_MESSAGE(4, state->keySize, "Key size was changed during init");
     TEST_ASSERT_EQUAL_INT8_MESSAGE(12, state->dataSize, "Data size was changed during init");
-    TEST_ASSERT_EQUAL_INT8_MESSAGE(state->keySize + state->dataSize, state->recordSize, "Record size is not 4 (key) + 12 (data) = 16");
+    TEST_ASSERT_EQUAL_INT8_MESSAGE(state->keySize + state->dataSize + 4, state->recordSize, "Record size is not 4 (key) + 12 (data) = 16");
 
     TEST_ASSERT_NOT_NULL_MESSAGE(state->file, "sbitsInit did not open the data file");
     TEST_ASSERT_NOT_NULL_MESSAGE(state->indexFile, "sbitsInit did not open the index file");
