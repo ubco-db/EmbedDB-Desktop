@@ -1,4 +1,6 @@
 #include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "../src/sbits/sbits.h"
@@ -6,20 +8,34 @@
 #include "unity.h"
 
 sbitsState *state;
-int32_t numRecords = 1000;
+uint32_t numRecords = 1000;
+uint32_t inserted = 0;
 
-void setUp(void) {
+int i = 0;
+uint32_t dataSizes[] = {4, 6, 8};
+
+void setUp() {}
+void tearDown() {}
+
+void test_init() {
+    TEST_ASSERT_EQUAL_INT8_MESSAGE(0, sbitsInit(state, 0), "sbitsInit did not return 0");
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(4, state->keySize, "Key size was changed during sbitsInit");
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(dataSizes[i], state->dataSize, "Data size was changed during sbitsInit");
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(state->keySize + state->dataSize + 4, state->recordSize, "State's record size is not correct");
+}
+
+void initState(uint32_t dataSize) {
     // Initialize sbits State
     state = malloc(sizeof(sbitsState));
     state->keySize = 4;
-    state->dataSize = 4;
+    state->dataSize = dataSize;
     state->pageSize = 512;
     state->bufferSizeInBlocks = 6;
     state->buffer = calloc(1, state->pageSize * state->bufferSizeInBlocks);
     state->startAddress = 0;
-    state->endAddress = 1000 * state->pageSize;
-    state->varAddressStart = 0;
-    state->varAddressEnd = 1000 * state->pageSize;
+    state->endAddress = 100 * state->pageSize;
+    state->varAddressStart = state->endAddress;
+    state->varAddressEnd = state->varAddressStart + 100 * state->pageSize;
     state->eraseSizeInPages = 4;
     state->parameters = SBITS_USE_BMAP | SBITS_USE_INDEX | SBITS_USE_VDATA;
     state->bitmapSize = 1;
@@ -28,109 +44,150 @@ void setUp(void) {
     state->buildBitmapFromRange = buildBitmapInt8FromRange;
     state->compareKey = int32Comparator;
     state->compareData = int32Comparator;
-    TEST_ASSERT_EQUAL_INT8_MESSAGE(0, sbitsInit(state, 0), "Failed to initialize sbitsState");
     resetStats(state);
 }
 
-void iteratorReturnsCorrectVarRecords(void) {
-    resetStats(state);
-
-    // Insert records
-    uint8_t dataLen = 15;
-    char vardata[15] = "Testing 000...";
-    for (uint32_t key = 0; key < numRecords; key++) {
-        uint32_t data = key % 100;
-        void *varData = NULL;
-        uint32_t length = 0;
-        if (key % 10 == 0) {
-            length = 15;
-            vardata[10] = (char)(key % 10) + '0';
-            vardata[9] = (char)((key / 10) % 10) + '0';
-            vardata[8] = (char)((key / 100) % 10) + '0';
-            varData = malloc(length);
-            memcpy(varData, vardata, length);
-        }
-
-        sbitsPutVar(state, &key, &data, varData, length);
-
-        if (varData != NULL) {
-            free(varData);
-            varData = NULL;
-        }
-    }
-    sbitsFlush(state);
-
-    // Query records using an iterator
-    sbitsIterator it;
-    uint32_t minData = 23, maxData = 38, minKey = 32;
-    it.minData = &minData;
-    it.maxData = &maxData;
-    it.minKey = &minKey;
-    it.maxKey = NULL;
-    sbitsInitIterator(state, &it);
-
-    uint32_t numRecordsRead = 0, numPageReads = state->numReads;
-    uint32_t key, data;
-    uint8_t varBufSize = 4;
-    void *varBuf = malloc(varBufSize);
-    sbitsVarDataStream *varStream;
-    while (sbitsNextVar(state, &it, &key, &data, &varStream)) {
-        numRecordsRead++;
-        TEST_ASSERT_GREATER_OR_EQUAL_UINT32_MESSAGE(minKey, key, "Key is not in range of query");
-        TEST_ASSERT_EQUAL_UINT32_MESSAGE(key % 100, data, "Record contains the wrong data");
-        TEST_ASSERT_GREATER_OR_EQUAL_UINT32_MESSAGE(minData, data, "Data is not in range of query");
-        TEST_ASSERT_LESS_OR_EQUAL_UINT32_MESSAGE(maxData, data, "Data is not in range of query");
-        if (key % 10 == 0) {
-            TEST_ASSERT_NOT_NULL_MESSAGE(varStream, "Record should contain vardata and return a datastream");
-        } else {
-            TEST_ASSERT_NULL_MESSAGE(varStream, "Record should not contain vardata or return a datastream");
-        }
-
-        if (varStream != NULL) {
-            int8_t count = 0;
-            char reconstructedData[15];
-            uint32_t bytesRead, totalBytes = 0;
-            while ((bytesRead = sbitsVarDataStreamRead(state, varStream, varBuf, varBufSize)) > 0) {
-                TEST_ASSERT_LESS_OR_EQUAL_UINT8_MESSAGE(dataLen, totalBytes + bytesRead, "Datastream is returning too much data");
-                memcpy(reconstructedData + totalBytes, varBuf, bytesRead);
-                totalBytes += bytesRead;
-            }
-
-            char expected[15] = "Testing 000...";
-            expected[10] = (char)(key % 10) + '0';
-            expected[9] = (char)((key / 10) % 10) + '0';
-            expected[8] = (char)((key / 100) % 10) + '0';
-            TEST_ASSERT_EQUAL_CHAR_ARRAY_MESSAGE(expected, reconstructedData, dataLen, "Datastream did not return the correct data");
-
-            free(varStream);
-            varStream = NULL;
-        }
-    }
-
-    free(varBuf);
-
-    // Check that the correct number of records were read
-    uint32_t expectedNum = 0;
-    for (int i = 0; i < numRecords; i++) {
-        if (it.minKey != NULL && i < *(uint32_t *)it.minKey) continue;
-        if (it.maxKey != NULL && i > *(uint32_t *)it.maxKey) continue;
-        if (it.minData != NULL && i % 100 < *(uint32_t *)it.minData) continue;
-        if (it.maxData != NULL && i % 100 > *(uint32_t *)it.maxData) continue;
-        expectedNum++;
-    }
-    TEST_ASSERT_EQUAL_UINT32_MESSAGE(expectedNum, numRecordsRead, "Iterator did not read the correct number of records");
-
-    // Check that not all pages were read
-    TEST_ASSERT_LESS_THAN_UINT32_MESSAGE(numRecords / state->maxRecordsPerPage + 1, state->numReads - numPageReads, "Iterator made too many reads");
-}
-
-void tearDown(void) {
+void resetState() {
     sbitsClose(state);
+    free(state->buffer);
     free(state);
+    state = NULL;
+    inserted = 0;
 }
 
-int main(void) {
+int insertRecords(uint32_t n) {
+    char varData[] = "Testing 000...";
+    int targetNum = inserted + n;
+    for (uint64_t j = inserted; j < targetNum; j++) {
+        varData[10] = (char)(j % 10) + '0';
+        varData[9] = (char)((j / 10) % 10) + '0';
+        varData[8] = (char)((j / 100) % 10) + '0';
+
+        uint64_t data = j % 100;
+
+        int result = sbitsPutVar(state, &j, &data, varData, 15);
+        if (result != 0) {
+            return result;
+        }
+        inserted++;
+    }
+
+    return 0;
+}
+
+void test_get_when_empty() {
+    uint32_t key = 1, data, length = 0;
+    void *varData = NULL;
+    int8_t result = sbitsGetVar(state, &key, &data, &varData, &length);
+    TEST_ASSERT_EQUAL_INT8_MESSAGE(-1, result, "sbitsGetVar did not return -1 when the key was not found");
+    if (varData != NULL) {
+        free(varData);
+    }
+}
+
+void test_get_when_1() {
+    // Check that the record is correctly in the buffer
+    uint32_t expectedKey = 0;
+    uint64_t expectedData = 0;
+    uint32_t expectedVarDataSize = 15;
+    char expectedVarData[] = "Testing 000...";
+    void *key = (int8_t *)state->buffer + SBITS_DATA_WRITE_BUFFER * state->pageSize + state->headerSize;
+    void *data = (int8_t *)key + state->keySize;
+    uint32_t *varDataSize = (uint32_t *)((int8_t *)state->buffer + SBITS_VAR_WRITE_BUFFER(state->parameters) * state->pageSize + state->keySize);
+    void *varData = (int8_t *)state->buffer + SBITS_VAR_WRITE_BUFFER(state->parameters) * state->pageSize + state->keySize + sizeof(uint32_t);
+
+    TEST_ASSERT_EQUAL_CHAR_ARRAY_MESSAGE(&expectedKey, key, state->keySize, "Key was not correct with 1 record inserted");
+    TEST_ASSERT_EQUAL_CHAR_ARRAY_MESSAGE(&expectedData, data, state->dataSize, "Data was not correct with 1 record inserted");
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(expectedVarDataSize, *varDataSize, "Vardata size was not correct with 1 record inserted");
+    TEST_ASSERT_EQUAL_CHAR_ARRAY_MESSAGE(&expectedVarData, varData, 15, "Vardata was not correct with 1 record inserted");
+}
+
+void test_get_when_almost_almost_full_page() {
+    // Check that page gasn't been written
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(0, state->nextPageId, "sbits should not have written a page yet");
+    // Check that there is still space for another record
+    TEST_ASSERT_EACH_EQUAL_CHAR_MESSAGE(0, (int8_t *)state->buffer + SBITS_DATA_WRITE_BUFFER * state->pageSize + (state->pageSize - state->recordSize), state->recordSize, "There isn't space for another record in the buffer");
+}
+
+void test_get_when_almost_full_page() {
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(0, state->nextPageId, "sbits should not have written a page yet");
+}
+
+void test_get_when_full_page() {
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(1, state->nextPageId, "sbits should have written a page by now");
+
+    uint32_t key = 23, length;
+    uint64_t expectedData = 23, data = 0;
+    void *varData = NULL;
+    int result = sbitsGetVar(state, &key, &data, &varData, &length);
+    TEST_ASSERT_EQUAL_CHAR_ARRAY_MESSAGE(&expectedData, &data, state->dataSize, "sbitsGetVar did not return the correct fixed data");
+    TEST_ASSERT_NOT_NULL_MESSAGE(varData, "sbitsGetVar did not return vardata");
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(15, length, "Returned vardata was not the right length");
+    char expected[] = "Testing 023...";
+    TEST_ASSERT_EQUAL_CHAR_ARRAY_MESSAGE(expected, varData, 15, "sbitsGetVar did not return the correct vardata");
+
+    if (varData != NULL) {
+        free(varData);
+    }
+}
+
+void test_get_when_all() {
+    char expectedVarData[] = "Testing 000...";
+    void *varData = NULL;
+    for (int key = 0; key < numRecords; key++) {
+        expectedVarData[10] = (char)(key % 10) + '0';
+        expectedVarData[9] = (char)((key / 10) % 10) + '0';
+        expectedVarData[8] = (char)((key / 100) % 10) + '0';
+        uint32_t length;
+        uint64_t data = 0, expectedData = key % 100;
+
+        int result = sbitsGetVar(state, &key, &data, &varData, &length);
+        TEST_ASSERT_EQUAL_CHAR_ARRAY_MESSAGE(&expectedData, &data, state->dataSize, "sbitsGetVar did not return the correct fixed data");
+        TEST_ASSERT_NOT_NULL_MESSAGE(varData, "sbitsGetVar did not return vardata");
+        TEST_ASSERT_EQUAL_UINT32_MESSAGE(15, length, "Returned vardata was not the right length");
+        TEST_ASSERT_EQUAL_CHAR_ARRAY_MESSAGE(expectedVarData, varData, 15, "sbitsGetVar did not return the correct vardata");
+    }
+
+    free(varData);
+}
+
+void test_insert_1() {
+    TEST_ASSERT_EQUAL_INT8_MESSAGE(0, insertRecords(1), "sbitsPutVar was not successful when inserting a record");
+}
+
+void test_insert_lt_page() {
+    TEST_ASSERT_EQUAL_INT_MESSAGE(0, insertRecords(state->maxRecordsPerPage - inserted - 1), "Error while inserting records");
+}
+
+void test_insert_rest() {
+    TEST_ASSERT_EQUAL_INT_MESSAGE(0, insertRecords(numRecords - inserted), "Error while inserting records");
+}
+
+int main() {
     UNITY_BEGIN();
-    RUN_TEST(iteratorReturnsCorrectVarRecords);
+
+    for (i = 0; i < sizeof(dataSizes) / sizeof(dataSizes[i]); i++) {
+        // Setup state
+        initState(dataSizes[i]);
+        RUN_TEST(test_init);
+
+        // Run tests
+        RUN_TEST(test_get_when_empty);
+        RUN_TEST(test_insert_1);
+        RUN_TEST(test_get_when_1);
+        RUN_TEST(test_insert_lt_page);
+        RUN_TEST(test_get_when_almost_almost_full_page);
+        RUN_TEST(test_insert_1);
+        RUN_TEST(test_get_when_almost_full_page);
+        RUN_TEST(test_insert_1);
+        RUN_TEST(test_get_when_full_page);
+        RUN_TEST(test_insert_rest);
+        sbitsFlush(state);
+        RUN_TEST(test_get_when_all);
+
+        // Clean up state
+        resetState();
+    }
+
     return UNITY_END();
 }
