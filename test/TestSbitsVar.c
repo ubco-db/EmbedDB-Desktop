@@ -13,7 +13,7 @@ void setUp(void) {
     // Initialize sbits State
     state = (sbitsState *)malloc(sizeof(sbitsState));
     state->keySize = 4;
-    state->dataSize = 4;
+    state->dataSize = 12;
     state->pageSize = 512;
     state->bufferSizeInBlocks = 6;
     state->buffer = calloc(1, state->pageSize * state->bufferSizeInBlocks);
