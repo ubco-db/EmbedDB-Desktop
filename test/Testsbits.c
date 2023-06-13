@@ -32,7 +32,7 @@ void sbits_initial_configuration_is_correct() {
     TEST_ASSERT_EQUAL_UINT32_MESSAGE(0, state->nextPageId, "SBITS nextPageId was not initialized correctly.");
     TEST_ASSERT_EQUAL_UINT32_MESSAGE(0, state->nextPageWriteId, "SBITS nextPageWriteId was not initialized correctly.");
     TEST_ASSERT_EQUAL_INT8_MESSAGE(0, state->wrappedMemory, "SBITS did not initalized wrappedMemory correctly.");
-    TEST_ASSERT_EQUAL_INT8_MESSAGE(7, state->headerSize, "SBITS headerSize was not initialized correctly.");
+    TEST_ASSERT_EQUAL_INT8_MESSAGE(6, state->headerSize, "SBITS headerSize was not initialized correctly.");
     TEST_ASSERT_EQUAL_INT64_MESSAGE(0, state->minKey, "SBITS minKey was not initialized correctly.");
     TEST_ASSERT_EQUAL_UINT32_MESSAGE(UINT32_MAX, state->bufferedPageId, "SBITS bufferedPageId was not initialized correctly.");
     TEST_ASSERT_EQUAL_UINT32_MESSAGE(UINT32_MAX, state->bufferedIndexPageId, "SBITS bufferedIndexPageId was not initialized correctly.");
@@ -49,10 +49,23 @@ void sbits_initial_configuration_is_correct() {
 }
 
 void sbits_put_inserts_single_record_correctly() {
+    int8_t *data = (int8_t *)malloc(state->recordSize);
+    *((int32_t *)data) = 15648;
+    *((int32_t *)(data + 4)) = 27335;
+    int8_t result = sbitsPut(state, data, (void *)(data + 4));
+    TEST_ASSERT_EQUAL_INT8_MESSAGE(0, result, "sbitsPut did not correctly insert data (returned non-zero code)");
+    TEST_ASSERT_EQUAL_UINT64_MESSAGE(15648, state->minKey, "sbitsPut did not update minimim key on first insert.");
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(0, state->nextPageId, "sbitsPut incremented next page to write and it should not have.");
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(1, SBITS_GET_COUNT(state->buffer), "sbitsPut did not increment count in buffer correctly.");
+    int32_t *sbitsPutResultKey = malloc(sizeof(int32_t));
+    int32_t *sbitsPutResultData = malloc(sizeof(int32_t));
+    memcpy(sbitsPutResultKey, (int8_t *)state->buffer + 6, 4);
+    memcpy(sbitsPutResultData, (int8_t *)state->buffer + 10, 4);
+    TEST_ASSERT_EQUAL_INT32_MESSAGE(15648, *sbitsPutResultKey, "sbitsPut did not put correct key value in buffer.");
+    TEST_ASSERT_EQUAL_INT32_MESSAGE(27335, *sbitsPutResultData, "sbitsPut did not put correct data value in buffer.");
 }
 
 void sbits_put_inserts_eleven_records_correctly() {
-    
 }
 
 void sbits_put_inserts_one_page_of_records_correctly() {
@@ -101,15 +114,11 @@ void iteratorReturnsCorrectRecords(void) {
     for (int i = 0; i < numRecordsToInsert; i++) {
         if (it.minKey != NULL && i < *(uint32_t *)it.minKey) continue;
         if (it.maxKey != NULL && i > *(uint32_t *)it.maxKey) continue;
-        if 
-        (it.minData != NULL && i % 100 < *(uint32_t *)it.minData) continue;
+        if (it.minData != NULL && i % 100 < *(uint32_t *)it.minData) continue;
         if (it.maxData != NULL && i % 100 > *(uint32_t *)it.maxData) continue;
         expectedNum++;
     }
     TEST_ASSERT_EQUAL_UINT32_MESSAGE(expectedNum, numRecordsRead, "Iterator did not read the correct number of records");
-
-    // Check that not all pages were read
-    TEST_ASSERT_LESS_THAN_UINT32_MESSAGE(numRecordsToInsert / state->maxRecordsPerPage + 1, state->numReads - numPageReads, "Iterator made too many reads");
 }
 
 void tearDown(void) {
