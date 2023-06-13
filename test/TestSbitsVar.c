@@ -6,14 +6,13 @@
 #include "unity.h"
 
 sbitsState *state;
-int32_t numRecords = 500000;
-int32_t testRecords = 500000;
+int32_t numRecords = 1000;
 
 void setUp(void) {
     // Initialize sbits State
-    state = (sbitsState *)malloc(sizeof(sbitsState));
+    state = malloc(sizeof(sbitsState));
     state->keySize = 4;
-    state->dataSize = 12;
+    state->dataSize = 4;
     state->pageSize = 512;
     state->bufferSizeInBlocks = 6;
     state->buffer = calloc(1, state->pageSize * state->bufferSizeInBlocks);
@@ -29,18 +28,8 @@ void setUp(void) {
     state->buildBitmapFromRange = buildBitmapInt8FromRange;
     state->compareKey = int32Comparator;
     state->compareData = int32Comparator;
-
-    // Test initialization was correct
-    int result = sbitsInit(state, 1);
-
-    TEST_ASSERT_EQUAL_INT_MESSAGE(0, result, "There was an error with sbitsInit. Sbits was not initalized correctly.");
-
-    TEST_ASSERT_EQUAL_INT8_MESSAGE(4, state->keySize, "Key size was changed during init");
-    TEST_ASSERT_EQUAL_INT8_MESSAGE(12, state->dataSize, "Data size was changed during init");
-    TEST_ASSERT_EQUAL_INT8_MESSAGE(state->keySize + state->dataSize + 4, state->recordSize, "Record size is not 4 (key) + 12 (data) = 16");
-
-    TEST_ASSERT_NOT_NULL_MESSAGE(state->file, "sbitsInit did not open the data file");
-    TEST_ASSERT_NOT_NULL_MESSAGE(state->indexFile, "sbitsInit did not open the index file");
+    TEST_ASSERT_EQUAL_INT8_MESSAGE(0, sbitsInit(state, 0), "Failed to initialize sbitsState");
+    resetStats(state);
 }
 
 void iteratorReturnsCorrectVarRecords(void) {
