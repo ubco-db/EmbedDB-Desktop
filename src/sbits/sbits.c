@@ -149,7 +149,7 @@ void *sbitsGetMaxKey(sbitsState *state, void *buffer) {
 /**
  * @brief   Initialize SBITS structure.
  * @param   state           SBITS algorithm state structure
- * @param   indexMaxError   max error of indexing structure (spline or PGM)
+ * @param   indexMaxError   max error of indexing structure (spline)
  * @return  Return 0 if success. Non-zero value if error.
  */
 int8_t sbitsInit(sbitsState *state, size_t indexMaxError) {
