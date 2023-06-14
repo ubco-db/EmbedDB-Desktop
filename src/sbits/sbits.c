@@ -171,19 +171,14 @@ int8_t sbitsInit(sbitsState *state, size_t indexMaxError) {
     state->file = NULL;
     state->indexFile = NULL;
     state->varFile = NULL;
-    state->nextPageId = 0;
-    state->nextPageWriteId = 0;
-    state->wrappedMemory = 0;
-    state->indexMaxError = indexMaxError;
 
-    /* Calculate block header size */
+    state->indexMaxError = indexMaxError;
 
     /* Header size depends on bitmap size: 6 + X bytes: 4 byte id, 2 for record count, X for bitmap. */
     state->headerSize = 6 + state->bitmapSize;
     if (SBITS_USING_MAX_MIN(state->parameters))
         state->headerSize += state->keySize * 2 + state->dataSize * 2;
 
-    state->minKey = 0;
     state->bufferedPageId = -1;
     state->bufferedIndexPageId = -1;
     state->bufferedVarPage = -1;
@@ -198,14 +193,25 @@ int8_t sbitsInit(sbitsState *state, size_t indexMaxError) {
     /* Allocate first page of buffer as output page */
     initBufferPage(state, 0);
 
-    resetStats(state);
-
     id_t numPages = (state->endAddress - state->startAddress) / state->pageSize;
 
     if (numPages < (SBITS_USING_INDEX(state->parameters) * 2 + 2) * state->eraseSizeInPages) {
         printf("ERROR: Number of pages allocated must be at least twice erase block size for SBITS and four times when using indexing. Memory pages: %d\n", numPages);
         return -1;
     }
+
+    state->endDataPage = state->endAddress / state->pageSize;
+
+    state->file = fopen("build/artifacts/datafile.bin", "r");
+    if (state->file != NULL) {
+    }
+
+    state->nextPageId = 0;
+    state->nextPageWriteId = 0;
+    state->wrappedMemory = 0;
+    state->minKey = 0;
+
+    resetStats(state);
 
     state->startDataPage = 0;
     state->endDataPage = state->endAddress / state->pageSize;
@@ -221,7 +227,8 @@ int8_t sbitsInit(sbitsState *state, size_t indexMaxError) {
         return -1;
     }
 
-    if (SBITS_USING_INDEX(state->parameters)) { /* Allocate file and buffer for index */
+    if (SBITS_USING_INDEX(state->parameters)) {
+        /* Allocate file and buffer for index */
         if (state->bufferSizeInBlocks < 4) {
             printf("ERROR: SBITS using index requires at least 4 page buffers. Defaulting to without index.\n");
             state->parameters -= SBITS_USE_INDEX;

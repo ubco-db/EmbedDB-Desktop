@@ -55,12 +55,14 @@ typedef uint16_t count_t;
 #define SBITS_USE_SUM 4
 #define SBITS_USE_BMAP 8
 #define SBITS_USE_VDATA 16
+#define SBITS_RESET_DATA 32
 
 #define SBITS_USING_INDEX(x) ((x & SBITS_USE_INDEX) > 0 ? 1 : 0)
 #define SBITS_USING_MAX_MIN(x) ((x & SBITS_USE_MAX_MIN) > 0 ? 1 : 0)
 #define SBITS_USING_SUM(x) ((x & SBITS_USE_SUM) > 0 ? 1 : 0)
 #define SBITS_USING_BMAP(x) ((x & SBITS_USE_BMAP) > 0 ? 1 : 0)
 #define SBITS_USING_VDATA(x) ((x & SBITS_USE_VDATA) > 0 ? 1 : 0)
+#define SBITS_RESETING_DATA(x) ((x & SBITS_RESET_DATA) > 0 ? 1 : 0)
 
 /* Offsets with header */
 #define SBITS_COUNT_OFFSET 4
