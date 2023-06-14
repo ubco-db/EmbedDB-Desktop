@@ -63,22 +63,80 @@ void sbits_put_inserts_single_record_correctly() {
     memcpy(sbitsPutResultData, (int8_t *)state->buffer + 10, 4);
     TEST_ASSERT_EQUAL_INT32_MESSAGE(15648, *sbitsPutResultKey, "sbitsPut did not put correct key value in buffer.");
     TEST_ASSERT_EQUAL_INT32_MESSAGE(27335, *sbitsPutResultData, "sbitsPut did not put correct data value in buffer.");
+    free(sbitsPutResultKey);
+    free(sbitsPutResultData);
+    free(data);
 }
 
 void sbits_put_inserts_eleven_records_correctly() {
+    int8_t *data = (int8_t *)malloc(state->recordSize);
+    int32_t *sbitsPutResultKey = malloc(sizeof(int32_t));
+    int32_t *sbitsPutResultData = malloc(sizeof(int32_t));
+    *((int32_t *)data) = 16321;
+    *((int32_t *)(data + 4)) = 28361;
+    for (int i = 0; i < 11; i++) {
+        *((int32_t *)data) += i;
+        *((int32_t *)(data + 4)) %= (i + 1);
+        int8_t result = sbitsPut(state, data, (void *)(data + 4));
+        TEST_ASSERT_EQUAL_INT8_MESSAGE(0, result, "sbitsPut did not correctly insert data (returned non-zero code)");
+        memcpy(sbitsPutResultKey, (int8_t *)state->buffer + 6 + (i * 8), 4);
+        memcpy(sbitsPutResultData, (int8_t *)state->buffer + 10 + (i * 8), 4);
+        TEST_ASSERT_EQUAL_INT32_MESSAGE(*((int32_t *)data), *sbitsPutResultKey, "sbitsPut did not put correct key value in buffer.");
+        TEST_ASSERT_EQUAL_INT32_MESSAGE(*((int32_t *)(data + 4)), *sbitsPutResultData, "sbitsPut did not put correct data value in buffer.");
+    }
+    printf("Value of minKey is: %i\n", state->minKey);
+    TEST_ASSERT_EQUAL_INT64_MESSAGE(16321, state->minKey, "sbitsPut did not update minimim key on first insert.");
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(0, state->nextPageId, "sbitsPut incremented next page to write and it should not have.");
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(11, SBITS_GET_COUNT(state->buffer), "sbitsPut did not increment count in buffer correctly.");
+    free(sbitsPutResultKey);
+    free(sbitsPutResultData);
+    free(data);
 }
 
 void sbits_put_inserts_one_page_of_records_correctly() {
-    // 63 records based on setup
+    int8_t *data = (int8_t *)malloc(state->recordSize);
+    int32_t *sbitsPutResultKey = malloc(sizeof(int32_t));
+    int32_t *sbitsPutResultData = malloc(sizeof(int32_t));
+    *((int32_t *)data) = 100;
+    *((int32_t *)(data + 4)) = 724;
+    for (int i = 0; i < 63; i++) {
+        *((int32_t *)data) += i;
+        *((int32_t *)(data + 4)) %= (i + 1);
+        int8_t result = sbitsPut(state, data, (void *)(data + 4));
+        TEST_ASSERT_EQUAL_INT8_MESSAGE(0, result, "sbitsPut did not correctly insert data (returned non-zero code)");
+        memcpy(sbitsPutResultKey, (int8_t *)state->buffer + 6 + (i * 8), 4);
+        memcpy(sbitsPutResultData, (int8_t *)state->buffer + 10 + (i * 8), 4);
+        TEST_ASSERT_EQUAL_INT32_MESSAGE(*((int32_t *)data), *sbitsPutResultKey, "sbitsPut did not put correct key value in buffer.");
+        TEST_ASSERT_EQUAL_INT32_MESSAGE(*((int32_t *)(data + 4)), *sbitsPutResultData, "sbitsPut did not put correct data value in buffer.");
+    }
+    printf("Value of minKey is: %i\n", state->minKey);
+    TEST_ASSERT_EQUAL_INT64_MESSAGE(100, state->minKey, "sbitsPut did not update minimim key on first insert.");
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(0, state->nextPageId, "sbitsPut incremented next page to write and it should not have.");
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(63, SBITS_GET_COUNT(state->buffer), "sbitsPut did not increment count in buffer correctly.");
+    free(sbitsPutResultKey);
+    free(sbitsPutResultData);
+    free(data);
 }
 
-void sbits_put_inserts_one_less_than_one_page_of_records_correctly() {
-}
-
-void sbits_put_inserts_four_pages_of_records_correctly() {
-}
-
-void sbits_put_inserts_large_number_of_records_correctly() {
+void sbits_put_inserts_one_more_than_one_page_of_records_correctly() {
+    int8_t *data = (int8_t *)malloc(state->recordSize);
+    int32_t *sbitsPutResultKey = malloc(sizeof(int32_t));
+    int32_t *sbitsPutResultData = malloc(sizeof(int32_t));
+    *((int32_t *)data) = 4444444444;
+    *((int32_t *)(data + 4)) = 96875;
+    for (int i = 0; i < 64; i++) {
+        *((int32_t *)data) += i;
+        *((int32_t *)(data + 4)) %= (i + 1);
+        int8_t result = sbitsPut(state, data, (void *)(data + 4));
+        TEST_ASSERT_EQUAL_INT8_MESSAGE(0, result, "sbitsPut did not correctly insert data (returned non-zero code)");
+    }
+    printf("Value of minKey is: %i\n", state->minKey);
+    TEST_ASSERT_EQUAL_INT64_MESSAGE(4444444444, state->minKey, "sbitsPut did not update minimim key on first insert.");
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(1, state->nextPageId, "sbitsPut incremented next page to write and it should not have.");
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(0, SBITS_GET_COUNT(state->buffer), "sbitsPut did not increment count in buffer correctly.");
+    free(sbitsPutResultKey);
+    free(sbitsPutResultData);
+    free(data);
 }
 
 void iteratorReturnsCorrectRecords(void) {
@@ -132,9 +190,7 @@ int main(void) {
     RUN_TEST(sbits_put_inserts_single_record_correctly);
     RUN_TEST(sbits_put_inserts_eleven_records_correctly);
     RUN_TEST(sbits_put_inserts_one_page_of_records_correctly);
-    RUN_TEST(sbits_put_inserts_one_less_than_one_page_of_records_correctly);
-    RUN_TEST(sbits_put_inserts_four_pages_of_records_correctly);
-    RUN_TEST(sbits_put_inserts_large_number_of_records_correctly);
+    RUN_TEST(sbits_put_inserts_one_more_than_one_page_of_records_correctly);
     RUN_TEST(iteratorReturnsCorrectRecords);
     return UNITY_END();
 }
