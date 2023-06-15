@@ -28,36 +28,62 @@ A paper describing SBITS use for time series indexing is [available from the pub
 
 ## Usage
 
-### Setup Index and Configure Memory
-
+### Configure Records
+Create an sbits state
 ```c
-/* Configure SBITS state */
 sbitsState* state = (sbitsState*) malloc(sizeof(sbitsState));
-
-state->recordSize = 16;
-state->keySize = 4;
+```
+Configure the size of the records. These attributes are only for fixed-size data/keys. If you require variable-sized records keep reading
+```c
+state->keySize = 4;  // Allowed up to 8
 state->dataSize = 12;        
+```
+Configure storage addresses
+```c
 state->pageSize = 512;
-state->bitmapSize = 0;
-state->bufferSizeInBlocks = M;
-state->buffer  = malloc((size_t) state->bufferSizeInBlocks * state->pageSize);    
-int8_t* recordBuffer = (int8_t*) malloc(state->recordSize); 
-
-/* Address level parameters */
-state->startAddress = 0;
-state->endAddress = state->pageSize * numRecords / 10;  /* Modify this value lower to test wrap around */	
 state->eraseSizeInPages = 4;
-state->parameters = SBITS_USE_BMAP | SBITS_USE_INDEX;
-if (SBITS_USING_INDEX(state->parameters) == 1)
-    state->endAddress += state->pageSize * (state->eraseSizeInPages *2);    
-if (SBITS_USING_BMAP(state->parameters))
-    state->bitmapSize = 8;
-    
-/* Setup for data and bitmap comparison functions */
-state->inBitmap = inBitmapInt16;
-state->updateBitmap = updateBitmapInt16;
+
+/* If your storage medium has a file system (e.g. sd card) then the start address doesn't matter, only the different between the start and end.
+ * If you do not have a file system, then be sure that you do not overlap memory regions.
+ */
+state->startAddress = 0;
+state->endAddress = 1000 * state->pageSize;
+
+// If variable sized data will be stored
+state->varAddressStart = 2000 * state->pageSize;
+state->varAddressEnd = state->varAddressStart + 1000 * state->pageSize;
+```
+Configure memory buffers
+ ```c
+/* How to choose the number of blocks to use: 
+ * Required: 
+ *     - 2 blocks for record read/write buffers
+ * Optional:
+ *     - 2 blocks for index read/write buffers (Writing the bitmap index to file)
+ *     - 2 blocks for variable data read/write buffers (If you need to have a variable sized portion of the record)
+ */
+state->bufferSizeInBlocks = 6;
+state->buffer = malloc((size_t) state->bufferSizeInBlocks * state->pageSize);
+```
+Other parameters:
+```c
+state->parameters = SBITS_USE_BMAP | SBITS_USE_INDEX | SBITS_USE_VDATA;
+```
+`SBITS_USE_INDEX` - Writes the bitmap to a file for fast queries on the data (Usually used in conjuction with `SBITS_USE_BMAP`) \
+`SBITS_USE_BMAP` - Includes the bitmap in each page header so that it is easy to tell if a buffered page may contain a given key 
+```c
+state->bitmapSize = 8;
+
+// Include function pointers that can build/update a bitmap of the specified size
 state->inBitmap = inBitmapInt64;
 state->updateBitmap = updateBitmapInt64;
+state->buildBitmapFromRange = buildBitmapInt64FromRange;
+```
+
+`SBITS_USE_MAX_MIN` - Includes the max and min records in each page header \
+`SBITS_USE_VDATA` - Enables including variable-sized data with each record
+```c
+
 state->compareKey = int32Comparator;
 state->compareData = int32Comparator;
 
@@ -65,6 +91,8 @@ state->compareData = int32Comparator;
 size_t splineMaxError = 1; /* Modify this value to change spline error tolerance */
 sbitsInit(state, splineMaxError);
 ```
+
+### Setup Index
 
 ### Setup Index Method and Optional Radix Table
 ```c
