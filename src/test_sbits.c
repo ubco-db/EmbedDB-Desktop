@@ -215,7 +215,7 @@ void runalltests_sbits() {
         state->eraseSizeInPages = 4;
         // state->parameters = SBITS_USE_MAX_MIN | SBITS_USE_BMAP |
         // SBITS_USE_INDEX;
-        state->parameters = SBITS_USE_BMAP | SBITS_USE_INDEX;
+        state->parameters = SBITS_USE_BMAP | SBITS_USE_INDEX | SBITS_RESET_DATA;
         // state->parameters =  0;
         if (SBITS_USING_INDEX(state->parameters) == 1)
             state->endAddress +=

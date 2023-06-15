@@ -67,6 +67,14 @@
  */
 #define USE_RADIX 0
 
+/* Helper Functions */
+int8_t sbitsInitData(sbitsState *state);
+int8_t sbitsInitDataFromFile(sbitsState *state);
+int8_t sbitsInitIndex(sbitsState *state);
+int8_t sbitsInitIndexFromFile(sbitsState *state);
+int8_t sbitsInitVarData(sbitsState *state);
+int8_t sbitsInitVarDataFromFile(sbitsState *state);
+
 void printBitmap(char *bm) {
     for (int8_t i = 0; i <= 7; i++) {
         printf(" " BYTE_TO_BINARY_PATTERN "", BYTE_TO_BINARY(*(bm + i)));
@@ -171,14 +179,18 @@ int8_t sbitsInit(sbitsState *state, size_t indexMaxError) {
     state->file = NULL;
     state->indexFile = NULL;
     state->varFile = NULL;
-
+    state->wrappedMemory = 0;
     state->indexMaxError = indexMaxError;
+
+    /* Calculate block header size */
 
     /* Header size depends on bitmap size: 6 + X bytes: 4 byte id, 2 for record count, X for bitmap. */
     state->headerSize = 6 + state->bitmapSize;
     if (SBITS_USING_MAX_MIN(state->parameters))
         state->headerSize += state->keySize * 2 + state->dataSize * 2;
 
+    /* Flags to show that these values have not been initalized with actual data yet */
+    state->minKey = UINT32_MAX;
     state->bufferedPageId = -1;
     state->bufferedIndexPageId = -1;
     state->bufferedVarPage = -1;
@@ -193,6 +205,8 @@ int8_t sbitsInit(sbitsState *state, size_t indexMaxError) {
     /* Allocate first page of buffer as output page */
     initBufferPage(state, 0);
 
+    resetStats(state);
+
     id_t numPages = (state->endAddress - state->startAddress) / state->pageSize;
 
     if (numPages < (SBITS_USING_INDEX(state->parameters) * 2 + 2) * state->eraseSizeInPages) {
@@ -200,19 +214,57 @@ int8_t sbitsInit(sbitsState *state, size_t indexMaxError) {
         return -1;
     }
 
-    state->endDataPage = state->endAddress / state->pageSize;
-
-    state->file = fopen("build/artifacts/datafile.bin", "r");
-    if (state->file != NULL) {
+    /* Initalize the spline or radix spline structure if either are to be used */
+    if (SEARCH_METHOD == 2) {
+        if (USE_RADIX) {
+            initRadixSpline(state, 1000, RADIX_BITS);
+        } else {
+            state->spl = malloc(sizeof(spline));
+            splineInit(state->spl, 1000, indexMaxError, state->keySize);
+        }
     }
 
+    /* Allocate file for data*/
+    int8_t dataInitResult = 0;
+    dataInitResult = sbitsInitData(state);
+    
+    if(dataInitResult != 0){
+        return dataInitResult;
+    }
+
+    /* Allocate file and buffer for index */
+    int8_t indexInitResult = 0;
+    if (SBITS_USING_INDEX(state->parameters)) {
+        if (state->bufferSizeInBlocks < 4) {
+            printf("ERROR: SBITS using index requires at least 4 page buffers. Defaulting to without index.\n");
+            state->parameters -= SBITS_USE_INDEX;
+        } else {
+            indexInitResult = sbitsInitIndex(state);
+        }
+    }
+
+    if (indexInitResult != 0) {
+        return indexInitResult;
+    }
+
+    /* Allocate file and buffer for variable data */
+    int8_t varDataInitResult = 0;
+    if (SBITS_USING_VDATA(state->parameters)) {
+        if (state->bufferSizeInBlocks < 4 + (SBITS_USING_INDEX(state->parameters) ? 2 : 0)) {
+            printf("ERROR: SBITS using variable records requires at least 4 page buffers if there is no index and 6 if there is. Defaulting to no variable data.\n");
+            state->parameters -= SBITS_USE_VDATA;
+        } else {
+            varDataInitResult = sbitsInitVarData(state);
+        }
+        return varDataInitResult;
+    }
+
+    return 0;
+}
+
+int8_t sbitsInitData(sbitsState *state) {
     state->nextPageId = 0;
     state->nextPageWriteId = 0;
-    state->wrappedMemory = 0;
-    state->minKey = 0;
-
-    resetStats(state);
-
     state->startDataPage = 0;
     state->endDataPage = state->endAddress / state->pageSize;
     state->firstDataPage = 0;
@@ -227,87 +279,84 @@ int8_t sbitsInit(sbitsState *state, size_t indexMaxError) {
         return -1;
     }
 
-    if (SBITS_USING_INDEX(state->parameters)) {
-        /* Allocate file and buffer for index */
-        if (state->bufferSizeInBlocks < 4) {
-            printf("ERROR: SBITS using index requires at least 4 page buffers. Defaulting to without index.\n");
-            state->parameters -= SBITS_USE_INDEX;
-        } else {
-            /* Setup index file. */
-            state->indexFile = fopen("build/artifacts/indexfile.bin", "w+b");
-            if (state->indexFile == NULL) {
-                printf("Error: Can't open index file!\n");
-                return -1;
-            }
+    return 0;
+}
 
-            /* 4 for id, 2 for count, 2 unused, 4 for minKey (pageId), 4 for maxKey (pageId) */
-            state->maxIdxRecordsPerPage = (state->pageSize - 16) / state->bitmapSize;
+int8_t sbitsInitDataFromFile(sbitsState *state) {
+    return 0;
+}
 
-            /* Allocate third page of buffer as index output page */
-            initBufferPage(state, SBITS_INDEX_WRITE_BUFFER);
-
-            /* Add page id to minimum value spot in page */
-            void *buf = (int8_t *)state->buffer + state->pageSize * (SBITS_INDEX_WRITE_BUFFER);
-            id_t *ptr = ((id_t *)((int8_t *)buf + 8));
-            *ptr = state->nextPageId;
-
-            state->nextIdxPageId = 0;
-            state->nextIdxPageWriteId = 0;
-
-            count_t numIdxPages = numPages / 100; /* Index overhead is about 1% of data size */
-            if (numIdxPages < state->eraseSizeInPages * 2) {
-                /* Minimum index space is two erase blocks */
-                numIdxPages = state->eraseSizeInPages * 2;
-            } else {
-                /* Ensure index space is a multiple of erase block size */
-                numIdxPages = ((numIdxPages / state->eraseSizeInPages) + 1) * state->eraseSizeInPages;
-            }
-
-            /* Index pages are at the end of the memory space */
-            state->endIdxPage = state->endDataPage;
-            state->endDataPage -= numIdxPages;
-            state->startIdxPage = state->endDataPage + 1;
-            state->firstIdxPage = 0;
-            state->erasedEndIdxPage = 0;
-            state->wrappedIdxMemory = 0;
-        }
+int8_t sbitsInitIndex(sbitsState *state) {
+    /* Setup index file. */
+    state->indexFile = fopen("build/artifacts/indexfile.bin", "w+b");
+    if (state->indexFile == NULL) {
+        printf("Error: Can't open index file!\n");
+        return -1;
     }
 
-    if (SBITS_USING_VDATA(state->parameters)) {
-        if (state->bufferSizeInBlocks < 4 + (SBITS_USING_INDEX(state->parameters) ? 2 : 0)) {
-            printf("ERROR: SBITS using variable records requires at least 4 page buffers if there is no index and 6 if there is. Defaulting to no variable data.\n");
-            state->parameters -= SBITS_USE_VDATA;
-        } else {
-            // SETUP FILE
-            state->varFile = fopen("build/artifacts/varFile.bin", "w+b");
-            if (state->varFile == NULL) {
-                printf("Error: Can't open variable data file!\n");
-                return -1;
-            }
+    id_t numPages = (state->endAddress - state->startAddress) / state->pageSize;
 
-            // Initialize variable data outpt buffer
-            initBufferPage(state, SBITS_VAR_WRITE_BUFFER(state->parameters));
+    /* 4 for id, 2 for count, 2 unused, 4 for minKey (pageId), 4 for maxKey (pageId) */
+    state->maxIdxRecordsPerPage = (state->pageSize - 16) / state->bitmapSize;
 
-            state->currentVarLoc = state->keySize;
-            state->minVarRecordId = 0;
-            state->wrappedVariableMemory = 0;
-            state->numAvailVarPages = (state->varAddressEnd - state->varAddressStart) / state->pageSize;
-            state->numVarPages = state->numAvailVarPages;
-            state->nextVarPageId = 0;
+    /* Allocate third page of buffer as index output page */
+    initBufferPage(state, SBITS_INDEX_WRITE_BUFFER);
 
-            printf("Variable data pages: %d\n", state->numVarPages);
-        }
+    /* Add page id to minimum value spot in page */
+    void *buf = (int8_t *)state->buffer + state->pageSize * (SBITS_INDEX_WRITE_BUFFER);
+    id_t *ptr = ((id_t *)((int8_t *)buf + 8));
+    *ptr = state->nextPageId;
+
+    state->nextIdxPageId = 0;
+    state->nextIdxPageWriteId = 0;
+
+    count_t numIdxPages = numPages / 100; /* Index overhead is about 1% of data size */
+    if (numIdxPages < state->eraseSizeInPages * 2) {
+        /* Minimum index space is two erase blocks */
+        numIdxPages = state->eraseSizeInPages * 2;
+    } else {
+        /* Ensure index space is a multiple of erase block size */
+        numIdxPages = ((numIdxPages / state->eraseSizeInPages) + 1) * state->eraseSizeInPages;
     }
 
-    if (SEARCH_METHOD == 2) {
-        if (USE_RADIX) {
-            initRadixSpline(state, 1000, RADIX_BITS);
-        } else {
-            state->spl = malloc(sizeof(spline));
-            splineInit(state->spl, 1000, indexMaxError, state->keySize);
-        }
+    /* Index pages are at the end of the memory space */
+    state->endIdxPage = state->endDataPage;
+    state->endDataPage -= numIdxPages;
+    state->startIdxPage = state->endDataPage + 1;
+    state->firstIdxPage = 0;
+    state->erasedEndIdxPage = 0;
+    state->wrappedIdxMemory = 0;
+
+    return 0;
+}
+
+int8_t sbitsInitIndexFromFile(sbitsState *state) {
+    return 0;
+}
+
+int8_t sbitsInitVarData(sbitsState *state) {
+    // SETUP FILE
+    state->varFile = fopen("build/artifacts/varFile.bin", "w+b");
+    if (state->varFile == NULL) {
+        printf("Error: Can't open variable data file!\n");
+        return -1;
     }
 
+    // Initialize variable data outpt buffer
+    initBufferPage(state, SBITS_VAR_WRITE_BUFFER(state->parameters));
+
+    state->currentVarLoc = state->keySize;
+    state->minVarRecordId = 0;
+    state->wrappedVariableMemory = 0;
+    state->numAvailVarPages = (state->varAddressEnd - state->varAddressStart) / state->pageSize;
+    state->numVarPages = state->numAvailVarPages;
+    state->nextVarPageId = 0;
+
+    printf("Variable data pages: %d\n", state->numVarPages);
+    return 0;
+}
+
+int8_t sbitsInitVarDataFromFile(sbitsState *state) {
     return 0;
 }
 
@@ -530,7 +579,7 @@ int8_t sbitsPut(sbitsState *state, void *key, void *data) {
     SBITS_INC_COUNT(state->buffer);
 
     /* Set minimum key for first record insert */
-    if (state->minKey == 0)
+    if (state->minKey == UINT32_MAX)
         memcpy(&state->minKey, key, state->keySize);
 
     if (SBITS_USING_MAX_MIN(state->parameters)) {

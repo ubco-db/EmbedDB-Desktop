@@ -146,7 +146,7 @@ int main() {
         state->varAddressEnd = 1000000;
         state->eraseSizeInPages = 4;
 
-        state->parameters = SBITS_USE_BMAP | SBITS_USE_INDEX | SBITS_USE_VDATA;
+        state->parameters = SBITS_USE_BMAP | SBITS_USE_INDEX | SBITS_USE_VDATA | SBITS_RESET_DATA;
 
         if (SBITS_USING_INDEX(state->parameters) == 1)
             state->endAddress += state->pageSize * (state->eraseSizeInPages * 2);
