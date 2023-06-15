@@ -19,7 +19,7 @@ void setUp(void) {
     state->startAddress = 0;
     state->endAddress = 1000 * state->pageSize;
     state->eraseSizeInPages = 4;
-    state->parameters = SBITS_USE_BMAP | SBITS_USE_INDEX;
+    state->parameters = SBITS_USE_BMAP | SBITS_USE_INDEX | SBITS_RESET_DATA;
     state->bitmapSize = 1;
     state->inBitmap = inBitmapInt8;
     state->updateBitmap = updateBitmapInt8;

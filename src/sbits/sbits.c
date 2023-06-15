@@ -75,7 +75,8 @@ int8_t sbitsInitIndex(sbitsState *state);
 int8_t sbitsInitIndexFromFile(sbitsState *state);
 int8_t sbitsInitVarData(sbitsState *state);
 int8_t sbitsInitVarDataFromFile(sbitsState *state);
-void updateAverageKeyDifference(sbitsState *state);
+void updateAverageKeyDifference(sbitsState *state, void *buffer);
+void sbitsInitSplineFromFile(sbitsState *state);
 
 void printBitmap(char *bm) {
     for (int8_t i = 0; i <= 7; i++) {
@@ -303,7 +304,7 @@ int8_t sbitsInitDataFromFile(sbitsState *state) {
     id_t maxLogicalPageId = 0;
     id_t physicalPageId = 0;
     /* This will become zero if there is no more to read */
-    int8_t moreToRead = readPage(state, physicalPageId);
+    int8_t moreToRead = !(readPage(state, physicalPageId));
     bool haveWrappedInMemory = false;
     while (moreToRead) {
         memcpy(&logicalPageId, state->buffer, sizeof(id_t));
@@ -313,7 +314,7 @@ int8_t sbitsInitDataFromFile(sbitsState *state) {
         }
         maxLogicalPageId = logicalPageId;
         physicalPageId++;
-        moreToRead = readPage(state, physicalPageId);
+        moreToRead = !(readPage(state, physicalPageId));
     }
 
     state->nextPageId = maxLogicalPageId + 1;
@@ -325,8 +326,27 @@ int8_t sbitsInitDataFromFile(sbitsState *state) {
         state->erasedEndPage = physicalPageId;
     }
 
-    updateAverageKeyDifference(state);
+    void *buffer = (int8_t *)state->buffer + state->pageSize;
+    updateAverageKeyDifference(state, buffer);
+
+    if (SEARCH_METHOD == 2) {
+        sbitsInitSplineFromFile(state);
+    }
+
     return 0;
+}
+
+void sbitsInitSplineFromFile(sbitsState *state) {
+    int8_t moreToRead = readPage(state, state->firstDataPage);
+    void *buffer = (int8_t *)state->buffer + state->pageSize;
+    while (moreToRead) {
+        if (USE_RADIX) {
+            radixsplineAddPoint(state->rdix, sbitsGetMinKey(state, buffer));
+        } else {
+            splineAdd(state->spl, sbitsGetMinKey(state, buffer));
+        }
+        moreToRead = !(readPage(state, state->firstDataPage));
+    }
 }
 
 int8_t sbitsInitIndex(sbitsState *state) {
@@ -365,8 +385,8 @@ int8_t sbitsInitIndex(sbitsState *state) {
     state->wrappedIdxMemory = 0;
 
     if (!SBITS_RESETING_DATA(state->parameters)) {
-        state->file = fopen("build/artifacts/indexfile.bin", "r");
-        if (state->file != NULL) {
+        state->indexFile = fopen("build/artifacts/indexfile.bin", "r");
+        if (state->indexFile != NULL) {
             return sbitsInitIndexFromFile(state);
         }
         printf("Unable to open index file. Attempting to initialize a new one.\n");
@@ -590,7 +610,7 @@ int8_t sbitsPut(sbitsState *state, void *key, void *data) {
             memcpy((void *)((int8_t *)buf + SBITS_IDX_HEADER_SIZE + state->bitmapSize * idxcount), bm, state->bitmapSize);
         }
 
-        updateAverageKeyDifference(state);
+        updateAverageKeyDifference(state, state->buffer);
 
         // Calculate error within the page
         int32_t maxError = getMaxError(state, state->buffer);
@@ -662,7 +682,7 @@ int8_t sbitsPut(sbitsState *state, void *key, void *data) {
     return 0;
 }
 
-void updateAverageKeyDifference(sbitsState *state) {
+void updateAverageKeyDifference(sbitsState *state, void *buffer) {
     /* Update estimate of average key difference. */
     int32_t numBlocks = state->nextPageWriteId - 1;
     if (state->nextPageWriteId < state->firstDataPage) {
@@ -675,11 +695,11 @@ void updateAverageKeyDifference(sbitsState *state) {
 
     if (state->keySize <= 4) {
         uint32_t maxKey = 0;
-        memcpy(&maxKey, sbitsGetMaxKey(state, state->buffer), state->keySize);
+        memcpy(&maxKey, sbitsGetMaxKey(state, buffer), state->keySize);
         state->avgKeyDiff = (maxKey - state->minKey) / numBlocks / state->maxRecordsPerPage;
     } else {
         uint64_t maxKey = 0;
-        memcpy(&maxKey, sbitsGetMaxKey(state, state->buffer), state->keySize);
+        memcpy(&maxKey, sbitsGetMaxKey(state, buffer), state->keySize);
         state->avgKeyDiff = (maxKey - state->minKey) / numBlocks / state->maxRecordsPerPage;
     }
 }
@@ -1612,7 +1632,7 @@ id_t writeVariablePage(sbitsState *state, void *buffer) {
  * @brief	Reads given page from storage.
  * @param	state	SBITS algorithm state structure
  * @param	pageNum	Page number to read
- * @return	Return 0 if success, -1 if error.
+ * @return	Return 0 if success, 1 if error.
  */
 int8_t readPage(sbitsState *state, id_t pageNum) {
     /* Check if page is currently in buffer */
