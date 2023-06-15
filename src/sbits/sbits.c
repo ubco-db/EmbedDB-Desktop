@@ -38,6 +38,7 @@
 #include "sbits.h"
 
 #include <math.h>
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -74,6 +75,7 @@ int8_t sbitsInitIndex(sbitsState *state);
 int8_t sbitsInitIndexFromFile(sbitsState *state);
 int8_t sbitsInitVarData(sbitsState *state);
 int8_t sbitsInitVarDataFromFile(sbitsState *state);
+void updateAverageKeyDifference(sbitsState *state);
 
 void printBitmap(char *bm) {
     for (int8_t i = 0; i <= 7; i++) {
@@ -278,7 +280,7 @@ int8_t sbitsInitData(sbitsState *state) {
         if (state->file != NULL) {
             return sbitsInitDataFromFile(state);
         }
-        printf("Unable to open data file. Attempting to initialize a new one.\n");
+        printf("No existing data file found. Attempting to initialize a new one.\n");
     }
 
     state->file = fopen("build/artifacts/datafile.bin", "w+b");
@@ -291,6 +293,39 @@ int8_t sbitsInitData(sbitsState *state) {
 }
 
 int8_t sbitsInitDataFromFile(sbitsState *state) {
+    /* Open the data file */
+    state->file = fopen("build/artifacts/datafile.bin", "r+b");
+    if (state->file == NULL) {
+        printf("Error: Can't open existing data file!\n");
+        return -1;
+    }
+    id_t logicalPageId = 0;
+    id_t maxLogicalPageId = 0;
+    id_t physicalPageId = 0;
+    /* This will become zero if there is no more to read */
+    int8_t moreToRead = readPage(state, physicalPageId);
+    bool haveWrappedInMemory = false;
+    while (moreToRead) {
+        memcpy(&logicalPageId, state->buffer, sizeof(id_t));
+        if (logicalPageId < maxLogicalPageId) {
+            haveWrappedInMemory = true;
+            break;
+        }
+        maxLogicalPageId = logicalPageId;
+        physicalPageId++;
+        moreToRead = readPage(state, physicalPageId);
+    }
+
+    state->nextPageId = maxLogicalPageId + 1;
+    state->nextPageWriteId = physicalPageId + 1;
+
+    if (haveWrappedInMemory) {
+        state->firstDataPage = physicalPageId + 1;
+        state->firstDataPageId = maxLogicalPageId + 1;
+        state->erasedEndPage = physicalPageId;
+    }
+
+    updateAverageKeyDifference(state);
     return 0;
 }
 
@@ -555,25 +590,7 @@ int8_t sbitsPut(sbitsState *state, void *key, void *data) {
             memcpy((void *)((int8_t *)buf + SBITS_IDX_HEADER_SIZE + state->bitmapSize * idxcount), bm, state->bitmapSize);
         }
 
-        /* Update estimate of average key difference. */
-        int32_t numBlocks = state->nextPageWriteId - 1;
-        if (state->nextPageWriteId < state->firstDataPage) {
-            /* Wrapped around in memory and first data page is after the next page that will write */
-            numBlocks = state->endDataPage - state->firstDataPage + 1 + state->nextIdxPageWriteId;
-        }
-
-        if (numBlocks == 0)
-            numBlocks = 1;
-
-        if (state->keySize <= 4) {
-            uint32_t maxKey = 0;
-            memcpy(&maxKey, sbitsGetMaxKey(state, state->buffer), state->keySize);
-            state->avgKeyDiff = (maxKey - state->minKey) / numBlocks / state->maxRecordsPerPage;
-        } else {
-            uint64_t maxKey = 0;
-            memcpy(&maxKey, sbitsGetMaxKey(state, state->buffer), state->keySize);
-            state->avgKeyDiff = (maxKey - state->minKey) / numBlocks / state->maxRecordsPerPage;
-        }
+        updateAverageKeyDifference(state);
 
         // Calculate error within the page
         int32_t maxError = getMaxError(state, state->buffer);
@@ -643,6 +660,28 @@ int8_t sbitsPut(sbitsState *state, void *key, void *data) {
     }
 
     return 0;
+}
+
+void updateAverageKeyDifference(sbitsState *state) {
+    /* Update estimate of average key difference. */
+    int32_t numBlocks = state->nextPageWriteId - 1;
+    if (state->nextPageWriteId < state->firstDataPage) {
+        /* Wrapped around in memory and first data page is after the next page that will write */
+        numBlocks = state->endDataPage - state->firstDataPage + 1 + state->nextIdxPageWriteId;
+    }
+
+    if (numBlocks == 0)
+        numBlocks = 1;
+
+    if (state->keySize <= 4) {
+        uint32_t maxKey = 0;
+        memcpy(&maxKey, sbitsGetMaxKey(state, state->buffer), state->keySize);
+        state->avgKeyDiff = (maxKey - state->minKey) / numBlocks / state->maxRecordsPerPage;
+    } else {
+        uint64_t maxKey = 0;
+        memcpy(&maxKey, sbitsGetMaxKey(state, state->buffer), state->keySize);
+        state->avgKeyDiff = (maxKey - state->minKey) / numBlocks / state->maxRecordsPerPage;
+    }
 }
 
 /**
