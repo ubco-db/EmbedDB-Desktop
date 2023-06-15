@@ -227,8 +227,8 @@ int8_t sbitsInit(sbitsState *state, size_t indexMaxError) {
     /* Allocate file for data*/
     int8_t dataInitResult = 0;
     dataInitResult = sbitsInitData(state);
-    
-    if(dataInitResult != 0){
+
+    if (dataInitResult != 0) {
         return dataInitResult;
     }
 
@@ -273,9 +273,17 @@ int8_t sbitsInitData(sbitsState *state) {
     state->avgKeyDiff = 1;
 
     /* Setup data file. */
+    if (!SBITS_RESETING_DATA(state->parameters)) {
+        state->file = fopen("build/artifacts/datafile.bin", "r");
+        if (state->file != NULL) {
+            return sbitsInitDataFromFile(state);
+        }
+        printf("Unable to open data file. Attempting to initialize a new one.\n");
+    }
+
     state->file = fopen("build/artifacts/datafile.bin", "w+b");
     if (state->file == NULL) {
-        printf("Error: Can't open file!\n");
+        printf("Error: Can't open data file!\n");
         return -1;
     }
 
@@ -288,12 +296,6 @@ int8_t sbitsInitDataFromFile(sbitsState *state) {
 
 int8_t sbitsInitIndex(sbitsState *state) {
     /* Setup index file. */
-    state->indexFile = fopen("build/artifacts/indexfile.bin", "w+b");
-    if (state->indexFile == NULL) {
-        printf("Error: Can't open index file!\n");
-        return -1;
-    }
-
     id_t numPages = (state->endAddress - state->startAddress) / state->pageSize;
 
     /* 4 for id, 2 for count, 2 unused, 4 for minKey (pageId), 4 for maxKey (pageId) */
@@ -327,6 +329,20 @@ int8_t sbitsInitIndex(sbitsState *state) {
     state->erasedEndIdxPage = 0;
     state->wrappedIdxMemory = 0;
 
+    if (!SBITS_RESETING_DATA(state->parameters)) {
+        state->file = fopen("build/artifacts/indexfile.bin", "r");
+        if (state->file != NULL) {
+            return sbitsInitIndexFromFile(state);
+        }
+        printf("Unable to open index file. Attempting to initialize a new one.\n");
+    }
+
+    state->indexFile = fopen("build/artifacts/indexfile.bin", "w+b");
+    if (state->indexFile == NULL) {
+        printf("Error: Can't open index file!\n");
+        return -1;
+    }
+
     return 0;
 }
 
@@ -336,11 +352,6 @@ int8_t sbitsInitIndexFromFile(sbitsState *state) {
 
 int8_t sbitsInitVarData(sbitsState *state) {
     // SETUP FILE
-    state->varFile = fopen("build/artifacts/varFile.bin", "w+b");
-    if (state->varFile == NULL) {
-        printf("Error: Can't open variable data file!\n");
-        return -1;
-    }
 
     // Initialize variable data outpt buffer
     initBufferPage(state, SBITS_VAR_WRITE_BUFFER(state->parameters));
@@ -351,6 +362,20 @@ int8_t sbitsInitVarData(sbitsState *state) {
     state->numAvailVarPages = (state->varAddressEnd - state->varAddressStart) / state->pageSize;
     state->numVarPages = state->numAvailVarPages;
     state->nextVarPageId = 0;
+
+    if (!SBITS_RESETING_DATA(state->parameters)) {
+        state->file = fopen("build/artifacts/varFile.bin", "r");
+        if (state->file != NULL) {
+            return sbitsInitIndexFromFile(state);
+        }
+        printf("Unable to open variable data file. Attempting to initialize a new one.\n");
+    }
+
+    state->varFile = fopen("build/artifacts/varFile.bin", "w+b");
+    if (state->varFile == NULL) {
+        printf("Error: Can't open variable data file!\n");
+        return -1;
+    }
 
     printf("Variable data pages: %d\n", state->numVarPages);
     return 0;
