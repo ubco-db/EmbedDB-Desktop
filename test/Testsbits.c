@@ -16,6 +16,7 @@ void setUp(void) {
     state->buffer = calloc(1, state->pageSize * state->bufferSizeInBlocks);
     state->startAddress = 0;
     state->endAddress = 1000 * state->pageSize;
+    state->parameters = 0;
     state->eraseSizeInPages = 4;
     state->bitmapSize = 0;
     state->inBitmap = inBitmapInt8;
