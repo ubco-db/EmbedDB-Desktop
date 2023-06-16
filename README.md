@@ -29,6 +29,24 @@ SBITS is a high performance embedded data storage and index structure for time s
 
 A paper describing SBITS use for time series indexing is [available from the publisher](https://www.scitepress.org/Link.aspx?doi=10.5220/0010318800920099) and a [pre-print is also available](SBITS_time_series_index.pdf).
 
+### Table of Contents
+- [Configure SBITS State](#configure-records)
+	- [Create an sbits state](#create-an-sbits-state)
+	- [Size of records](#configure-the-size-of-the-records-these-attributes-are-only-for-fixed-size-datakeys-if-you-require-variable-sized-records-keep-reading)
+	- [Comparator Functions](#comparator-functions)
+	- [Storage Addresses](#configure-storage-addresses)
+	- [Memory Buffers](#configure-memory-buffers)
+	- [Other Parameters](#other-parameters)
+	- [Final Initialization](#final-initilization)
+- [Setup Index](#setup-index-method-and-optional-radix-table)
+- [Insert Records](#insert-put-items-into-table)
+- [Query Records](#query-get-items-from-tree)
+- [Iterate over Records](#iterate-through-items-in-tree)
+	- [Filter by key](#iterator-with-filter-on-keys)
+	- [Filter by data](#iterator-with-filter-on-data)
+	- [Iterate with vardata](#iterate-over-records-with-vardata)
+- [Disposing of sbits state](#disposing-of-sbits-state)
+
 ## Usage
 
 ### Configure Records
