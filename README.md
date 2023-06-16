@@ -30,22 +30,23 @@ SBITS is a high performance embedded data storage and index structure for time s
 A paper describing SBITS use for time series indexing is [available from the publisher](https://www.scitepress.org/Link.aspx?doi=10.5220/0010318800920099) and a [pre-print is also available](SBITS_time_series_index.pdf).
 
 ### Table of Contents
-- [Configure SBITS State](#configure-records)
-	- [Create an sbits state](#create-an-sbits-state)
-	- [Size of records](#configure-the-size-of-the-records-these-attributes-are-only-for-fixed-size-datakeys-if-you-require-variable-sized-records-keep-reading)
-	- [Comparator Functions](#comparator-functions)
-	- [Storage Addresses](#configure-storage-addresses)
-	- [Memory Buffers](#configure-memory-buffers)
-	- [Other Parameters](#other-parameters)
-	- [Final Initialization](#final-initilization)
-- [Setup Index](#setup-index-method-and-optional-radix-table)
-- [Insert Records](#insert-put-items-into-table)
-- [Query Records](#query-get-items-from-tree)
-- [Iterate over Records](#iterate-through-items-in-tree)
-	- [Filter by key](#iterator-with-filter-on-keys)
-	- [Filter by data](#iterator-with-filter-on-data)
-	- [Iterate with vardata](#iterate-over-records-with-vardata)
-- [Disposing of sbits state](#disposing-of-sbits-state)
+
+-   [Configure SBITS State](#configure-records)
+    -   [Create an sbits state](#create-an-sbits-state)
+    -   [Size of records](#configure-size-of-records)
+    -   [Comparator Functions](#comparator-functions)
+    -   [Storage Addresses](#configure-storage-addresses)
+    -   [Memory Buffers](#configure-memory-buffers)
+    -   [Other Parameters](#other-parameters)
+    -   [Final Initialization](#final-initilization)
+-   [Setup Index](#setup-index-method-and-optional-radix-table)
+-   [Insert Records](#insert-put-items-into-table)
+-   [Query Records](#query-get-items-from-tree)
+-   [Iterate over Records](#iterate-through-items-in-tree)
+    -   [Filter by key](#iterator-with-filter-on-keys)
+    -   [Filter by data](#iterator-with-filter-on-data)
+    -   [Iterate with vardata](#iterate-over-records-with-vardata)
+-   [Disposing of sbits state](#disposing-of-sbits-state)
 
 ## Usage
 
@@ -57,7 +58,9 @@ A paper describing SBITS use for time series indexing is [available from the pub
 sbitsState* state = (sbitsState*) malloc(sizeof(sbitsState));
 ```
 
-#### Configure the size of the records. These attributes are only for fixed-size data/keys. If you require variable-sized records keep reading
+#### Configure size of records
+
+These attributes are only for fixed-size data/keys. If you require variable-sized records keep reading
 
 ```c
 state->keySize = 4;  // Allowed up to 8
@@ -65,6 +68,9 @@ state->dataSize = 12;  // No limit as long as at least one record can fit on a p
 ```
 
 #### Comparator functions
+
+There are example implementations of these in src/sbits/utilityFunctions.c \
+These can be customized for your own keys and data.
 
 ```c
 // Function pointers that can compare two keys/data
@@ -143,7 +149,7 @@ The `SEARCH_METHOD` defines the method used for indexing physical data pages.
 
 -   0 Uses a linear function to approximate data page locations.
 -   1 Performs a binary search over all data pages.
--   **2 Uses a Spline structure (with optional Radix table) to index data pages. _Recommended_**
+-   **2 Uses a Spline structure (with optional Radix table) to index data pages. _This is the recommended option_**
 
 The `RADIX_BITS` constant defines how many bits are indexed by the Radix table when using `SEARCH_METHOD 2`.
 Setting this constant to 0 will omit the Radix table, indexing will rely solely on the Spline structure.
