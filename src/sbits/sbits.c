@@ -149,7 +149,7 @@ void *sbitsGetMaxKey(sbitsState *state, void *buffer) {
 /**
  * @brief   Initialize SBITS structure.
  * @param   state           SBITS algorithm state structure
- * @param   indexMaxError   max error of indexing structure (spline or PGM)
+ * @param   indexMaxError   max error of indexing structure (spline)
  * @return  Return 0 if success. Non-zero value if error.
  */
 int8_t sbitsInit(sbitsState *state, size_t indexMaxError) {
@@ -762,6 +762,11 @@ int8_t linearSearch(sbitsState *state, int16_t *numReads, void *buf, void *key, 
  * @return	Return 0 if success. Non-zero value if error.
  */
 int8_t sbitsGet(sbitsState *state, void *key, void *data) {
+    if (state->nextPageId == 0 && state->wrappedMemory == 0) {
+        printf("ERROR: No data in database.\n");
+        return -1;
+    }
+
     int32_t pageId, physPageId;
     int32_t first = 0, last;
     void *buf;
