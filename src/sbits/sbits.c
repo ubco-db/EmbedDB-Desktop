@@ -53,7 +53,7 @@
  * 1 = Binary serach
  * 2 = Modified linear search (Spline)
  */
-#define SEARCH_METHOD 2
+#define SEARCH_METHOD 1
 
 /**
  * Number of bits to be indexed by the Radix Search structure
@@ -77,6 +77,7 @@ int8_t sbitsInitVarData(sbitsState *state);
 int8_t sbitsInitVarDataFromFile(sbitsState *state);
 void updateAverageKeyDifference(sbitsState *state, void *buffer);
 void sbitsInitSplineFromFile(sbitsState *state);
+int32_t getMaxError(sbitsState *state, void *buffer);
 
 void printBitmap(char *bm) {
     for (int8_t i = 0; i <= 7; i++) {
@@ -294,20 +295,32 @@ int8_t sbitsInitData(sbitsState *state) {
 }
 
 int8_t sbitsInitDataFromFile(sbitsState *state) {
-    /* Open the data file */
+    printf("Attempt to initialize from data file\n");
     state->file = fopen("build/artifacts/datafile.bin", "r+b");
     if (state->file == NULL) {
         printf("Error: Can't open existing data file!\n");
         return -1;
     }
+
     id_t logicalPageId = 0;
     id_t maxLogicalPageId = 0;
     id_t physicalPageId = 0;
+
     /* This will become zero if there is no more to read */
     int8_t moreToRead = !(readPage(state, physicalPageId));
+
     bool haveWrappedInMemory = false;
+    int count = 0;
+    void *buffer = (int8_t *)state->buffer + state->pageSize;
     while (moreToRead) {
-        memcpy(&logicalPageId, state->buffer, sizeof(id_t));
+        memcpy(&logicalPageId, buffer, sizeof(id_t));
+
+        /* Need to update maxError which requires looking at every page */
+        int32_t maxError = getMaxError(state, buffer);
+        if (state->maxError < maxError) {
+            state->maxError = maxError;
+        }
+
         if (logicalPageId < maxLogicalPageId) {
             haveWrappedInMemory = true;
             break;
@@ -315,18 +328,38 @@ int8_t sbitsInitDataFromFile(sbitsState *state) {
         maxLogicalPageId = logicalPageId;
         physicalPageId++;
         moreToRead = !(readPage(state, physicalPageId));
+        count++;
     }
 
     state->nextPageId = maxLogicalPageId + 1;
-    state->nextPageWriteId = physicalPageId + 1;
+    state->nextPageWriteId = physicalPageId;
 
     if (haveWrappedInMemory) {
-        state->firstDataPage = physicalPageId + 1;
+        state->wrappedMemory = 1;
+        state->firstDataPage = physicalPageId;
         state->firstDataPageId = maxLogicalPageId + 1;
-        state->erasedEndPage = physicalPageId;
+        state->erasedEndPage = physicalPageId - 1;
     }
 
-    void *buffer = (int8_t *)state->buffer + state->pageSize;
+    /*
+     * Need to put the first data page in the buffer to find the minimum key for updating
+     * the average difference.
+     */
+    readPage(state, state->firstDataPage);
+
+    if (state->keySize <= 4) {
+        uint32_t minKey = 0;
+        memcpy(&minKey, sbitsGetMinKey(state, buffer), state->keySize);
+        state->minKey = minKey;
+    } else {
+        uint64_t minKey = 0;
+        memcpy(&minKey, sbitsGetMinKey(state, buffer), state->keySize);
+        state->minKey = minKey;
+    }
+
+    /* Put largest key back into the buffer */
+    readPage(state, state->nextPageWriteId - 1);
+
     updateAverageKeyDifference(state, buffer);
 
     if (SEARCH_METHOD == 2) {
@@ -337,15 +370,22 @@ int8_t sbitsInitDataFromFile(sbitsState *state) {
 }
 
 void sbitsInitSplineFromFile(sbitsState *state) {
-    int8_t moreToRead = readPage(state, state->firstDataPage);
+    // TODO: Refactor splineAdd as it tracks the page internally instead of accepting a page from the user
+    id_t pageNumberToRead = state->firstDataPage;
     void *buffer = (int8_t *)state->buffer + state->pageSize;
-    while (moreToRead) {
+    id_t pagesRead = 0;
+    id_t numberOfPagesToRead = state->firstDataPage == 0 ? state->nextPageWriteId : state->endDataPage;
+    while (pagesRead < numberOfPagesToRead) {
+        (readPage(state, pageNumberToRead++));
         if (USE_RADIX) {
             radixsplineAddPoint(state->rdix, sbitsGetMinKey(state, buffer));
         } else {
             splineAdd(state->spl, sbitsGetMinKey(state, buffer));
         }
-        moreToRead = !(readPage(state, state->firstDataPage));
+        pagesRead++;
+        if (pageNumberToRead >= state->endDataPage) {
+            pageNumberToRead = 0;
+        }
     }
 }
 
@@ -402,6 +442,51 @@ int8_t sbitsInitIndex(sbitsState *state) {
 }
 
 int8_t sbitsInitIndexFromFile(sbitsState *state) {
+    printf("Attempt to initialize from data file\n");
+    state->file = fopen("build/artifacts/indexfile.bin", "r+b");
+    if (state->file == NULL) {
+        printf("Error: Can't open existing data file!\n");
+        return -1;
+    }
+
+    id_t logicalIndexPageId = 0;
+    id_t maxLogicaIndexPageId = 0;
+    id_t physicalIndexPageId = 0;
+
+    /* This will become zero if there is no more to read */
+    int8_t moreToRead = !(readIndexPage(state, physicalIndexPageId));
+
+    bool haveWrappedInMemory = false;
+    int count = 0;
+    void *buffer = (int8_t *)state->buffer + state->pageSize * SBITS_INDEX_READ_BUFFER;
+
+    while (moreToRead) {
+        memcpy(&logicalIndexPageId, buffer, sizeof(id_t));
+        if (logicalIndexPageId < maxLogicaIndexPageId) {
+            haveWrappedInMemory = true;
+            break;
+        }
+        maxLogicaIndexPageId = logicalPageId;
+        physicalPageId++;
+        moreToRead = !(readPage(state, physicalPageId));
+        count++;
+    }
+
+    state->nextPageId = maxLogicaIndexPageId + 1;
+    state->nextPageWriteId = physicalPageId;
+
+    if (haveWrappedInMemory) {
+        state->wrappedMemory = 1;
+        state->firstDataPage = physicalPageId;
+        state->firstDataPageId = maxLogicaIndexPageId + 1;
+        state->erasedEndPage = physicalPageId - 1;
+    }
+
+    state->nextIdxPageId = 0;
+    state->nextIdxPageWriteId = 0;
+    state->firstIdxPage = 0;
+    state->erasedEndIdxPage = 0;
+    state->wrappedIdxMemory = 0;
     return 0;
 }
 
@@ -1661,7 +1746,7 @@ int8_t readPage(sbitsState *state, id_t pageNum) {
  * @brief	Reads given index page from storage.
  * @param	state	SBITS algorithm state structure
  * @param	pageNum	Page number to read
- * @return	Return 0 if success, -1 if error.
+ * @return	Return 0 if success, 1 if error.
  */
 int8_t readIndexPage(sbitsState *state, id_t pageNum) {
     /* Check if page is currently in buffer */
