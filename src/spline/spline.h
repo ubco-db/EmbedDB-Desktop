@@ -63,6 +63,7 @@ struct spline_s {
     id_t lastLoc;           /* Location of previous spline key */
     void *lastKey;          /* Previous spline key */
     uint32_t maxError;      /* Maximum error */
+    uint32_t numAddCalls;   /* Number of times the add method has been called */
     id_t tempLastPoint;     /* Last spline point is temporary if value is not 0 */
     uint8_t keySize;        /* Size of key in bytes */
 };

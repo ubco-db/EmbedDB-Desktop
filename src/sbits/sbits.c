@@ -337,8 +337,13 @@ int8_t sbitsInitDataFromFile(sbitsState *state) {
     if (haveWrappedInMemory) {
         state->wrappedMemory = 1;
         state->firstDataPage = physicalPageId;
-        state->firstDataPageId = maxLogicalPageId + 1;
         state->erasedEndPage = physicalPageId - 1;
+
+        /* Update smallest logical page number */
+        readPage(state, state->firstDataPage);
+        id_t smallestLogicalPageNumber = 0;
+        memcpy(&smallestLogicalPageNumber, buffer, sizeof(id_t));
+        state->firstDataPageId = physicalPageId;
     }
 
     /*

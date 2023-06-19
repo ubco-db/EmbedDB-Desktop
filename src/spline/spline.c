@@ -61,6 +61,7 @@ void splineInit(spline *spl, id_t size, size_t maxError, uint8_t keySize) {
     spl->lastKey = malloc(keySize);
     spl->lower.key = malloc(keySize);
     spl->upper.key = malloc(keySize);
+    spl->numAddCalls = 0;
 }
 
 /**
@@ -83,8 +84,9 @@ static inline int8_t splineIsRight(uint64_t x1, int64_t y1, uint64_t x2, int64_t
  * @param    key     Data key to be added (must be incrementing)
  */
 void splineAdd(spline *spl, void *key, uint32_t page) {
+    spl->numAddCalls++;
     /* Check if no spline points are currently empty */
-    if (spl->count == 0) {
+    if (spl->numAddCalls == 1) {
         /* Add first point in data set to spline. */
         memcpy(spl->points[0].key, key, spl->keySize);
         spl->points[0].page = page;
@@ -94,7 +96,7 @@ void splineAdd(spline *spl, void *key, uint32_t page) {
     }
 
     /* Check if there is only one spline point (need to initialize upper and lower limits using 2nd point) */
-    if (spl->count == 1) {
+    if (spl->numAddCalls == 2) {
         /* Initialize upper and lower limits using second (unique) data point */
         memcpy(spl->lower.key, key, spl->keySize);
         spl->lower.page = page < spl->maxError ? 0 : page - spl->maxError;

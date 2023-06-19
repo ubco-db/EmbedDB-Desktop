@@ -17,8 +17,12 @@ int main() {
         return insertStatus;
     }
 
-    // printf("Spline Stats After Initial Inserts: \n");
-    // splinePrint(state->spl);
+    printf("\nFirst Logical Page ID: %i\n", state->firstDataPageId);
+
+    printf("\nFirst Physical Page ID: %i\n", state->firstDataPage);
+
+    printf("\nSpline Stats After Initial Inserts: \n");
+    splinePrint(state->spl);
     sbitsClose(state);
 
     /* Initalize state again */
@@ -28,7 +32,12 @@ int main() {
         printf("Re-init was not successful.\n");
         return initStatus;
     }
-    // splinePrint(state->spl);
+    printf("\nSpline Stats After Reload: \n");
+    splinePrint(state->spl);
+
+    printf("\nFirst Page ID: %i\n", state->firstDataPageId);
+
+    printf("\nFirst Physical Page ID: %i\n", state->firstDataPage);
     return 0;
 }
 
@@ -59,7 +68,7 @@ int insertRecords(sbitsState *state, uint32_t numberOfRecords) {
         return -1;
     }
     *((int32_t *)data) = 10;
-    *((int32_t *)(data + 4)) = 20230615;
+    *((int32_t *)(data + 4)) = 100;
     for (int i = 0; i < numberOfRecords; i++) {
         *((int32_t *)data) += i;
         *((int32_t *)(data + 4)) += i;
