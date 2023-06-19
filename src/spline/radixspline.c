@@ -158,7 +158,6 @@ void radixsplineAddPoint(radixspline *rsidx, void *key, uint32_t page) {
     memcpy(rsidx->table + prefix, &rsidx->pointsSeen, sizeof(id_t));
 
     rsidx->pointsSeen++;
-    rsidx->numPoints = rsidx->spl->currentPointLoc;
 }
 
 /**
@@ -172,7 +171,6 @@ void radixsplineInit(radixspline *rsidx, spline *spl, int8_t radixSize, uint8_t 
     rsidx->spl = spl;
     rsidx->radixSize = radixSize;
     rsidx->keySize = keySize;
-    rsidx->numPoints = 0;
     rsidx->shiftSize = 0;
     rsidx->size = pow(2, radixSize);
 

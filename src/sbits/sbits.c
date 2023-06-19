@@ -53,7 +53,7 @@
  * 1 = Binary serach
  * 2 = Modified linear search (Spline)
  */
-#define SEARCH_METHOD 1
+#define SEARCH_METHOD 2
 
 /**
  * Number of bits to be indexed by the Radix Search structure
