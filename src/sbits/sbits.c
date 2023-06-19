@@ -381,7 +381,7 @@ void sbitsInitSplineFromFile(sbitsState *state) {
     uint32_t logicalPageNumber = state->firstDataPageId;
     while (pagesRead < numberOfPagesToRead) {
         (readPage(state, pageNumberToRead++));
-        if (USE_RADIX) {
+        if (RADIX_BITS > 0) {
             radixsplineAddPoint(state->rdix, sbitsGetMinKey(state, buffer), logicalPageNumber++);
         } else {
             splineAdd(state->spl, sbitsGetMinKey(state, buffer), logicalPageNumber++);

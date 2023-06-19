@@ -210,8 +210,7 @@ void runalltests_sbits() {
         /* Address level parameters */
         state->startAddress = 0;
         state->endAddress =
-            state->pageSize * numRecords /
-            10; /* Modify this value lower to test wrap around */
+            state->pageSize * 50; /* Modify this value lower to test wrap around */
         state->eraseSizeInPages = 4;
         // state->parameters = SBITS_USE_MAX_MIN | SBITS_USE_BMAP |
         // SBITS_USE_INDEX;
@@ -349,11 +348,15 @@ void runalltests_sbits() {
          * 2: Query random records in the range of original data set.
          * 3: Query range of records using an iterator.
          */
-        int8_t queryType = 3;
+        int8_t queryType = 1;
 
         if (seqdata == 1) {
             if (queryType == 1) {
                 for (i = 0; i < numRecords; i++) {
+                    if (i = 9982) {
+                        printf("Hello world\n");
+                    }
+
                     int32_t key = i;
                     int8_t result = sbitsGet(state, &key, recordBuffer);
 
