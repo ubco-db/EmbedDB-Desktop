@@ -466,27 +466,21 @@ int8_t sbitsInitIndexFromFile(sbitsState *state) {
             haveWrappedInMemory = true;
             break;
         }
-        maxLogicaIndexPageId = logicalPageId;
-        physicalPageId++;
-        moreToRead = !(readPage(state, physicalPageId));
+        maxLogicaIndexPageId = logicalIndexPageId;
+        physicalIndexPageId++;
+        moreToRead = !(readPage(state, physicalIndexPageId));
         count++;
     }
 
-    state->nextPageId = maxLogicaIndexPageId + 1;
-    state->nextPageWriteId = physicalPageId;
+    state->nextIdxPageId = maxLogicaIndexPageId + 1;
+    state->nextIdxPageWriteId = physicalIndexPageId;
 
     if (haveWrappedInMemory) {
-        state->wrappedMemory = 1;
-        state->firstDataPage = physicalPageId;
-        state->firstDataPageId = maxLogicaIndexPageId + 1;
-        state->erasedEndPage = physicalPageId - 1;
+        state->wrappedIdxMemory = 1;
+        state->firstIdxPage = physicalIndexPageId;
+        state->erasedEndIdxPage = physicalIndexPageId - 1;
     }
 
-    state->nextIdxPageId = 0;
-    state->nextIdxPageWriteId = 0;
-    state->firstIdxPage = 0;
-    state->erasedEndIdxPage = 0;
-    state->wrappedIdxMemory = 0;
     return 0;
 }
 
@@ -1656,7 +1650,8 @@ id_t writeIndexPage(sbitsState *state, void *buffer) {
 
         /* Update the start of the data */
         state->erasedEndIdxPage = 0 + state->eraseSizeInPages - 1;
-        state->firstIdxPage = state->erasedEndIdxPage + 1; /* First active physical data page is just after what was erased */
+        /* First active physical data page is just after what was erased */
+        state->firstIdxPage = state->erasedEndIdxPage + 1;
         state->wrappedIdxMemory = 1;
 
         /* Wrap to start of memory space */
