@@ -119,10 +119,50 @@ typedef uint16_t count_t;
         (bm & 0x02 ? '1' : '0'),   \
         (bm & 0x01 ? '1' : '0')
 
+/**
+ * @brief	An interface for sbits to read/write to any storage medium at the page level of granularity
+ */
+typedef struct sbitsFileInterface {
+    /**
+     * @brief	Reads a single page into the buffer
+     * @param	buffer		Pre-allocated space where data is read into
+     * @param	pageNum		Page number to read. Is treated as an offset from the beginning of the file
+     * @param	pageSize	Number of bytes in a page
+     * @param	file		The file to read from. This is the file data that was returned by sbitsFileInterface::open
+     * @return	1 for success and 0 for failure
+     */
+    int8_t (*read)(void *buffer, uint32_t pageNum, uint32_t pageSize, void *file);
+
+    /**
+     * @brief	Writes a single page to file
+     * @param	buffer		The data to write to file
+     * @param	pageNum		Page number to write. Is treated as an offset from the beginning of the file
+     * @param	pageSize	Number of bytes in a page
+     * @param	file		The file data that was returned by sbitsFileInterface::open
+     * @return	1 for success and 0 for failure
+     */
+    int8_t (*write)(const void *buffer, uint32_t pageNum, uint32_t pageSize, void *file);
+
+    /**
+     * @brief	Closes the file
+     * @return	1 for success and 0 for failure
+     */
+    int8_t (*close)(void *file);
+
+    /**
+     * @brief	Opens a file
+     * @param	filename	The name of the file to be created
+     * @param	mode		Which mode to open the file in. See: https://en.cppreference.com/w/c/io/fopen#File_access_flags
+     * @return	A pointer to the file object. Returns NULL when there is an issue opening the file
+     */
+    void *(*open)(char *filename, char *mode);
+} sbitsFileInterface;
+
 typedef struct {
-    FILE *file;                                                           /* File for storing data records. */
-    FILE *indexFile;                                                      /* File for storing index records. */
-    FILE *varFile;                                                        /* File for storing variable length data. */
+    void *dataFile;                                                       /* File for storing data records. */
+    void *indexFile;                                                      /* File for storing index records. */
+    void *varFile;                                                        /* File for storing variable length data. */
+    sbitsFileInterface *fileInterface;                                    /* Interface to the file storage */
     id_t startAddress;                                                    /* Start address in memory space */
     id_t endAddress;                                                      /* End address in memory space */
     count_t eraseSizeInPages;                                             /* Erase size in pages */
