@@ -57,16 +57,15 @@
 
 /**
  * Number of bits to be indexed by the Radix Search structure
- * Note: The Radix search structure is only used with Spline (SEARCH_METHOD ==
- * 2) To use a pure Spline index without a Radix table, set RADIX_BITS to 0
+ * Note: The Radix search structure is only used with Spline (SEARCH_METHOD == 2) To use a pure Spline index without a Radix table, set RADIX_BITS to 0
  */
 #define RADIX_BITS 0
 
-/*
- * Defines if the radix table should be use, or just the spline structure. It is
- * only applicable for search method 2.
+/**
+ * Number of spline points to be allocated. This is a set amount and will not grow.
+ * The amount you need will depend on how much your key rate varies and what maxSplineError is set during sbits initialization.
  */
-#define USE_RADIX 0
+#define ALLOCATED_SPLINE_POINTS 300
 
 /* Helper Functions */
 int8_t sbitsInitData(sbitsState *state);
@@ -220,11 +219,11 @@ int8_t sbitsInit(sbitsState *state, size_t indexMaxError) {
 
     /* Initalize the spline or radix spline structure if either are to be used */
     if (SEARCH_METHOD == 2) {
-        if (USE_RADIX) {
-            initRadixSpline(state, 1000, RADIX_BITS);
+        if (RADIX_BITS > 0) {
+            initRadixSpline(state, ALLOCATED_SPLINE_POINTS, RADIX_BITS);
         } else {
             state->spl = malloc(sizeof(spline));
-            splineInit(state->spl, 1000, indexMaxError, state->keySize);
+            splineInit(state->spl, ALLOCATED_SPLINE_POINTS, indexMaxError, state->keySize);
         }
     }
 
@@ -645,7 +644,7 @@ int32_t getMaxError(sbitsState *state, void *buffer) {
  */
 void indexPage(sbitsState *state, uint32_t pageNumber) {
     if (SEARCH_METHOD == 2) {
-        if (USE_RADIX) {
+        if (RADIX_BITS > 0) {
             radixsplineAddPoint(state->rdix, sbitsGetMinKey(state, state->buffer), pageNumber);
         } else {
             splineAdd(state->spl, sbitsGetMinKey(state, state->buffer), pageNumber);
@@ -1091,7 +1090,7 @@ int8_t sbitsGet(sbitsState *state, void *key, void *data) {
     /* Modified linear search */
     // NEXT STEP: Make it so that a point is only added when a new spline point is added, not for every point
     id_t location;
-    if (USE_RADIX) {
+    if (RADIX_BITS > 0) {
         radixsplineFind(state->rdix, key, state->compareKey, &location, &lowbound, &highbound);
     } else {
         splineFind(state->spl, key, state->compareKey, &location, &lowbound, &highbound);
@@ -1542,7 +1541,7 @@ void printStats(sbitsState *state) {
     printf("Max Error: %d\n", state->maxError);
 
     if (SEARCH_METHOD == 2) {
-        if (USE_RADIX) {
+        if (RADIX_BITS > 0) {
             splinePrint(state->rdix->spl);
             radixsplinePrint(state->rdix);
         } else {
@@ -1828,7 +1827,7 @@ void sbitsClose(sbitsState *state) {
         fclose(state->varFile);
     }
     if (SEARCH_METHOD == 2) {  // Spline
-        if (USE_RADIX) {
+        if (RADIX_BITS > 0) {
             radixsplineClose(state->rdix);
             free(state->rdix);
             state->rdix = NULL;
