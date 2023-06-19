@@ -324,7 +324,7 @@ void runalltests_sbits() {
 
     doneread:
         sbitsFlush(state);
-        fflush(state->file);
+        fflush(state->dataFile);
         uint32_t end = clock();
 
         l = numSteps - 1;

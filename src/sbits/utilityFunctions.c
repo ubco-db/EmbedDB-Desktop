@@ -210,3 +210,30 @@ int8_t int32Comparator(void *a, void *b) {
         return 1;
     return 0;
 }
+
+int8_t DEFAULT_READ(void *buffer, uint32_t pageNum, uint32_t pageSize, void *file) {
+    fseek((FILE *)file, pageSize * pageNum, SEEK_SET);
+    return fread(buffer, pageSize, 1, (FILE *)file);
+}
+
+int8_t DEFAULT_WRITE(const void *buffer, uint32_t pageNum, uint32_t pageSize, void *file) {
+    fseek((FILE *)file, pageNum * pageSize, SEEK_SET);
+    return fwrite(buffer, pageSize, 1, (FILE *)file);
+}
+
+int8_t DEFAULT_CLOSE(void *file) {
+    return fclose((FILE *)file);
+}
+
+void *DEFAULT_OPEN(char *filename, char *mode) {
+    return fopen(filename, mode);
+}
+
+sbitsFileInterface *getFileInterface() {
+    sbitsFileInterface *fileInterface = malloc(sizeof(sbitsFileInterface));
+    fileInterface->open = DEFAULT_OPEN;
+    fileInterface->close = DEFAULT_CLOSE;
+    fileInterface->read = DEFAULT_READ;
+    fileInterface->write = DEFAULT_WRITE;
+    return fileInterface;
+}

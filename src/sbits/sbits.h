@@ -33,6 +33,9 @@
  * 	POSSIBILITY OF SUCH DAMAGE.
  */
 /******************************************************************************/
+#ifndef _H_SBITS
+#define _H_SBITS
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -122,7 +125,7 @@ typedef uint16_t count_t;
 /**
  * @brief	An interface for sbits to read/write to any storage medium at the page level of granularity
  */
-typedef struct sbitsFileInterface {
+typedef struct {
     /**
      * @brief	Reads a single page into the buffer
      * @param	buffer		Pre-allocated space where data is read into
@@ -415,4 +418,5 @@ void sbitsClose(sbitsState *state);
 
 #ifdef __cplusplus
 }
+#endif
 #endif

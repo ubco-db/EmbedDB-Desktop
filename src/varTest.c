@@ -145,6 +145,7 @@ int main() {
         state->varAddressStart = 0;
         state->varAddressEnd = 1000000;
         state->eraseSizeInPages = 4;
+        state->fileInterface = getFileInterface();
 
         state->parameters = SBITS_USE_BMAP | SBITS_USE_INDEX | SBITS_USE_VDATA;
 
@@ -153,7 +154,6 @@ int main() {
         if (SBITS_USING_BMAP(state->parameters))
             state->bitmapSize = 1;
 
-        /* Setup for data and bitmap comparison functions */
         /* Setup for data and bitmap comparison functions */
         state->inBitmap = inBitmapInt8;
         state->updateBitmap = updateBitmapInt8;
@@ -325,8 +325,8 @@ int main() {
 
     doneread:
         sbitsFlush(state);
-        fflush(state->file);
-        fflush(state->varFile);
+        // fflush(state->dataFile);
+        // fflush(state->varFile);
         uint32_t end = clock();
 
         l = NUM_STEPS - 1;
@@ -352,7 +352,7 @@ int main() {
          * 2: Query random records in the range of original data set.
          * 3: Query range of records using an iterator.
          */
-        int8_t queryType = 3;
+        int8_t queryType = 1;
 
         if (seqdata == 1) {
             if (queryType == 1) {
@@ -378,7 +378,7 @@ int main() {
                         }
                         if (validationHead == NULL) {
                             printf("ERROR: No validation data for: %lu\n", i);
-                            return;
+                            return -1;
                         }
                         // Check that the var data is correct
                         if (!dataEquals(varData, length, validationHead)) {
@@ -428,14 +428,14 @@ int main() {
                         *((int32_t *)itData) > *((int32_t *)it.maxData)) {
                         printf("Key: %d Data: %d Error\n", itKey, *(uint32_t *)itData);
                     } else {
-                        printf("Key: %d  Data: %d\n", itKey, *(uint32_t *)itData);
+                        // printf("Key: %d  Data: %d\n", itKey, *(uint32_t *)itData);
                         if (varStream != NULL) {
-                            printf("Var data: ");
-                            uint32_t bytesRead;
-                            while ((bytesRead = sbitsVarDataStreamRead(state, varStream, varDataBuf, varBufSize)) > 0) {
-                                printf("%8s", varDataBuf);
-                            }
-                            printf("\n");
+                            // printf("Var data: ");
+                            // uint32_t bytesRead;
+                            // while ((bytesRead = sbitsVarDataStreamRead(state, varStream, varDataBuf, varBufSize)) > 0) {
+                            //     printf("%8s", varDataBuf);
+                            // }
+                            // printf("\n");
 
                             free(varStream);
                             varStream = NULL;
@@ -605,12 +605,12 @@ int main() {
                         *((int32_t *)itData) > *((int32_t *)it.maxData)) {
                         printf("Key: %d Data: %d Error\n", itKey, *(uint32_t *)itData);
                     } else {
-                        printf("Key: %d  Data: %d\n", itKey, *(uint32_t *)itData);
+                        // printf("Key: %d  Data: %d\n", itKey, *(uint32_t *)itData);
                         if (varStream != NULL) {
-                            while (sbitsVarDataStreamRead(state, varStream, varDataBuf, varBufSize) > 0) {
-                                printf("%8x", varDataBuf);
-                            }
-                            printf("\n");
+                            // while (sbitsVarDataStreamRead(state, varStream, varDataBuf, varBufSize) > 0) {
+                            //     printf("%8x", varDataBuf);
+                            // }
+                            // printf("\n");
 
                             free(varStream);
                             varStream = NULL;
@@ -645,7 +645,7 @@ int main() {
         // printStats(state);
 
         free(recordBuffer);
-        fclose(state->file);
+        fclose(state->dataFile);
         free(state->buffer);
         free(state);
     }

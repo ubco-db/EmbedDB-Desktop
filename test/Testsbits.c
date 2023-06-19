@@ -28,7 +28,7 @@ void setUp(void) {
 }
 
 void sbits_initial_configuration_is_correct() {
-    TEST_ASSERT_NOT_NULL_MESSAGE(state->file, "SBITS file was not initialized correctly.");
+    TEST_ASSERT_NOT_NULL_MESSAGE(state->dataFile, "SBITS file was not initialized correctly.");
     TEST_ASSERT_NULL_MESSAGE(state->varFile, "SBITS varFile was intialized for non-variable data.");
     TEST_ASSERT_EQUAL_UINT32_MESSAGE(0, state->nextPageId, "SBITS nextPageId was not initialized correctly.");
     TEST_ASSERT_EQUAL_UINT32_MESSAGE(0, state->nextPageWriteId, "SBITS nextPageWriteId was not initialized correctly.");

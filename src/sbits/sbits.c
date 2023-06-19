@@ -167,7 +167,7 @@ int8_t sbitsInit(sbitsState *state, size_t indexMaxError) {
     printf("Key size: %d Data size: %d %sRecord size: %d\n", state->keySize, state->dataSize, SBITS_USING_VDATA(state->parameters) ? "Variable data pointer size: 4 " : "", state->recordSize);
     printf("Use index: %d  Max/min: %d Sum: %d Bmap: %d\n", SBITS_USING_INDEX(state->parameters), SBITS_USING_MAX_MIN(state->parameters), SBITS_USING_SUM(state->parameters), SBITS_USING_BMAP(state->parameters));
 
-    state->file = NULL;
+    state->dataFile = NULL;
     state->indexFile = NULL;
     state->varFile = NULL;
     state->nextPageId = 0;
@@ -214,9 +214,9 @@ int8_t sbitsInit(sbitsState *state, size_t indexMaxError) {
     state->avgKeyDiff = 1;
 
     /* Setup data file. */
-    state->file = fopen("build/artifacts/datafile.bin", "w+b");
-    if (state->file == NULL) {
-        printf("Error: Can't open file!\n");
+    state->dataFile = state->fileInterface->open("build/artifacts/datafile.bin", "w+b");
+    if (state->dataFile == NULL) {
+        printf("Error: Can't open data file!\n");
         return -1;
     }
 
@@ -226,7 +226,7 @@ int8_t sbitsInit(sbitsState *state, size_t indexMaxError) {
             state->parameters -= SBITS_USE_INDEX;
         } else {
             /* Setup index file. */
-            state->indexFile = fopen("build/artifacts/indexfile.bin", "w+b");
+            state->indexFile = state->fileInterface->open("build/artifacts/indexfile.bin", "w+b");
             if (state->indexFile == NULL) {
                 printf("Error: Can't open index file!\n");
                 return -1;
@@ -271,7 +271,7 @@ int8_t sbitsInit(sbitsState *state, size_t indexMaxError) {
             state->parameters -= SBITS_USE_VDATA;
         } else {
             // SETUP FILE
-            state->varFile = fopen("build/artifacts/varFile.bin", "w+b");
+            state->varFile = state->fileInterface->open("build/artifacts/varFile.bin", "w+b");
             if (state->varFile == NULL) {
                 printf("Error: Can't open variable data file!\n");
                 return -1;
@@ -1333,7 +1333,7 @@ void printStats(sbitsState *state) {
  * @return	Return page number if success, -1 if error.
  */
 id_t writePage(sbitsState *state, void *buffer) {
-    if (state->file == NULL)
+    if (state->dataFile == NULL)
         return -1;
 
     /* Always writes to next page number. Returned to user. */
@@ -1380,8 +1380,10 @@ id_t writePage(sbitsState *state, void *buffer) {
     }
 
     /* Seek to page location in file */
-    fseek(state->file, state->nextPageWriteId * state->pageSize, SEEK_SET);
-    fwrite(buffer, state->pageSize, 1, state->file);
+    if (!state->fileInterface->write(buffer, state->nextPageWriteId, state->pageSize, state->dataFile)) {
+        printf("ERROR: Could not write to data file\n");
+        return -1;
+    }
 
     state->nextPageWriteId++;
     state->numWrites++;
@@ -1438,8 +1440,10 @@ id_t writeIndexPage(sbitsState *state, void *buffer) {
     }
 
     /* Seek to page location in file */
-    fseek(state->indexFile, state->nextIdxPageWriteId * state->pageSize, SEEK_SET);
-    fwrite(buffer, state->pageSize, 1, state->indexFile);
+    if (!state->fileInterface->write(buffer, state->nextIdxPageWriteId, state->pageSize, state->indexFile)) {
+        printf("ERROR: Could not write to the index file\n");
+        return -1;
+    }
 
     state->nextIdxPageWriteId++;
     state->numIdxWrites++;
@@ -1477,8 +1481,10 @@ id_t writeVariablePage(sbitsState *state, void *buffer) {
     }
 
     // Write to file
-    fseek(state->varFile, state->pageSize * state->nextVarPageId, SEEK_SET);
-    fwrite(buffer, state->pageSize, 1, state->varFile);
+    if (!state->fileInterface->write(buffer, state->nextVarPageId, state->pageSize, state->varFile)) {
+        printf("ERROR: Could not write to the vardata file\n");
+        return -1;
+    }
 
     state->nextVarPageId++;
     state->numAvailVarPages--;
@@ -1501,15 +1507,12 @@ int8_t readPage(sbitsState *state, id_t pageNum) {
     }
 
     /* Page is not in buffer. Read from storage. */
-    FILE *fp = state->file;
     void *buf = (int8_t *)state->buffer + state->pageSize;
 
-    /* Seek to page location in file */
-    fseek(fp, pageNum * state->pageSize, SEEK_SET);
-
     /* Read page into start of buffer 1 */
-    if (0 == fread(buf, state->pageSize, 1, fp))
+    if (!state->fileInterface->read(buf, pageNum, state->pageSize, state->dataFile)) {
         return 1;
+    }
 
     state->numReads++;
     state->bufferedPageId = pageNum;
@@ -1530,15 +1533,12 @@ int8_t readIndexPage(sbitsState *state, id_t pageNum) {
     }
 
     /* Page is not in buffer. Read from storage. */
-    FILE *fp = state->indexFile;
     void *buf = (int8_t *)state->buffer + state->pageSize * SBITS_INDEX_READ_BUFFER;
 
-    /* Seek to page location in file */
-    fseek(fp, pageNum * state->pageSize, SEEK_SET);
-
     /* Read page into start of buffer */
-    if (0 == fread(buf, state->pageSize, 1, fp))
+    if (!state->fileInterface->read(buf, pageNum, state->pageSize, state->indexFile)) {
         return 1;
+    }
 
     state->numIdxReads++;
     state->bufferedIndexPageId = pageNum;
@@ -1561,11 +1561,8 @@ int8_t readVariablePage(sbitsState *state, id_t pageNum) {
     // Get buffer to read into
     void *buf = (int8_t *)state->buffer + SBITS_VAR_READ_BUFFER(state->parameters) * state->pageSize;
 
-    // Go to page to read
-    fseek(state->varFile, pageNum * state->pageSize, SEEK_SET);
-
     // Read in one page worth of data
-    if (fread(buf, state->pageSize, 1, state->varFile) == 0) {
+    if (!state->fileInterface->read(buf, pageNum, state->pageSize, state->varFile)) {
         return -1;
     }
 
@@ -1592,14 +1589,14 @@ void resetStats(sbitsState *state) {
  * @param	state	SBITS state structure
  */
 void sbitsClose(sbitsState *state) {
-    if (state->file != NULL) {
-        fclose(state->file);
+    if (state->dataFile != NULL) {
+        state->fileInterface->close(state->dataFile);
     }
     if (state->indexFile != NULL) {
-        fclose(state->indexFile);
+        state->fileInterface->close(state->indexFile);
     }
     if (state->varFile != NULL) {
-        fclose(state->varFile);
+        state->fileInterface->close(state->varFile);
     }
     if (SEARCH_METHOD == 2) {  // Spline
         if (RADIX_BITS > 0) {
