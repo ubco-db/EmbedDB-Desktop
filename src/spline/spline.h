@@ -56,7 +56,6 @@ typedef struct spline_s spline;
 #include "radixspline.h"
 struct spline_s {
     size_t count;           /* Number of points in spline */
-    size_t currentPointLoc; /* Location of current point */
     size_t size;            /* Maximum number of points */
     point *points;          /* Array of points */
     point upper;            /* Upper spline limit */
@@ -93,7 +92,7 @@ void splineBuild(spline *spl, void **data, id_t size, size_t maxError);
  * @param    spl     Spline structure
  * @param    key     Data key to be added (must be incrementing)
  */
-void splineAdd(spline *spl, void *key);
+void splineAdd(spline *spl, void *key, uint32_t page);
 
 /**
  * @brief	Print a spline structure.

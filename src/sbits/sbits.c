@@ -370,17 +370,17 @@ int8_t sbitsInitDataFromFile(sbitsState *state) {
 }
 
 void sbitsInitSplineFromFile(sbitsState *state) {
-    // TODO: Refactor splineAdd as it tracks the page internally instead of accepting a page from the user
     id_t pageNumberToRead = state->firstDataPage;
     void *buffer = (int8_t *)state->buffer + state->pageSize;
     id_t pagesRead = 0;
     id_t numberOfPagesToRead = state->firstDataPage == 0 ? state->nextPageWriteId : state->endDataPage;
+    uint32_t logicalPageNumber = state->firstDataPageId;
     while (pagesRead < numberOfPagesToRead) {
         (readPage(state, pageNumberToRead++));
         if (USE_RADIX) {
-            radixsplineAddPoint(state->rdix, sbitsGetMinKey(state, buffer));
+            radixsplineAddPoint(state->rdix, sbitsGetMinKey(state, buffer), logicalPageNumber++);
         } else {
-            splineAdd(state->spl, sbitsGetMinKey(state, buffer));
+            splineAdd(state->spl, sbitsGetMinKey(state, buffer), logicalPageNumber++);
         }
         pagesRead++;
         if (pageNumberToRead >= state->endDataPage) {
@@ -638,12 +638,12 @@ int32_t getMaxError(sbitsState *state, void *buffer) {
  * @brief	Adds an entry for the current page into the search structure
  * @param	state	SBITS algorithm state structure
  */
-void indexPage(sbitsState *state) {
+void indexPage(sbitsState *state, uint32_t pageNumber) {
     if (SEARCH_METHOD == 2) {
         if (USE_RADIX) {
-            radixsplineAddPoint(state->rdix, sbitsGetMinKey(state, state->buffer));
+            radixsplineAddPoint(state->rdix, sbitsGetMinKey(state, state->buffer), pageNumber);
         } else {
-            splineAdd(state->spl, sbitsGetMinKey(state, state->buffer));
+            splineAdd(state->spl, sbitsGetMinKey(state, state->buffer), pageNumber);
         }
     }
 }
@@ -664,7 +664,7 @@ int8_t sbitsPut(sbitsState *state, void *key, void *data) {
         // As the first buffer is the data write buffer, no manipulation is required
         id_t pageNum = writePage(state, state->buffer);
 
-        indexPage(state);
+        indexPage(state, pageNum);
 
         /* Save record in index file */
         if (state->indexFile != NULL) {
@@ -1258,7 +1258,7 @@ int8_t sbitsFlush(sbitsState *state) {
     // As the first buffer is th data write buffer, no address change is required
     id_t pageNum = writePage(state, state->buffer);
 
-    indexPage(state);
+    indexPage(state, pageNum);
 
     if (state->indexFile != NULL) {
         void *buf = (int8_t *)state->buffer + state->pageSize * (SBITS_INDEX_WRITE_BUFFER);

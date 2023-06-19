@@ -60,7 +60,7 @@ void radixsplineBuild(radixspline *rsidx, void **keys, uint32_t numKeys) {
     for (uint32_t i = 0; i < numKeys; i++) {
         void *key;
         memcpy(&key, keys + i, sizeof(void *));
-        radixsplineAddPoint(rsidx, key);
+        radixsplineAddPoint(rsidx, key, i);
     }
 }
 
@@ -89,8 +89,8 @@ void radixsplineRebuild(radixspline *rsidx, int8_t radixSize, int8_t shiftAmount
  * @param	rsdix	Radix spline structure
  * @param	key		New point to be indexed by radix spline
  */
-void radixsplineAddPoint(radixspline *rsidx, void *key) {
-    splineAdd(rsidx->spl, key);
+void radixsplineAddPoint(radixspline *rsidx, void *key, uint32_t page) {
+    splineAdd(rsidx->spl, key, page);
 
     // Return if not using Radix table
     if (rsidx->radixSize == 0) {
