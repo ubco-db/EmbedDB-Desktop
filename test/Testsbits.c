@@ -18,6 +18,7 @@ void setUp(void) {
     state->endAddress = 1000 * state->pageSize;
     state->parameters = 0;
     state->eraseSizeInPages = 4;
+    state->fileInterface = getFileInterface();
     state->bitmapSize = 0;
     state->inBitmap = inBitmapInt8;
     state->updateBitmap = updateBitmapInt8;

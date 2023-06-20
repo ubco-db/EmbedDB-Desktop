@@ -37,6 +37,7 @@ void initState(uint32_t dataSize) {
     state->varAddressStart = state->endAddress;
     state->varAddressEnd = state->varAddressStart + 100 * state->pageSize;
     state->eraseSizeInPages = 4;
+    state->fileInterface = getFileInterface();
     state->parameters = SBITS_USE_BMAP | SBITS_USE_INDEX | SBITS_USE_VDATA;
     state->bitmapSize = 1;
     state->inBitmap = inBitmapInt8;
