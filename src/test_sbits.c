@@ -109,7 +109,7 @@ void testIterator(sbitsState *state) {
 void runalltests_sbits() {
     printf("\nSTARTING SBITS TESTS.\n");
     int8_t M = 4;
-    int32_t numRecords = 1551;    // default values
+    int32_t numRecords = 10000;    // default values
     int32_t testRecords = 500000;  // default values
     uint8_t useRandom = 0;         // default values
     size_t splineMaxError = 0;     // default values
@@ -209,8 +209,8 @@ void runalltests_sbits() {
 
         /* Address level parameters */
         state->startAddress = 0;
-        state->endAddress =
-            state->pageSize * 50; /* Modify this value lower to test wrap around */
+        /* Modify this value lower to test wrap around */
+        state->endAddress = state->pageSize * numRecords / 10; 
         state->eraseSizeInPages = 4;
         // state->parameters = SBITS_USE_MAX_MIN | SBITS_USE_BMAP |
         // SBITS_USE_INDEX;
@@ -348,7 +348,7 @@ void runalltests_sbits() {
          * 2: Query random records in the range of original data set.
          * 3: Query range of records using an iterator.
          */
-        int8_t queryType = 1;
+        int8_t queryType = 3;
 
         if (seqdata == 1) {
             if (queryType == 1) {

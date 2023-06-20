@@ -948,9 +948,7 @@ int8_t linearSearch(sbitsState *state, int16_t *numReads, void *buf, void *key, 
     int32_t physPageId;
     while (1) {
         /* Move logical page number to physical page id based on location of first data page */
-        physPageId = pageId + state->firstDataPage;
-        if (physPageId >= state->endDataPage)
-            physPageId = physPageId - state->endDataPage;
+        physPageId = pageId % state->endDataPage;
 
         if (pageId > high || pageId < low || low > high) {
             return -1;
