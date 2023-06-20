@@ -14,26 +14,41 @@ int main() {
         printf("Init not successfull.\n");
         return initStatus;
     }
-    int insertStatus = insertRecords(state, 3781, 10, 2465);
+    int insertStatus = insertRecords(state, 2521, 10, 2465);
     if (insertStatus != 0) {
         return insertStatus;
     }
 
     printf("\nSpline Stats After Initial Inserts: \n");
     splinePrint(state->spl);
-    queryRecord(state, 3728, 3105);
 
+    printf("\nQuery Testing:\n");
+    int queryResult = queryRecord(state, 1143838, 1146293);
+    if (queryResult) {
+        printf("Record not found\n");
+    } else {
+        printf("Record found\n");
+    }
+    
     sbitsClose(state);
 
-    // /* Initalize state again */
-    // state = (sbitsState *)malloc(sizeof(sbitsState));
-    // initStatus = initializeSbits(state);
-    // if (initStatus != 0) {
-    //     printf("Re-init was not successful.\n");
-    //     return initStatus;
-    // }
-    // printf("\nSpline Stats After Reload: \n");
-    // splinePrint(state->spl);
+    /* Initalize state again */
+    state = (sbitsState *)malloc(sizeof(sbitsState));
+    initStatus = initializeSbits(state);
+    if (initStatus != 0) {
+        printf("Re-init was not successful.\n");
+        return initStatus;
+    }
+    printf("\nSpline Stats After Reload: \n");
+    splinePrint(state->spl);
+
+    printf("\nQuery Testing:\n");
+    queryResult = queryRecord(state, 1143838, 1146293);
+    if (queryResult) {
+        printf("Record not found\n");
+    } else {
+        printf("Record found\n");
+    }
 
     // printf("\nQuery Testing:\n");
     // queryRecord(state, 286156, 288611);
@@ -52,7 +67,7 @@ int initializeSbits(sbitsState *state) {
     state->endAddress = 50 * state->pageSize;
     state->eraseSizeInPages = 4;
     state->bitmapSize = 0;
-    state->parameters = SBITS_RESET_DATA;
+    state->parameters = 0;
     state->inBitmap = inBitmapInt8;
     state->updateBitmap = updateBitmapInt8;
     state->buildBitmapFromRange = buildBitmapInt8FromRange;
@@ -71,8 +86,8 @@ int insertRecords(sbitsState *state, uint32_t numberOfRecords, int32_t startingK
     *((int32_t *)data) = startingKey;
     *((int32_t *)(data + 4)) = startingData;
     for (int32_t i = 0; i < numberOfRecords; i++) {
-        *((int32_t *)data) += 1;
-        *((int32_t *)(data + 4)) += 1;
+        *((int32_t *)data) += i;
+        *((int32_t *)(data + 4)) += i;
         int8_t result = sbitsPut(state, data, (void *)(data + 4));
         if (result != 0) {
             return result;

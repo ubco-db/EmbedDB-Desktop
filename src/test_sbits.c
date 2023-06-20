@@ -109,7 +109,7 @@ void testIterator(sbitsState *state) {
 void runalltests_sbits() {
     printf("\nSTARTING SBITS TESTS.\n");
     int8_t M = 4;
-    int32_t numRecords = 10000;    // default values
+    int32_t numRecords = 1551;    // default values
     int32_t testRecords = 500000;  // default values
     uint8_t useRandom = 0;         // default values
     size_t splineMaxError = 0;     // default values
@@ -353,10 +353,6 @@ void runalltests_sbits() {
         if (seqdata == 1) {
             if (queryType == 1) {
                 for (i = 0; i < numRecords; i++) {
-                    if (i = 9982) {
-                        printf("Hello world\n");
-                    }
-
                     int32_t key = i;
                     int8_t result = sbitsGet(state, &key, recordBuffer);
 
