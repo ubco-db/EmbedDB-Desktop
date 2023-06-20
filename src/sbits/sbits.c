@@ -167,9 +167,6 @@ int8_t sbitsInit(sbitsState *state, size_t indexMaxError) {
     printf("Key size: %d Data size: %d %sRecord size: %d\n", state->keySize, state->dataSize, SBITS_USING_VDATA(state->parameters) ? "Variable data pointer size: 4 " : "", state->recordSize);
     printf("Use index: %d  Max/min: %d Sum: %d Bmap: %d\n", SBITS_USING_INDEX(state->parameters), SBITS_USING_MAX_MIN(state->parameters), SBITS_USING_SUM(state->parameters), SBITS_USING_BMAP(state->parameters));
 
-    state->dataFile = NULL;
-    state->indexFile = NULL;
-    state->varFile = NULL;
     state->nextPageId = 0;
     state->nextPageWriteId = 0;
     state->wrappedMemory = 0;
@@ -214,9 +211,8 @@ int8_t sbitsInit(sbitsState *state, size_t indexMaxError) {
     state->avgKeyDiff = 1;
 
     /* Setup data file. */
-    state->dataFile = state->fileInterface->open("build/artifacts/datafile.bin", "w+b");
     if (state->dataFile == NULL) {
-        printf("Error: Can't open data file!\n");
+        printf("ERROR: No data file opened\n");
         return -1;
     }
 
@@ -224,11 +220,11 @@ int8_t sbitsInit(sbitsState *state, size_t indexMaxError) {
         if (state->bufferSizeInBlocks < 4) {
             printf("ERROR: SBITS using index requires at least 4 page buffers. Defaulting to without index.\n");
             state->parameters -= SBITS_USE_INDEX;
+            state->indexFile = NULL;
         } else {
             /* Setup index file. */
-            state->indexFile = state->fileInterface->open("build/artifacts/indexfile.bin", "w+b");
             if (state->indexFile == NULL) {
-                printf("Error: Can't open index file!\n");
+                printf("ERROR: No index file opened\n");
                 return -1;
             }
 
@@ -263,17 +259,19 @@ int8_t sbitsInit(sbitsState *state, size_t indexMaxError) {
             state->erasedEndIdxPage = 0;
             state->wrappedIdxMemory = 0;
         }
+    } else {
+        state->indexFile = NULL;
     }
 
     if (SBITS_USING_VDATA(state->parameters)) {
         if (state->bufferSizeInBlocks < 4 + (SBITS_USING_INDEX(state->parameters) ? 2 : 0)) {
             printf("ERROR: SBITS using variable records requires at least 4 page buffers if there is no index and 6 if there is. Defaulting to no variable data.\n");
             state->parameters -= SBITS_USE_VDATA;
+            state->varFile = NULL;
         } else {
             // SETUP FILE
-            state->varFile = state->fileInterface->open("build/artifacts/varFile.bin", "w+b");
             if (state->varFile == NULL) {
-                printf("Error: Can't open variable data file!\n");
+                printf("ERROR: No vardata file opened\n");
                 return -1;
             }
 
@@ -289,6 +287,8 @@ int8_t sbitsInit(sbitsState *state, size_t indexMaxError) {
 
             printf("Variable data pages: %d\n", state->numVarPages);
         }
+    } else {
+        state->varFile = NULL;
     }
 
     if (SEARCH_METHOD == 2) {

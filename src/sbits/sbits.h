@@ -151,14 +151,6 @@ typedef struct {
      * @return	1 for success and 0 for failure
      */
     int8_t (*close)(void *file);
-
-    /**
-     * @brief	Opens a file
-     * @param	filename	The name of the file to be created
-     * @param	mode		Which mode to open the file in. See: https://en.cppreference.com/w/c/io/fopen#File_access_flags
-     * @return	A pointer to the file object. Returns NULL when there is an issue opening the file
-     */
-    void *(*open)(char *filename, char *mode);
 } sbitsFileInterface;
 
 typedef struct {

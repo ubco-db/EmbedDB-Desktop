@@ -225,13 +225,8 @@ int8_t DEFAULT_CLOSE(void *file) {
     return fclose((FILE *)file);
 }
 
-void *DEFAULT_OPEN(char *filename, char *mode) {
-    return fopen(filename, mode);
-}
-
 sbitsFileInterface *getFileInterface() {
     sbitsFileInterface *fileInterface = malloc(sizeof(sbitsFileInterface));
-    fileInterface->open = DEFAULT_OPEN;
     fileInterface->close = DEFAULT_CLOSE;
     fileInterface->read = DEFAULT_READ;
     fileInterface->write = DEFAULT_WRITE;

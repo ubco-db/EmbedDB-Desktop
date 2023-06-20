@@ -19,6 +19,9 @@ void setUp(void) {
     state->parameters = 0;
     state->eraseSizeInPages = 4;
     state->fileInterface = getFileInterface();
+    state->dataFile = fopen("build/artifacts/dataFile.bin", "w+b");
+    state->indexFile = fopen("build/artifacts/indexFile.bin", "w+b");
+    state->varFile = fopen("build/artifacts/varFile.bin", "w+b");
     state->bitmapSize = 0;
     state->inBitmap = inBitmapInt8;
     state->updateBitmap = updateBitmapInt8;

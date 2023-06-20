@@ -145,7 +145,11 @@ int main() {
         state->varAddressStart = 0;
         state->varAddressEnd = 1000000;
         state->eraseSizeInPages = 4;
+
         state->fileInterface = getFileInterface();
+        state->dataFile = fopen("build/artifacts/dataFile.bin", "w+b");
+        state->indexFile = fopen("build/artifacts/indexFile.bin", "w+b");
+        state->varFile = fopen("build/artifacts/varFile.bin", "w+b");
 
         state->parameters = SBITS_USE_BMAP | SBITS_USE_INDEX | SBITS_USE_VDATA;
 
