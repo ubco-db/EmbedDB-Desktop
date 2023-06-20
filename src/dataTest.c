@@ -21,15 +21,18 @@ int main() {
 
     printf("\nSpline Stats After Initial Inserts: \n");
     splinePrint(state->spl);
+    resetStats(state);
 
     printf("\nQuery Testing:\n");
-    int queryResult = queryRecord(state, 1143838, 1146293);
-    if (queryResult) {
-        printf("Record not found\n");
-    } else {
-        printf("Record found\n");
+    int queryStatus = queryAllRecords(state, 2520, 10, 2465);
+    if (queryStatus != 0) {
+        printf("Did not sucessfully query all records.\n");
+        return queryStatus;
     }
-    
+    printf("Queried all records sucessfully.\n");
+
+    printStats(state);
+
     sbitsClose(state);
 
     /* Initalize state again */
@@ -42,18 +45,17 @@ int main() {
     printf("\nSpline Stats After Reload: \n");
     splinePrint(state->spl);
 
+    resetStats(state);
+
     printf("\nQuery Testing:\n");
-    queryResult = queryRecord(state, 1143838, 1146293);
-    if (queryResult) {
-        printf("Record not found\n");
-    } else {
-        printf("Record found\n");
+    queryStatus = queryAllRecords(state, 2520, 10, 2465);
+    if (queryStatus != 0) {
+        printf("Did not sucessfully query all records.\n");
+        return queryStatus;
     }
+    printf("Queried all records sucessfully.\n");
 
-    // printf("\nQuery Testing:\n");
-    // queryRecord(state, 286156, 288611);
-    // // int queryStatus = queryAllRecords(state, 3150 + 630, 198775, 201230);
-
+    printStats(state);
     return 0;
 }
 
@@ -101,10 +103,11 @@ int queryAllRecords(sbitsState *state, uint32_t numberOfRecords, int32_t startin
     int32_t *result = (int32_t *)malloc(state->recordSize);
     int32_t key = startingKey;
     int32_t data = startingData;
-    for (uint32_t i = 630; i < numberOfRecords; i++) {
-        int8_t result = sbitsGet(state, &key, (void *)result);
-
-        if (result != 0) {
+    for (int32_t i = 0; i < numberOfRecords; i++) {
+        key = startingKey += i;
+        data += i;
+        int8_t getStatus = sbitsGet(state, &key, (void *)result);
+        if (getStatus != 0) {
             printf("ERROR: Failed to find: %lu\n", key);
             return 1;
         }
@@ -114,9 +117,6 @@ int queryAllRecords(sbitsState *state, uint32_t numberOfRecords, int32_t startin
                    *((int32_t *)result));
             return 1;
         }
-
-        key += i;
-        data += i;
     }
     return 0;
 }

@@ -208,8 +208,6 @@ int8_t sbitsInit(sbitsState *state, size_t indexMaxError) {
     /* Allocate first page of buffer as output page */
     initBufferPage(state, 0);
 
-    resetStats(state);
-
     id_t numPages = (state->endAddress - state->startAddress) / state->pageSize;
 
     if (numPages < (SBITS_USING_INDEX(state->parameters) * 2 + 2) * state->eraseSizeInPages) {
@@ -262,6 +260,7 @@ int8_t sbitsInit(sbitsState *state, size_t indexMaxError) {
         return varDataInitResult;
     }
 
+    resetStats(state);
     return 0;
 }
 

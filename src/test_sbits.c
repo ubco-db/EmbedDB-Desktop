@@ -210,7 +210,7 @@ void runalltests_sbits() {
         /* Address level parameters */
         state->startAddress = 0;
         /* Modify this value lower to test wrap around */
-        state->endAddress = state->pageSize * numRecords / 10; 
+        state->endAddress = state->pageSize * numRecords / 10;
         state->eraseSizeInPages = 4;
         // state->parameters = SBITS_USE_MAX_MIN | SBITS_USE_BMAP |
         // SBITS_USE_INDEX;
