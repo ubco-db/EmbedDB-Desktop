@@ -293,7 +293,7 @@ int8_t sbitsInitData(sbitsState *state) {
 }
 
 int8_t sbitsInitDataFromFile(sbitsState *state) {
-    printf("Attempt to initialize from data file\n");
+    printf("Attempt to initialize from existing data file\n");
     state->file = fopen("build/artifacts/datafile.bin", "r+b");
     if (state->file == NULL) {
         printf("Error: Can't open existing data file!\n");
@@ -303,6 +303,15 @@ int8_t sbitsInitDataFromFile(sbitsState *state) {
     id_t logicalPageId = 0;
     id_t maxLogicalPageId = 0;
     id_t physicalPageId = 0;
+    id_t numberOfDataPages = 0;
+
+    /* TODO: This block of code should be removed once the code for the file interface is implemetned */
+    if (SBITS_USING_INDEX(state->parameters)) {
+        
+    } else {
+
+    }
+    
 
     /* This will become zero if there is no more to read */
     int8_t moreToRead = !(readPage(state, physicalPageId));
@@ -313,18 +322,26 @@ int8_t sbitsInitDataFromFile(sbitsState *state) {
     while (moreToRead) {
         memcpy(&logicalPageId, buffer, sizeof(id_t));
 
-        /* Need to update maxError which requires looking at every page */
-        int32_t maxError = getMaxError(state, buffer);
-        if (state->maxError < maxError) {
-            state->maxError = maxError;
+        if (logicalPageId = maxLogicalPageId + 1) {
+            maxLogicalPageId = logicalPageId;
+            physicalPageId++;
+
+            /* Need to update maxError which requires looking at every page */
+            int32_t maxError = getMaxError(state, buffer);
+            if (state->maxError < maxError) {
+                state->maxError = maxError;
+            }
+        }
+
+        if (logicalPageId = maxLogicalPageId - numberOfDataPages) {
+            /* code */
         }
 
         if (logicalPageId < maxLogicalPageId) {
             haveWrappedInMemory = true;
             break;
         }
-        maxLogicalPageId = logicalPageId;
-        physicalPageId++;
+
         moreToRead = !(readPage(state, physicalPageId));
         count++;
     }
@@ -445,10 +462,10 @@ int8_t sbitsInitIndex(sbitsState *state) {
 }
 
 int8_t sbitsInitIndexFromFile(sbitsState *state) {
-    printf("Attempt to initialize from data file\n");
+    printf("Attempt to initialize from existing index file\n");
     state->file = fopen("build/artifacts/indexfile.bin", "r+b");
     if (state->file == NULL) {
-        printf("Error: Can't open existing data file!\n");
+        printf("Error: Can't open existing index file!\n");
         return -1;
     }
 
@@ -519,6 +536,20 @@ int8_t sbitsInitVarData(sbitsState *state) {
 }
 
 int8_t sbitsInitVarDataFromFile(sbitsState *state) {
+    printf("Attempt to initialize from existing variable data file\n");
+    state->file = fopen("build/artifacts/varFile.bin", "r+b");
+    if (state->file == NULL) {
+        printf("Error: Can't open existing variable data file!\n");
+        return -1;
+    }
+
+    state->currentVarLoc = state->keySize;
+    state->minVarRecordId = 0;
+    state->wrappedVariableMemory = 0;
+    state->numAvailVarPages = (state->varAddressEnd - state->varAddressStart) / state->pageSize;
+    state->numVarPages = state->numAvailVarPages;
+    state->nextVarPageId = 0;
+
     return 0;
 }
 
