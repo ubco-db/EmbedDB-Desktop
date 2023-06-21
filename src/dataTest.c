@@ -14,7 +14,7 @@ int main() {
         printf("Init not successfull.\n");
         return initStatus;
     }
-    int insertStatus = insertRecords(state, 2521, 10, 2465);
+    int insertStatus = insertRecords(state, 3151, 10, 2465);
     if (insertStatus != 0) {
         return insertStatus;
     }
@@ -24,7 +24,7 @@ int main() {
     resetStats(state);
 
     printf("\nQuery Testing:\n");
-    int queryStatus = queryAllRecords(state, 2520, 10, 2465);
+    int queryStatus = queryAllRecords(state, 3150, 10, 2465);
     if (queryStatus != 0) {
         printf("Did not sucessfully query all records.\n");
         return queryStatus;
@@ -32,6 +32,9 @@ int main() {
     printf("Queried all records sucessfully.\n");
 
     printStats(state);
+
+    printf("Erased end page: %i\n", state->erasedEndPage);
+    printf("Next write page: %i\n", state->nextPageWriteId);
 
     sbitsClose(state);
 
@@ -48,14 +51,18 @@ int main() {
     resetStats(state);
 
     printf("\nQuery Testing:\n");
-    queryStatus = queryAllRecords(state, 2520, 10, 2465);
+    queryStatus = queryAllRecords(state, 3150, 10, 2465);
     if (queryStatus != 0) {
         printf("Did not sucessfully query all records.\n");
         return queryStatus;
     }
     printf("Queried all records sucessfully.\n");
 
+    printf("Erased end page: %i\n", state->erasedEndPage);
+    printf("Next write page: %i\n", state->nextPageWriteId);
+
     printStats(state);
+    sbitsClose(state);
     return 0;
 }
 

@@ -77,6 +77,7 @@ int8_t sbitsInitVarDataFromFile(sbitsState *state);
 void updateAverageKeyDifference(sbitsState *state, void *buffer);
 void sbitsInitSplineFromFile(sbitsState *state);
 int32_t getMaxError(sbitsState *state, void *buffer);
+void updateMaxiumError(sbitsState *state, void *buffer);
 
 void printBitmap(char *bm) {
     for (int8_t i = 0; i <= 7; i++) {
@@ -306,12 +307,18 @@ int8_t sbitsInitDataFromFile(sbitsState *state) {
     id_t numberOfDataPages = 0;
 
     /* TODO: This block of code should be removed once the code for the file interface is implemetned */
+    id_t numPages = (state->endAddress - state->startAddress) / state->pageSize;
     if (SBITS_USING_INDEX(state->parameters)) {
-        
-    } else {
-
+        count_t numIdxPages = numPages / 100;
+        if (numIdxPages < state->eraseSizeInPages * 2) {
+            numIdxPages = state->eraseSizeInPages * 2;
+        } else {
+            numIdxPages = ((numIdxPages / state->eraseSizeInPages) + 1) * state->eraseSizeInPages;
+        }
+        numPages -= numIdxPages;
     }
-    
+    numberOfDataPages = numPages;
+    /* End of code to be removed */
 
     /* This will become zero if there is no more to read */
     int8_t moreToRead = !(readPage(state, physicalPageId));
@@ -319,35 +326,23 @@ int8_t sbitsInitDataFromFile(sbitsState *state) {
     bool haveWrappedInMemory = false;
     int count = 0;
     void *buffer = (int8_t *)state->buffer + state->pageSize;
-    while (moreToRead) {
+    while (moreToRead && count < numberOfDataPages) {
         memcpy(&logicalPageId, buffer, sizeof(id_t));
-
-        if (logicalPageId = maxLogicalPageId + 1) {
+        if (count == 0 || logicalPageId == maxLogicalPageId + 1) {
             maxLogicalPageId = logicalPageId;
             physicalPageId++;
-
-            /* Need to update maxError which requires looking at every page */
-            int32_t maxError = getMaxError(state, buffer);
-            if (state->maxError < maxError) {
-                state->maxError = maxError;
-            }
-        }
-
-        if (logicalPageId = maxLogicalPageId - numberOfDataPages) {
-            /* code */
-        }
-
-        if (logicalPageId < maxLogicalPageId) {
-            haveWrappedInMemory = true;
+            updateMaxiumError(state, buffer);
+            moreToRead = !(readPage(state, physicalPageId));
+            count++;
+        } else {
+            haveWrappedInMemory = logicalPageId == maxLogicalPageId - numberOfDataPages + 1 ? true : false;
             break;
         }
-
-        moreToRead = !(readPage(state, physicalPageId));
-        count++;
     }
 
     state->nextPageId = maxLogicalPageId + 1;
     state->nextPageWriteId = physicalPageId;
+    state->erasedEndPage = physicalPageId;
 
     if (haveWrappedInMemory) {
         state->wrappedMemory = 1;
@@ -358,7 +353,7 @@ int8_t sbitsInitDataFromFile(sbitsState *state) {
         readPage(state, state->firstDataPage);
         id_t smallestLogicalPageNumber = 0;
         memcpy(&smallestLogicalPageNumber, buffer, sizeof(id_t));
-        state->firstDataPageId = physicalPageId;
+        state->firstDataPageId = smallestLogicalPageNumber;
     }
 
     /*
@@ -472,6 +467,7 @@ int8_t sbitsInitIndexFromFile(sbitsState *state) {
     id_t logicalIndexPageId = 0;
     id_t maxLogicaIndexPageId = 0;
     id_t physicalIndexPageId = 0;
+    id_t numberOfIndexPages = state->endIdxPage - state->startIdxPage;
 
     /* This will become zero if there is no more to read */
     int8_t moreToRead = !(readIndexPage(state, physicalIndexPageId));
@@ -480,20 +476,22 @@ int8_t sbitsInitIndexFromFile(sbitsState *state) {
     int count = 0;
     void *buffer = (int8_t *)state->buffer + state->pageSize * SBITS_INDEX_READ_BUFFER;
 
-    while (moreToRead) {
+    while (moreToRead && count < numberOfIndexPages) {
         memcpy(&logicalIndexPageId, buffer, sizeof(id_t));
-        if (logicalIndexPageId < maxLogicaIndexPageId) {
-            haveWrappedInMemory = true;
+        if (logicalIndexPageId == maxLogicaIndexPageId + 1) {
+            maxLogicaIndexPageId = logicalIndexPageId;
+            physicalIndexPageId++;
+            moreToRead = !(readPage(state, physicalIndexPageId));
+            count++;
+        } else {
+            haveWrappedInMemory = logicalIndexPageId == maxLogicaIndexPageId - numberOfIndexPages ? true : false;
             break;
         }
-        maxLogicaIndexPageId = logicalIndexPageId;
-        physicalIndexPageId++;
-        moreToRead = !(readPage(state, physicalIndexPageId));
-        count++;
     }
 
     state->nextIdxPageId = maxLogicaIndexPageId + 1;
     state->nextIdxPageWriteId = physicalIndexPageId;
+    state->erasedEndIdxPage = physicalIndexPageId;
 
     if (haveWrappedInMemory) {
         state->wrappedIdxMemory = 1;
@@ -724,12 +722,7 @@ int8_t sbitsPut(sbitsState *state, void *key, void *data) {
         }
 
         updateAverageKeyDifference(state, state->buffer);
-
-        // Calculate error within the page
-        int32_t maxError = getMaxError(state, state->buffer);
-        if (state->maxError < maxError) {
-            state->maxError = maxError;
-        }
+        updateMaxiumError(state, state->buffer);
 
         count = 0;
         initBufferPage(state, 0);
@@ -793,6 +786,14 @@ int8_t sbitsPut(sbitsState *state, void *key, void *data) {
     }
 
     return 0;
+}
+
+void updateMaxiumError(sbitsState *state, void *buffer) {
+    // Calculate error within the page
+    int32_t maxError = getMaxError(state, buffer);
+    if (state->maxError < maxError) {
+        state->maxError = maxError;
+    }
 }
 
 void updateAverageKeyDifference(sbitsState *state, void *buffer) {
