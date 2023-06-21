@@ -55,17 +55,17 @@ typedef struct spline_s spline;
 
 #include "radixspline.h"
 struct spline_s {
-    size_t count;           /* Number of points in spline */
-    size_t size;            /* Maximum number of points */
-    point *points;          /* Array of points */
-    point upper;            /* Upper spline limit */
-    point lower;            /* Lower spline limit */
-    id_t lastLoc;           /* Location of previous spline key */
-    void *lastKey;          /* Previous spline key */
-    uint32_t maxError;      /* Maximum error */
-    uint32_t numAddCalls;   /* Number of times the add method has been called */
-    id_t tempLastPoint;     /* Last spline point is temporary if value is not 0 */
-    uint8_t keySize;        /* Size of key in bytes */
+    size_t count;         /* Number of points in spline */
+    size_t size;          /* Maximum number of points */
+    point *points;        /* Array of points */
+    point upper;          /* Upper spline limit */
+    point lower;          /* Lower spline limit */
+    id_t lastLoc;         /* Location of previous spline key */
+    void *lastKey;        /* Previous spline key */
+    uint32_t maxError;    /* Maximum error */
+    uint32_t numAddCalls; /* Number of times the add method has been called */
+    id_t tempLastPoint;   /* Last spline point is temporary if value is not 0 */
+    uint8_t keySize;      /* Size of key in bytes */
 };
 
 /**
