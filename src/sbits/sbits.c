@@ -877,7 +877,7 @@ int8_t sbitsPutVar(sbitsState *state, void *key, void *data, void *variableData,
 
                 // Update the header to include the maximum key value stored on this page
                 memcpy((int8_t *)buf + sizeof(id_t), key, state->keySize);
-                state->currentVarLoc += state->variableDataHeaderSize; 
+                state->currentVarLoc += state->variableDataHeaderSize;
             }
 
             int amtWritten = 0;
