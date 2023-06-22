@@ -695,7 +695,7 @@ int8_t sbitsPut(sbitsState *state, void *key, void *data) {
         void *previousKey = NULL;
         if (count == 0) {
             readPage(state, state->nextPageWriteId - 1);
-            previousKey = ((int8_t *)state->buffer + state->pageSize ) + (state->recordSize * (state->maxRecordsPerPage - 1)) + state->headerSize;
+            previousKey = ((int8_t *)state->buffer + state->pageSize) + (state->recordSize * (state->maxRecordsPerPage - 1)) + state->headerSize;
         } else {
             previousKey = (int8_t *)state->buffer + (state->recordSize * (count - 1)) + state->headerSize;
         }
