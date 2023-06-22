@@ -133,6 +133,7 @@ typedef struct {
     id_t numAvailVarPages;                                                /* Number of writable pages left before needing to delete */
     id_t varAddressStart;                                                 /* Start address for the variable data page */
     id_t varAddressEnd;                                                   /* End address for the variable data page */
+    id_t nextVarPageLogicalId;                                            /* Logical ID of the next variable data page */
     count_t numVarPages;                                                  /* Number of variable pages */
     id_t startIdxPage;                                                    /* Start index page number */
     id_t endIdxPage;                                                      /* End index page number */
@@ -159,6 +160,7 @@ typedef struct {
     int8_t recordSize;                                                    /* Size of record in bytes (fixed-size records) */
     int8_t headerSize;                                                    /* Size of header in bytes (calculated during init()) */
     int8_t bitmapSize;                                                    /* Size of bitmap in bytes */
+    int8_t variableDataHeaderSize;                                        /* Size of page header in variable data files (calculated during init()) */
     id_t avgKeyDiff;                                                      /* Estimate for difference between key values. Used for get() to predict location of record. */
     id_t nextPageId;                                                      /* Next logical page id. Page id is an incrementing value and may not always be same as physical page id. */
     id_t nextPageWriteId;                                                 /* Physical page id of next page to write. */

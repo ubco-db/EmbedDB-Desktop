@@ -508,7 +508,9 @@ int8_t sbitsInitVarData(sbitsState *state) {
     // Initialize variable data outpt buffer
     initBufferPage(state, SBITS_VAR_WRITE_BUFFER(state->parameters));
 
-    state->currentVarLoc = state->keySize;
+    state->nextVarPageLogicalId = 0;
+    state->variableDataHeaderSize = state->keySize + sizeof(id_t);
+    state->currentVarLoc = state->variableDataHeaderSize;
     state->minVarRecordId = 0;
     state->wrappedVariableMemory = 0;
     state->numAvailVarPages = (state->varAddressEnd - state->varAddressStart) / state->pageSize;
@@ -850,8 +852,8 @@ int8_t sbitsPutVar(sbitsState *state, void *key, void *data, void *variableData,
             if (state->currentVarLoc % state->pageSize > state->pageSize - 4) {
                 writeVariablePage(state, buf);
                 initBufferPage(state, SBITS_VAR_WRITE_BUFFER(state->parameters));
-                // Move data writing location to the beginning of the next page, leaving the first `keySize` bytes for a header
-                state->currentVarLoc += state->pageSize - state->currentVarLoc % state->pageSize + state->keySize;
+                // Move data writing location to the beginning of the next page, leaving the room for the header
+                state->currentVarLoc += state->pageSize - state->currentVarLoc % state->pageSize + state->variableDataHeaderSize;
             }
 
             // Perform the regular insert
@@ -862,7 +864,7 @@ int8_t sbitsPutVar(sbitsState *state, void *key, void *data, void *variableData,
             }
 
             // Update the header to include the maximum key value stored on this page
-            memcpy(buf, key, state->keySize);
+            memcpy((int8_t *)buf + sizeof(id_t), key, state->keySize);
 
             // Write the length of the data item into the buffer
             memcpy((uint8_t *)buf + state->currentVarLoc % state->pageSize, &length, sizeof(uint32_t));
@@ -874,8 +876,8 @@ int8_t sbitsPutVar(sbitsState *state, void *key, void *data, void *variableData,
                 initBufferPage(state, SBITS_VAR_WRITE_BUFFER(state->parameters));
 
                 // Update the header to include the maximum key value stored on this page
-                memcpy(buf, key, state->keySize);
-                state->currentVarLoc += state->keySize;
+                memcpy((int8_t *)buf + sizeof(id_t), key, state->keySize);
+                state->currentVarLoc += state->variableDataHeaderSize; 
             }
 
             int amtWritten = 0;
@@ -892,9 +894,9 @@ int8_t sbitsPutVar(sbitsState *state, void *key, void *data, void *variableData,
                     writeVariablePage(state, buf);
                     initBufferPage(state, SBITS_VAR_WRITE_BUFFER(state->parameters));
 
-                    // Update the header to include the maximum key value stored on this page
-                    memcpy(buf, key, state->keySize);
-                    state->currentVarLoc += state->keySize;
+                    // Update the header to include the maximum key value stored on this page and account for page number
+                    memcpy((int8_t *)buf + sizeof(id_t), key, state->keySize);
+                    state->currentVarLoc += state->variableDataHeaderSize;
                 }
             }
         } else {
@@ -1221,7 +1223,7 @@ int8_t sbitsGetVar(sbitsState *state, void *key, void *data, void **varData, uin
             return -1;
         }
         // Skip past the header
-        bufPos = state->keySize;
+        bufPos = state->variableDataHeaderSize;
     }
 
     // Allocate memory in the return pointer **TODO: Implement returning an iterator instead**
@@ -1245,7 +1247,7 @@ int8_t sbitsGetVar(sbitsState *state, void *key, void *data, void **varData, uin
                 return -1;
             }
             // Skip past the header
-            bufPos = state->keySize;
+            bufPos = state->variableDataHeaderSize;
         }
     }
 
@@ -1739,10 +1741,15 @@ id_t writeVariablePage(sbitsState *state, void *buffer) {
         if (readVariablePage(state, pageNum) != 0) {
             return -1;
         }
-        void *buf = (int8_t *)state->buffer + state->pageSize * SBITS_VAR_READ_BUFFER(state->parameters);
+        void *buf = (int8_t *)state->buffer + state->pageSize * SBITS_VAR_READ_BUFFER(state->parameters) + sizeof(id_t);
         memcpy(&state->minVarRecordId, buf, state->keySize);
         state->minVarRecordId += 1;  // Add one because the result from the last line is a record that is erased
     }
+
+    // Add logical page number to data page
+    void *buf = (int8_t *)state->buffer + state->pageSize * SBITS_VAR_WRITE_BUFFER(state->parameters);
+    memcpy(buf, &state->nextVarPageLogicalId, sizeof(id_t));
+    state->nextVarPageLogicalId++;
 
     // Write to file
     fseek(state->varFile, state->pageSize * state->nextVarPageId, SEEK_SET);
