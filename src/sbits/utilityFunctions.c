@@ -210,3 +210,12 @@ int8_t int32Comparator(void *a, void *b) {
         return 1;
     return 0;
 }
+
+int8_t int64Comparator(void *a, void *b) {
+    int64_t result = *((int64_t *)a) - *((int64_t *)b);
+    if (result < 0)
+        return -1;
+    if (result > 0)
+        return 1;
+    return 0;
+}

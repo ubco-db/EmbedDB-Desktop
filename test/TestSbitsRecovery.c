@@ -23,7 +23,7 @@ void setUp(void) {
     state->updateBitmap = updateBitmapInt8;
     state->buildBitmapFromRange = buildBitmapInt8FromRange;
     state->compareKey = int32Comparator;
-    state->compareData = int32Comparator;
+    state->compareData = int64Comparator;
     int8_t result = sbitsInit(state, 1);
     TEST_ASSERT_EQUAL_INT8_MESSAGE(0, result, "SBITS did not initialize correctly.");
 }
@@ -44,7 +44,7 @@ void initalizeSbitsFromFile(void) {
     state->updateBitmap = updateBitmapInt8;
     state->buildBitmapFromRange = buildBitmapInt8FromRange;
     state->compareKey = int32Comparator;
-    state->compareData = int32Comparator;
+    state->compareData = int64Comparator;
     int8_t result = sbitsInit(state, 1);
     TEST_ASSERT_EQUAL_INT8_MESSAGE(0, result, "SBITS did not initialize correctly.");
 }
@@ -115,6 +115,25 @@ void sbits_parameters_initializes_correctly_from_data_file_with_four_hundred_sev
     TEST_ASSERT_EQUAL_INT8_MESSAGE(1, state->wrappedMemory, "SBITS wrappedMemory is not32 correctly identified after reload from data file.");
 }
 
+void sbits_inserts_correctly_into_data_file_after_reload() {
+    insertRecordsLinear(0, 0, 1975);
+    sbitsClose(state);
+    initalizeSbitsFromFile();
+    int32_t key = 1974;
+    int32_t data = 1974;
+    int8_t insertResult = sbitsPut(state, &key, &data);
+    TEST_ASSERT_EQUAL_INT8_MESSAGE(1, insertResult, "SBITS inserted a duplicate key.");
+    insertRecordsLinear(1974, 8946, 43);
+    int8_t *recordBuffer = (int8_t *)malloc(state->dataSize);
+    key = 1975;
+    int8_t getResult = sbitsGet(state, &key, recordBuffer);
+    TEST_ASSERT_EQUAL_INT8_MESSAGE(0, getResult, "SBITS get encountered an error fetching the data for key 1975.");
+    if(getResult != 0) {
+        printf("There was an error getting the data.\n");
+    }
+    TEST_ASSERT_EQUAL_INT64_MESSAGE(8947, *((int32_t *)recordBuffer), "SBITS get did not return correct data after inserting records after reload.");
+}
+
 void tearDown(void) {
     sbitsClose(state);
     free(state);
@@ -126,5 +145,6 @@ int main(void) {
     RUN_TEST(sbits_parameters_initializes_from_data_file_with_ninety_three_pages_correctly);
     RUN_TEST(sbits_parameters_initializes_from_data_file_with_ninety_four_one_pages_correctly);
     RUN_TEST(sbits_parameters_initializes_correctly_from_data_file_with_four_hundred_seventeen_previous_page_inserts);
+    RUN_TEST(sbits_inserts_correctly_into_data_file_after_reload);
     return UNITY_END();
 }

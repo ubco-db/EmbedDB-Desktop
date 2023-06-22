@@ -19,3 +19,4 @@ void updateBitmapInt64(void *data, void *bm);
 int8_t inBitmapInt64(void *data, void *bm);
 void buildBitmapInt64FromRange(void *min, void *max, void *bm);
 int8_t int32Comparator(void *a, void *b);
+int8_t int64Comparator(void *a, void *b);

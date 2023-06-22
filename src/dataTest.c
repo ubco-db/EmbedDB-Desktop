@@ -6,6 +6,7 @@ int initializeSbits(sbitsState *state);
 int insertRecords(sbitsState *state, uint32_t numberOfRecords, int32_t startingKey, int32_t startingData);
 int queryAllRecords(sbitsState *state, uint32_t numberOfRecords, int32_t startingKey, int32_t startingData);
 int queryRecord(sbitsState *state, int32_t key, int32_t data);
+int insertRecord(sbitsState *state, int32_t key, int32_t data);
 
 int main() {
     sbitsState *state = (sbitsState *)malloc(sizeof(sbitsState));
@@ -32,10 +33,6 @@ int main() {
     printf("Queried all records sucessfully.\n");
 
     printStats(state);
-
-    printf("Erased end page: %i\n", state->erasedEndPage);
-    printf("Next write page: %i\n", state->nextPageWriteId);
-
     sbitsClose(state);
 
     /* Initalize state again */
@@ -58,8 +55,10 @@ int main() {
     }
     printf("Queried all records sucessfully.\n");
 
-    printf("Erased end page: %i\n", state->erasedEndPage);
-    printf("Next write page: %i\n", state->nextPageWriteId);
+    int x = insertRecord(state, 4959685, 1);
+    if (x == 1) {
+        printf("Failed to insert\n");
+    }
 
     printStats(state);
     sbitsClose(state);
@@ -86,7 +85,6 @@ int initializeSbits(sbitsState *state) {
 }
 
 int insertRecords(sbitsState *state, uint32_t numberOfRecords, int32_t startingKey, int32_t startingData) {
-    printf("Record size is %i\n", state->recordSize);
     int8_t *data = (int8_t *)malloc(state->recordSize);
     if (data == NULL) {
         printf("There was an error\n");
@@ -103,6 +101,22 @@ int insertRecords(sbitsState *state, uint32_t numberOfRecords, int32_t startingK
         }
     }
     free(data);
+    return 0;
+}
+
+int insertRecord(sbitsState *state, int32_t key, int32_t data) {
+    int8_t *record = (int8_t *)malloc(state->recordSize);
+    if (record == NULL) {
+        printf("There was an error\n");
+        return -1;
+    }
+    *((int32_t *)record) = key;
+    *((int32_t *)(record + 4)) = data;
+    int8_t result = sbitsPut(state, record, (void *)(record + 4));
+    if (result != 0) {
+        return result;
+    }
+    free(record);
     return 0;
 }
 

@@ -689,7 +689,21 @@ void indexPage(sbitsState *state, uint32_t pageNumber) {
  */
 int8_t sbitsPut(sbitsState *state, void *key, void *data) {
     /* Copy record into block */
+
     count_t count = SBITS_GET_COUNT(state->buffer);
+    if (state->minKey != UINT32_MAX) {
+        void *previousKey = NULL;
+        if (count == 0) {
+            readPage(state, state->nextPageWriteId - 1);
+            previousKey = ((int8_t *)state->buffer + state->pageSize ) + (state->recordSize * (state->maxRecordsPerPage - 1)) + state->headerSize;
+        } else {
+            previousKey = (int8_t *)state->buffer + (state->recordSize * (count - 1)) + state->headerSize;
+        }
+        if (state->compareKey(key, previousKey) != 1) {
+            printf("Keys must be scritcly ascending order. Insert Failed.\n");
+            return 1;
+        }
+    }
 
     /* Write current page if full */
     if (count >= state->maxRecordsPerPage) {
