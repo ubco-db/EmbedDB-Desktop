@@ -34,7 +34,7 @@ void sbits_initial_configuration_is_correct() {
     TEST_ASSERT_EQUAL_UINT32_MESSAGE(0, state->nextPageWriteId, "SBITS nextPageWriteId was not initialized correctly.");
     TEST_ASSERT_EQUAL_INT8_MESSAGE(0, state->wrappedMemory, "SBITS did not initalized wrappedMemory correctly.");
     TEST_ASSERT_EQUAL_INT8_MESSAGE(6, state->headerSize, "SBITS headerSize was not initialized correctly.");
-    TEST_ASSERT_EQUAL_INT64_MESSAGE(0, state->minKey, "SBITS minKey was not initialized correctly.");
+    TEST_ASSERT_EQUAL_INT64_MESSAGE(UINT32_MAX, state->minKey, "SBITS minKey was not initialized correctly.");
     TEST_ASSERT_EQUAL_UINT32_MESSAGE(UINT32_MAX, state->bufferedPageId, "SBITS bufferedPageId was not initialized correctly.");
     TEST_ASSERT_EQUAL_UINT32_MESSAGE(UINT32_MAX, state->bufferedIndexPageId, "SBITS bufferedIndexPageId was not initialized correctly.");
     TEST_ASSERT_EQUAL_UINT32_MESSAGE(UINT32_MAX, state->bufferedVarPage, "SBITS bufferedVarPage was not initialized correctly.");
