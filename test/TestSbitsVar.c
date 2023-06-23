@@ -93,8 +93,8 @@ void test_get_when_1() {
     char expectedVarData[] = "Testing 000...";
     void *key = (int8_t *)state->buffer + SBITS_DATA_WRITE_BUFFER * state->pageSize + state->headerSize;
     void *data = (int8_t *)key + state->keySize;
-    uint32_t *varDataSize = (uint32_t *)((int8_t *)state->buffer + SBITS_VAR_WRITE_BUFFER(state->parameters) * state->pageSize + state->keySize);
-    void *varData = (int8_t *)state->buffer + SBITS_VAR_WRITE_BUFFER(state->parameters) * state->pageSize + state->keySize + sizeof(uint32_t);
+    uint32_t *varDataSize = (uint32_t *)((int8_t *)state->buffer + SBITS_VAR_WRITE_BUFFER(state->parameters) * state->pageSize + state->variableDataHeaderSize);
+    void *varData = (int8_t *)state->buffer + SBITS_VAR_WRITE_BUFFER(state->parameters) * state->pageSize + state->variableDataHeaderSize + sizeof(uint32_t);
 
     TEST_ASSERT_EQUAL_CHAR_ARRAY_MESSAGE(&expectedKey, key, state->keySize, "Key was not correct with 1 record inserted");
     TEST_ASSERT_EQUAL_CHAR_ARRAY_MESSAGE(&expectedData, data, state->dataSize, "Data was not correct with 1 record inserted");

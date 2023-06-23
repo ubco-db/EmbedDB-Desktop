@@ -536,19 +536,21 @@ int8_t sbitsInitVarData(sbitsState *state) {
 }
 
 int8_t sbitsInitVarDataFromFile(sbitsState *state) {
-    printf("Attempt to initialize from existing variable data file\n");
-    state->file = fopen("build/artifacts/varFile.bin", "r+b");
-    if (state->file == NULL) {
-        printf("Error: Can't open existing variable data file!\n");
-        return -1;
-    }
+    if (0) {
+        printf("Attempt to initialize from existing variable data file\n");
+        state->file = fopen("build/artifacts/varFile.bin", "r+b");
+        if (state->file == NULL) {
+            printf("Error: Can't open existing variable data file!\n");
+            return -1;
+        }
 
-    state->currentVarLoc = state->keySize;
-    state->minVarRecordId = 0;
-    state->wrappedVariableMemory = 0;
-    state->numAvailVarPages = (state->varAddressEnd - state->varAddressStart) / state->pageSize;
-    state->numVarPages = state->numAvailVarPages;
-    state->nextVarPageId = 0;
+        state->currentVarLoc = state->keySize;
+        state->minVarRecordId = 0;
+        state->wrappedVariableMemory = 0;
+        state->numAvailVarPages = (state->varAddressEnd - state->varAddressStart) / state->pageSize;
+        state->numVarPages = state->numAvailVarPages;
+        state->nextVarPageId = 0;
+    }
 
     return 0;
 }
