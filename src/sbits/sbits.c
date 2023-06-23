@@ -49,7 +49,7 @@
 #include "../spline/spline.h"
 
 /**
- * 0 = Value-based search
+ * 0 = Modified binary search
  * 1 = Binary serach
  * 2 = Modified linear search (Spline)
  */
@@ -86,6 +86,10 @@ void printBitmap(char *bm) {
     printf("\n");
 }
 
+/**
+ * @brief	Determine if two bitmaps have any overlapping bits
+ * @return	1 if there is any overlap, else 0
+ */
 int8_t bitmapOverlap(uint8_t *bm1, uint8_t *bm2, int8_t size) {
     for (int8_t i = 0; i < size; i++)
         if ((*((uint8_t *)(bm1 + i)) & *((uint8_t *)(bm2 + i))) >= 1)
@@ -180,10 +184,6 @@ int8_t sbitsInit(sbitsState *state, size_t indexMaxError) {
     printf("Key size: %d Data size: %d %sRecord size: %d\n", state->keySize, state->dataSize, SBITS_USING_VDATA(state->parameters) ? "Variable data pointer size: 4 " : "", state->recordSize);
     printf("Use index: %d  Max/min: %d Sum: %d Bmap: %d\n", SBITS_USING_INDEX(state->parameters), SBITS_USING_MAX_MIN(state->parameters), SBITS_USING_SUM(state->parameters), SBITS_USING_BMAP(state->parameters));
 
-    state->file = NULL;
-    state->indexFile = NULL;
-    state->varFile = NULL;
-    state->wrappedMemory = 0;
     state->indexMaxError = indexMaxError;
 
     /* Calculate block header size */
@@ -209,10 +209,8 @@ int8_t sbitsInit(sbitsState *state, size_t indexMaxError) {
     /* Allocate first page of buffer as output page */
     initBufferPage(state, 0);
 
-    id_t numPages = (state->endAddress - state->startAddress) / state->pageSize;
-
-    if (numPages < (SBITS_USING_INDEX(state->parameters) * 2 + 2) * state->eraseSizeInPages) {
-        printf("ERROR: Number of pages allocated must be at least twice erase block size for SBITS and four times when using indexing. Memory pages: %d\n", numPages);
+    if (state->numDataPages < (SBITS_USING_INDEX(state->parameters) * 2 + 2) * state->eraseSizeInPages) {
+        printf("ERROR: Number of pages allocated must be at least twice erase block size for SBITS and four times when using indexing. Memory pages: %d\n", state->numDataPages);
         return -1;
     }
 
@@ -238,11 +236,14 @@ int8_t sbitsInit(sbitsState *state, size_t indexMaxError) {
     int8_t indexInitResult = 0;
     if (SBITS_USING_INDEX(state->parameters)) {
         if (state->bufferSizeInBlocks < 4) {
-            printf("ERROR: SBITS using index requires at least 4 page buffers. Defaulting to without index.\n");
-            state->parameters -= SBITS_USE_INDEX;
+            printf("ERROR: SBITS using index requires at least 4 page buffers.\n");
+            return -1;
         } else {
             indexInitResult = sbitsInitIndex(state);
         }
+    } else {
+        state->indexFile = NULL;
+        state->numIndexPages = 0;
     }
 
     if (indexInitResult != 0) {
@@ -253,12 +254,15 @@ int8_t sbitsInit(sbitsState *state, size_t indexMaxError) {
     int8_t varDataInitResult = 0;
     if (SBITS_USING_VDATA(state->parameters)) {
         if (state->bufferSizeInBlocks < 4 + (SBITS_USING_INDEX(state->parameters) ? 2 : 0)) {
-            printf("ERROR: SBITS using variable records requires at least 4 page buffers if there is no index and 6 if there is. Defaulting to no variable data.\n");
-            state->parameters -= SBITS_USE_VDATA;
+            printf("ERROR: SBITS using variable records requires at least 4 page buffers if there is no index and 6 if there is.\n");
+            return -1;
         } else {
             varDataInitResult = sbitsInitVarData(state);
         }
         return varDataInitResult;
+    } else {
+        state->varFile = NULL;
+        state->numVarPages = 0;
     }
 
     resetStats(state);
@@ -267,25 +271,27 @@ int8_t sbitsInit(sbitsState *state, size_t indexMaxError) {
 
 int8_t sbitsInitData(sbitsState *state) {
     state->nextPageId = 0;
-    state->nextPageWriteId = 0;
-    state->startDataPage = 0;
-    state->endDataPage = state->endAddress / state->pageSize;
-    state->firstDataPage = 0;
-    state->firstDataPageId = 0;
-    state->erasedEndPage = 0;
     state->avgKeyDiff = 1;
+    state->nextPageId = 0;
+    state->numAvailDataPages = state->numDataPages;
+    state->minDataPageId = 0;
+
+    if (state->dataFile == NULL) {
+        printf("ERROR: No data file provided!\n");
+        return -1;
+    }
 
     /* Setup data file. */
     if (!SBITS_RESETING_DATA(state->parameters)) {
-        state->file = fopen("build/artifacts/datafile.bin", "r");
-        if (state->file != NULL) {
+        int8_t openStatus = state->fileInterface->open(state->dataFile, SBITS_FILE_MODE_R_PLUS_B);
+        if (openStatus) {
             return sbitsInitDataFromFile(state);
         }
         printf("No existing data file found. Attempting to initialize a new one.\n");
     }
 
-    state->file = fopen("build/artifacts/datafile.bin", "w+b");
-    if (state->file == NULL) {
+    int8_t openStatus = state->fileInterface->open(state->dataFile, SBITS_FILE_MODE_W_PLUS_B);
+    if (openStatus) {
         printf("Error: Can't open data file!\n");
         return -1;
     }
@@ -295,30 +301,9 @@ int8_t sbitsInitData(sbitsState *state) {
 
 int8_t sbitsInitDataFromFile(sbitsState *state) {
     printf("Attempt to initialize from existing data file\n");
-    state->file = fopen("build/artifacts/datafile.bin", "r+b");
-    if (state->file == NULL) {
-        printf("Error: Can't open existing data file!\n");
-        return -1;
-    }
-
     id_t logicalPageId = 0;
     id_t maxLogicalPageId = 0;
     id_t physicalPageId = 0;
-    id_t numberOfDataPages = 0;
-
-    /* TODO: This block of code should be removed once the code for the file interface is implemetned */
-    id_t numPages = (state->endAddress - state->startAddress) / state->pageSize;
-    if (SBITS_USING_INDEX(state->parameters)) {
-        count_t numIdxPages = numPages / 100;
-        if (numIdxPages < state->eraseSizeInPages * 2) {
-            numIdxPages = state->eraseSizeInPages * 2;
-        } else {
-            numIdxPages = ((numIdxPages / state->eraseSizeInPages) + 1) * state->eraseSizeInPages;
-        }
-        numPages -= numIdxPages;
-    }
-    numberOfDataPages = numPages;
-    /* End of code to be removed */
 
     /* This will become zero if there is no more to read */
     int8_t moreToRead = !(readPage(state, physicalPageId));
@@ -326,7 +311,7 @@ int8_t sbitsInitDataFromFile(sbitsState *state) {
     bool haveWrappedInMemory = false;
     int count = 0;
     void *buffer = (int8_t *)state->buffer + state->pageSize;
-    while (moreToRead && count < numberOfDataPages) {
+    while (moreToRead && count < state->numDataPages) {
         memcpy(&logicalPageId, buffer, sizeof(id_t));
         if (count == 0 || logicalPageId == maxLogicalPageId + 1) {
             maxLogicalPageId = logicalPageId;
@@ -335,78 +320,63 @@ int8_t sbitsInitDataFromFile(sbitsState *state) {
             moreToRead = !(readPage(state, physicalPageId));
             count++;
         } else {
-            haveWrappedInMemory = logicalPageId == maxLogicalPageId - numberOfDataPages + 1 ? true : false;
+            haveWrappedInMemory = logicalPageId == (maxLogicalPageId - state->numDataPages + 1);
             break;
         }
     }
 
-    state->nextPageId = maxLogicalPageId + 1;
-    state->nextPageWriteId = physicalPageId;
-    state->erasedEndPage = physicalPageId;
+    if (count > 0) {
+        state->nextPageId = maxLogicalPageId + 1;
+        state->minDataPageId = 0;
+        id_t physicalPageIDOfSmallestData = 0;
+        if (haveWrappedInMemory) {
+            physicalPageIDOfSmallestData = logicalPageId % state->numDataPages;
+        }
+        readPage(state, physicalPageIDOfSmallestData);
+        memcpy(&(state->minDataPageId), buffer, sizeof(id_t));
+        state->numAvailDataPages = (state->minDataPageId % state->numDataPages - maxLogicalPageId % state->numDataPages + state->numDataPages) % state->numDataPages;
 
-    if (haveWrappedInMemory) {
-        state->wrappedMemory = 1;
-        state->firstDataPage = physicalPageId;
-        state->erasedEndPage = physicalPageId - 1;
+        if (state->keySize <= 4) {
+            uint32_t minKey = 0;
+            memcpy(&minKey, sbitsGetMinKey(state, buffer), state->keySize);
+            state->minKey = minKey;
+        } else {
+            uint64_t minKey = 0;
+            memcpy(&minKey, sbitsGetMinKey(state, buffer), state->keySize);
+            state->minKey = minKey;
+        }
 
-        /* Update smallest logical page number */
-        readPage(state, state->firstDataPage);
-        id_t smallestLogicalPageNumber = 0;
-        memcpy(&smallestLogicalPageNumber, buffer, sizeof(id_t));
-        state->firstDataPageId = smallestLogicalPageNumber;
-    }
+        /* Put largest key back into the buffer */
+        readPage(state, state->nextPageId - 1);
 
-    /*
-     * Need to put the first data page in the buffer to find the minimum key for updating
-     * the average difference.
-     */
-    readPage(state, state->firstDataPage);
+        updateAverageKeyDifference(state, buffer);
 
-    if (state->keySize <= 4) {
-        uint32_t minKey = 0;
-        memcpy(&minKey, sbitsGetMinKey(state, buffer), state->keySize);
-        state->minKey = minKey;
-    } else {
-        uint64_t minKey = 0;
-        memcpy(&minKey, sbitsGetMinKey(state, buffer), state->keySize);
-        state->minKey = minKey;
-    }
-
-    /* Put largest key back into the buffer */
-    readPage(state, state->nextPageWriteId - 1);
-
-    updateAverageKeyDifference(state, buffer);
-
-    if (SEARCH_METHOD == 2) {
-        sbitsInitSplineFromFile(state);
+        if (SEARCH_METHOD == 2) {
+            sbitsInitSplineFromFile(state);
+        }
     }
 
     return 0;
 }
 
 void sbitsInitSplineFromFile(sbitsState *state) {
-    id_t pageNumberToRead = state->firstDataPage;
-    void *buffer = (int8_t *)state->buffer + state->pageSize;
+    id_t pageNumberToRead = state->minDataPageId;
+    void *buffer = (int8_t *)state->buffer + state->pageSize * SBITS_DATA_READ_BUFFER;
     id_t pagesRead = 0;
-    id_t numberOfPagesToRead = state->firstDataPage == 0 ? state->nextPageWriteId : state->endDataPage;
-    uint32_t logicalPageNumber = state->firstDataPageId;
+    id_t numberOfPagesToRead = state->nextIdxPageId - state->minDataPageId;
     while (pagesRead < numberOfPagesToRead) {
-        (readPage(state, pageNumberToRead++));
+        readPage(state, pageNumberToRead % state->numDataPages);
         if (RADIX_BITS > 0) {
-            radixsplineAddPoint(state->rdix, sbitsGetMinKey(state, buffer), logicalPageNumber++);
+            radixsplineAddPoint(state->rdix, sbitsGetMinKey(state, buffer), pageNumberToRead++);
         } else {
-            splineAdd(state->spl, sbitsGetMinKey(state, buffer), logicalPageNumber++);
+            splineAdd(state->spl, sbitsGetMinKey(state, buffer), pageNumberToRead++);
         }
         pagesRead++;
-        if (pageNumberToRead >= state->endDataPage) {
-            pageNumberToRead = 0;
-        }
     }
 }
 
 int8_t sbitsInitIndex(sbitsState *state) {
     /* Setup index file. */
-    id_t numPages = (state->endAddress - state->startAddress) / state->pageSize;
 
     /* 4 for id, 2 for count, 2 unused, 4 for minKey (pageId), 4 for maxKey (pageId) */
     state->maxIdxRecordsPerPage = (state->pageSize - 16) / state->bitmapSize;
@@ -420,35 +390,34 @@ int8_t sbitsInitIndex(sbitsState *state) {
     *ptr = state->nextPageId;
 
     state->nextIdxPageId = 0;
-    state->nextIdxPageWriteId = 0;
+    state->numAvailIndexPages = state->numIndexPages;
+    state->minIndexPageId = 0;
 
-    count_t numIdxPages = numPages / 100; /* Index overhead is about 1% of data size */
-    if (numIdxPages < state->eraseSizeInPages * 2) {
-        /* Minimum index space is two erase blocks */
-        numIdxPages = state->eraseSizeInPages * 2;
-    } else {
-        /* Ensure index space is a multiple of erase block size */
-        numIdxPages = ((numIdxPages / state->eraseSizeInPages) + 1) * state->eraseSizeInPages;
+    if (state->numIndexPages < state->eraseSizeInPages * 2) {
+        printf("ERROR: Minimum index space is two erase blocks\n");
+        return -1;
     }
 
-    /* Index pages are at the end of the memory space */
-    state->endIdxPage = state->endDataPage;
-    state->endDataPage -= numIdxPages;
-    state->startIdxPage = state->endDataPage + 1;
-    state->firstIdxPage = 0;
-    state->erasedEndIdxPage = 0;
-    state->wrappedIdxMemory = 0;
+    if (state->numIndexPages % state->eraseSizeInPages != 0) {
+        printf("ERROR: Ensure index space is a multiple of erase block size\n");
+        return -1;
+    }
+
+    if (state->indexFile == NULL) {
+        printf("ERROR: No index file provided!\n");
+        return -1;
+    }
 
     if (!SBITS_RESETING_DATA(state->parameters)) {
-        state->indexFile = fopen("build/artifacts/indexfile.bin", "r");
-        if (state->indexFile != NULL) {
+        int8_t openStatus = state->fileInterface->open(state->indexFile, SBITS_FILE_MODE_R_PLUS_B);
+        if (openStatus) {
             return sbitsInitIndexFromFile(state);
         }
         printf("Unable to open index file. Attempting to initialize a new one.\n");
     }
 
-    state->indexFile = fopen("build/artifacts/indexfile.bin", "w+b");
-    if (state->indexFile == NULL) {
+    int8_t openStatus = state->fileInterface->open(state->indexFile, SBITS_FILE_MODE_W_PLUS_B);
+    if (openStatus) {
         printf("Error: Can't open index file!\n");
         return -1;
     }
@@ -458,16 +427,10 @@ int8_t sbitsInitIndex(sbitsState *state) {
 
 int8_t sbitsInitIndexFromFile(sbitsState *state) {
     printf("Attempt to initialize from existing index file\n");
-    state->file = fopen("build/artifacts/indexfile.bin", "r+b");
-    if (state->file == NULL) {
-        printf("Error: Can't open existing index file!\n");
-        return -1;
-    }
 
     id_t logicalIndexPageId = 0;
     id_t maxLogicaIndexPageId = 0;
     id_t physicalIndexPageId = 0;
-    id_t numberOfIndexPages = state->endIdxPage - state->startIdxPage;
 
     /* This will become zero if there is no more to read */
     int8_t moreToRead = !(readIndexPage(state, physicalIndexPageId));
@@ -476,7 +439,7 @@ int8_t sbitsInitIndexFromFile(sbitsState *state) {
     int count = 0;
     void *buffer = (int8_t *)state->buffer + state->pageSize * SBITS_INDEX_READ_BUFFER;
 
-    while (moreToRead && count < numberOfIndexPages) {
+    while (moreToRead && count < state->numIndexPages) {
         memcpy(&logicalIndexPageId, buffer, sizeof(id_t));
         if (logicalIndexPageId == maxLogicaIndexPageId + 1) {
             maxLogicaIndexPageId = logicalIndexPageId;
@@ -484,37 +447,35 @@ int8_t sbitsInitIndexFromFile(sbitsState *state) {
             moreToRead = !(readPage(state, physicalIndexPageId));
             count++;
         } else {
-            haveWrappedInMemory = logicalIndexPageId == maxLogicaIndexPageId - numberOfIndexPages ? true : false;
+            haveWrappedInMemory = logicalIndexPageId == maxLogicaIndexPageId - state->numIndexPages + 1;
             break;
         }
     }
 
-    state->nextIdxPageId = maxLogicaIndexPageId + 1;
-    state->nextIdxPageWriteId = physicalIndexPageId;
-    state->erasedEndIdxPage = physicalIndexPageId;
+    if (count > 0) {
+        state->nextIdxPageId = maxLogicaIndexPageId + 1;
+        state->minIndexPageId = 0;
 
-    if (haveWrappedInMemory) {
-        state->wrappedIdxMemory = 1;
-        state->firstIdxPage = physicalIndexPageId;
-        state->erasedEndIdxPage = physicalIndexPageId - 1;
+        id_t physicalPageIDOfSmallestData = 0;
+        if (haveWrappedInMemory) {
+            physicalPageIDOfSmallestData = logicalIndexPageId % state->numIndexPages;
+        }
+
+        readIndexPage(state, physicalPageIDOfSmallestData);
+        memcpy(&(state->minIndexPageId), buffer, sizeof(id_t));
+        state->numAvailIndexPages = (state->minIndexPageId % state->numIndexPages - maxLogicaIndexPageId % state->numIndexPages + state->numIndexPages) % state->numIndexPages;
     }
-
     return 0;
 }
 
 int8_t sbitsInitVarData(sbitsState *state) {
-    // SETUP FILE
-
     // Initialize variable data outpt buffer
     initBufferPage(state, SBITS_VAR_WRITE_BUFFER(state->parameters));
 
-    state->nextVarPageLogicalId = 0;
     state->variableDataHeaderSize = state->keySize + sizeof(id_t);
     state->currentVarLoc = state->variableDataHeaderSize;
     state->minVarRecordId = 0;
-    state->wrappedVariableMemory = 0;
-    state->numAvailVarPages = (state->varAddressEnd - state->varAddressStart) / state->pageSize;
-    state->numVarPages = state->numAvailVarPages;
+    state->numAvailVarPages = state->numVarPages;
     state->nextVarPageId = 0;
 
     if (!SBITS_RESETING_DATA(state->parameters)) {
@@ -1731,13 +1692,13 @@ id_t writeVariablePage(sbitsState *state, void *buffer) {
     }
 
     // Make sure the address being witten to wraps around
-    state->nextVarPageId %= state->numVarPages;
+    id_t pageNumberToWrite = state->nextVarPageId % state->numVarPages;
 
     // Erase data if needed
     if (state->numAvailVarPages <= 0) {
         state->numAvailVarPages += state->eraseSizeInPages;
         // Last page that is deleted
-        id_t pageNum = (state->nextVarPageId + state->eraseSizeInPages - 1) % state->numVarPages;
+        id_t pageNum = (pageNumberToWrite + state->eraseSizeInPages - 1) % state->numVarPages;
 
         // Read in that page so we can update which records we still have the data for
         if (readVariablePage(state, pageNum) != 0) {
@@ -1750,14 +1711,13 @@ id_t writeVariablePage(sbitsState *state, void *buffer) {
 
     // Add logical page number to data page
     void *buf = (int8_t *)state->buffer + state->pageSize * SBITS_VAR_WRITE_BUFFER(state->parameters);
-    memcpy(buf, &state->nextVarPageLogicalId, sizeof(id_t));
-    state->nextVarPageLogicalId++;
+    memcpy(buf, &state->nextVarPageId, sizeof(id_t));
+    state->nextVarPageId++;
 
     // Write to file
-    fseek(state->varFile, state->pageSize * state->nextVarPageId, SEEK_SET);
+    fseek(state->varFile, state->pageSize * pageNumberToWrite, SEEK_SET);
     fwrite(buffer, state->pageSize, 1, state->varFile);
 
-    state->nextVarPageId++;
     state->numAvailVarPages--;
     state->numWrites++;
 

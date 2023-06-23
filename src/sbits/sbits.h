@@ -190,11 +190,7 @@ typedef struct {
     id_t nextPageId;                                                      /* Next logical page id. Page id is an incrementing value and may not always be same as physical page id. */
     id_t nextIdxPageId;                                                   /* Next logical page id for index. Page id is an incrementing value and may not always be same as physical page id. */
     id_t nextVarPageId;                                                   /* Page number of next var page to be written */
-    id_t nextVarPageLogicalId;                                            /* Logical ID of the next variable data page */
     id_t currentVarLoc;                                                   /* Current variable address offset to write at (bytes from beginning of file) */
-    int8_t wrappedMemory;                                                 /* 1 if have wrapped around in memory, 0 otherwise */
-    int8_t wrappedIdxMemory;                                              /* 1 if have wrapped around in index memory, 0 otherwise */
-    int8_t wrappedVariableMemory;                                         /* 1 if have wrapped around in variable data memory, 0 otherwise */
     void *buffer;                                                         /* Pre-allocated memory buffer for use by algorithm */
     spline *spl;                                                          /* Spline model */
     radixspline *rdix;                                                    /* Radix Spline search model */
