@@ -14,8 +14,11 @@ void setUp(void) {
     state->pageSize = 512;
     state->bufferSizeInBlocks = 6;
     state->buffer = calloc(1, state->pageSize * state->bufferSizeInBlocks);
-    state->startAddress = 0;
-    state->endAddress = 93 * state->pageSize;
+    state->fileInterface = getFileInterface();
+    char dataPath[] = "build/artifacts/dataFile.bin", indexPath[] = "build/artifacts/indexFile.bin", varPath[] = "build/artifacts/varFile.bin";
+    state->dataFile = setupFile(dataPath);
+    state->indexFile = setupFile(indexPath);
+    state->numDataPages = 100;
     state->eraseSizeInPages = 4;
     state->bitmapSize = 0;
     state->parameters = SBITS_RESET_DATA;
@@ -30,6 +33,10 @@ void setUp(void) {
 
 void tearDown(void) {
     sbitsClose(state);
+    tearDownFile(state->dataFile);
+    tearDownFile(state->indexFile);
+    free(state->buffer);
+    free(state->fileInterface);
     free(state);
 }
 

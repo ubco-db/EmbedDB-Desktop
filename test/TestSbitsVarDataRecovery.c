@@ -15,26 +15,29 @@ typedef struct Node {
 } Node;
 
 void setUp(void) {
-    state = (sbitsState *)malloc(sizeof(sbitsState));
+    // Initialize sbits State
+    state = malloc(sizeof(sbitsState));
     state->keySize = 4;
     state->dataSize = 4;
     state->pageSize = 512;
     state->bufferSizeInBlocks = 6;
     state->buffer = calloc(1, state->pageSize * state->bufferSizeInBlocks);
-    state->startAddress = 0;
-    state->endAddress = 65 * state->pageSize;
+    state->numDataPages = 65;
+    state->numVarPages = 60;
     state->eraseSizeInPages = 4;
-    state->varAddressStart = state->endAddress;
-    state->varAddressEnd = state->varAddressStart + 60 * state->pageSize;
-    state->bitmapSize = 0;
-    state->parameters = SBITS_RESET_DATA | SBITS_USE_VDATA;
+    char dataPath[] = "build/artifacts/dataFile.bin", indexPath[] = "build/artifacts/indexFile.bin", varPath[] = "build/artifacts/varFile.bin";
+    state->fileInterface = getFileInterface();
+    state->dataFile = setupFile(dataPath);
+    state->indexFile = setupFile(indexPath);
+    state->varFile = setupFile(varPath);
+    state->parameters = SBITS_USE_VDATA | SBITS_RESET_DATA;
+    state->bitmapSize = 1;
     state->inBitmap = inBitmapInt8;
     state->updateBitmap = updateBitmapInt8;
     state->buildBitmapFromRange = buildBitmapInt8FromRange;
     state->compareKey = int32Comparator;
     state->compareData = int32Comparator;
-    int8_t result = sbitsInit(state, 1);
-    TEST_ASSERT_EQUAL_INT8_MESSAGE(0, result, "SBITS did not initialize correctly.");
+    resetStats(state);
 }
 
 uint32_t randomData(void **data, uint32_t sizeLowerBound, uint32_t sizeUpperBound) {
@@ -98,6 +101,9 @@ void sbits_variable_data_page_numbers_are_correct() {
 
 void tearDown(void) {
     sbitsClose(state);
+    tearDownFile(state->dataFile);
+    free(state->buffer);
+    free(state->fileInterface);
     free(state);
 }
 

@@ -14,10 +14,14 @@ void setUp(void) {
     state->pageSize = 512;
     state->bufferSizeInBlocks = 6;
     state->buffer = calloc(1, state->pageSize * state->bufferSizeInBlocks);
-    state->startAddress = 0;
-    state->endAddress = 1000 * state->pageSize;
+    state->numDataPages = 1000;
     state->parameters = SBITS_RESET_DATA;
     state->eraseSizeInPages = 4;
+    state->fileInterface = getFileInterface();
+    char dataPath[] = "build/artifacts/dataFile.bin", indexPath[] = "build/artifacts/indexFile.bin", varPath[] = "build/artifacts/varFile.bin";
+    state->dataFile = setupFile(dataPath);
+    state->indexFile = setupFile(indexPath);
+    state->varFile = setupFile(varPath);
     state->bitmapSize = 0;
     state->inBitmap = inBitmapInt8;
     state->updateBitmap = updateBitmapInt8;
@@ -28,10 +32,9 @@ void setUp(void) {
 }
 
 void sbits_initial_configuration_is_correct() {
-    TEST_ASSERT_NOT_NULL_MESSAGE(state->file, "SBITS file was not initialized correctly.");
+    TEST_ASSERT_NOT_NULL_MESSAGE(state->dataFile, "SBITS file was not initialized correctly.");
     TEST_ASSERT_NULL_MESSAGE(state->varFile, "SBITS varFile was intialized for non-variable data.");
     TEST_ASSERT_EQUAL_UINT32_MESSAGE(0, state->nextPageId, "SBITS nextPageId was not initialized correctly.");
-    TEST_ASSERT_EQUAL_UINT32_MESSAGE(0, state->nextPageWriteId, "SBITS nextPageWriteId was not initialized correctly.");
     TEST_ASSERT_EQUAL_INT8_MESSAGE(0, state->wrappedMemory, "SBITS did not initalized wrappedMemory correctly.");
     TEST_ASSERT_EQUAL_INT8_MESSAGE(6, state->headerSize, "SBITS headerSize was not initialized correctly.");
     TEST_ASSERT_EQUAL_INT64_MESSAGE(UINT32_MAX, state->minKey, "SBITS minKey was not initialized correctly.");
@@ -40,11 +43,8 @@ void sbits_initial_configuration_is_correct() {
     TEST_ASSERT_EQUAL_UINT32_MESSAGE(UINT32_MAX, state->bufferedVarPage, "SBITS bufferedVarPage was not initialized correctly.");
     TEST_ASSERT_EQUAL_UINT16_MESSAGE(63, state->maxRecordsPerPage, "SBITS maxRecordsPerPage was not initialized correctly.");
     TEST_ASSERT_EQUAL_INT32_MESSAGE(63, state->maxError, "SBITS maxError was not initialized correctly.");
-    TEST_ASSERT_EQUAL_UINT32_MESSAGE(0, state->startDataPage, "SBITS startDataPage was not initialized correctly.");
-    TEST_ASSERT_EQUAL_UINT32_MESSAGE(1000, state->endDataPage, "SBITS endDataPage was not initialized correctly.");
-    TEST_ASSERT_EQUAL_UINT32_MESSAGE(0, state->firstDataPage, "SBITS firstDataPage was not initialized correctly.");
-    TEST_ASSERT_EQUAL_UINT32_MESSAGE(0, state->firstDataPageId, "SBITS firstDataPageId was not initialized correctly.");
-    TEST_ASSERT_EQUAL_UINT32_MESSAGE(0, state->erasedEndPage, "SBITS erasedEndPage was not initialized correctly.");
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(1000, state->numDataPages, "SBITS numDataPages was not initialized correctly.");
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(0, state->minDataPageId, "SBITS firstDataPage was not initialized correctly.");
     TEST_ASSERT_EQUAL_UINT32_MESSAGE(1, state->avgKeyDiff, "SBITS avgKeyDiff was not initialized correctly.");
     TEST_ASSERT_NOT_NULL_MESSAGE(state->spl, "SBITS spline was not initialized correctly.");
 }
@@ -179,6 +179,9 @@ void iteratorReturnsCorrectRecords(void) {
 
 void tearDown(void) {
     sbitsClose(state);
+    tearDownFile(state->dataFile);
+    free(state->buffer);
+    free(state->fileInterface);
     free(state);
 }
 

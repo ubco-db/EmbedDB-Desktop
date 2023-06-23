@@ -66,22 +66,29 @@ int main() {
 }
 
 int initializeSbits(sbitsState *state) {
+    // Initialize sbits State
+    state = malloc(sizeof(sbitsState));
     state->keySize = 4;
     state->dataSize = 4;
     state->pageSize = 512;
     state->bufferSizeInBlocks = 6;
     state->buffer = calloc(1, state->pageSize * state->bufferSizeInBlocks);
-    state->startAddress = 0;
-    state->endAddress = 50 * state->pageSize;
+    state->numDataPages = 65;
+    state->numVarPages = 60;
     state->eraseSizeInPages = 4;
-    state->bitmapSize = 0;
-    state->parameters = 0;
+    char dataPath[] = "build/artifacts/dataFile.bin", indexPath[] = "build/artifacts/indexFile.bin", varPath[] = "build/artifacts/varFile.bin";
+    state->fileInterface = getFileInterface();
+    state->dataFile = setupFile(dataPath);
+    state->indexFile = setupFile(indexPath);
+    state->varFile = setupFile(varPath);
+    state->parameters = SBITS_RESET_DATA;
+    state->bitmapSize = 1;
     state->inBitmap = inBitmapInt8;
     state->updateBitmap = updateBitmapInt8;
     state->buildBitmapFromRange = buildBitmapInt8FromRange;
     state->compareKey = int32Comparator;
     state->compareData = int32Comparator;
-    return sbitsInit(state, 1);
+    resetStats(state);
 }
 
 int insertRecords(sbitsState *state, uint32_t numberOfRecords, int32_t startingKey, int32_t startingData) {
