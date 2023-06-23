@@ -32,15 +32,15 @@ void initState(uint32_t dataSize) {
     state->pageSize = 512;
     state->bufferSizeInBlocks = 6;
     state->buffer = calloc(1, state->pageSize * state->bufferSizeInBlocks);
-    state->startAddress = 0;
-    state->endAddress = 100 * state->pageSize;
-    state->varAddressStart = state->endAddress;
-    state->varAddressEnd = state->varAddressStart + 100 * state->pageSize;
+    state->numDataPages = 1000;
+    state->numIndexPages = 48;
+    state->numVarPages = 1000;
     state->eraseSizeInPages = 4;
+    char dataPath[] = "build/artifacts/dataFile.bin", indexPath[] = "build/artifacts/indexFile.bin", varPath[] = "build/artifacts/varFile.bin";
     state->fileInterface = getFileInterface();
-    state->dataFile = fopen("build/artifacts/dataFile.bin", "w+b");
-    state->indexFile = fopen("build/artifacts/indexFile.bin", "w+b");
-    state->varFile = fopen("build/artifacts/varFile.bin", "w+b");
+    state->dataFile = setupFile(dataPath);
+    state->indexFile = setupFile(indexPath);
+    state->varFile = setupFile(varPath);
     state->parameters = SBITS_USE_BMAP | SBITS_USE_INDEX | SBITS_USE_VDATA;
     state->bitmapSize = 1;
     state->inBitmap = inBitmapInt8;
@@ -53,8 +53,13 @@ void initState(uint32_t dataSize) {
 
 void resetState() {
     sbitsClose(state);
+    tearDownFile(state->dataFile);
+    tearDownFile(state->indexFile);
+    tearDownFile(state->varFile);
     free(state->buffer);
+    free(state->fileInterface);
     free(state);
+
     state = NULL;
     inserted = 0;
 }

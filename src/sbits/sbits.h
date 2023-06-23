@@ -3,38 +3,38 @@
  * @file		sbits.h
  * @author		Ramon Lawrence
  * @brief		This file is for sequential bitmap indexing for time series (SBITS).
- * @copyright	Copyright 2021
- * 			The University of British Columbia,
- * 			Ramon Lawrence
+ * @copyright	Copyright 2022
+ *                         The University of British Columbia
+ *                         Ramon Lawrence
  * @par Redistribution and use in source and binary forms, with or without
- * 	modification, are permitted provided that the following conditions are met:
+ *         modification, are permitted provided that the following conditions are met:
  *
  * @par 1.Redistributions of source code must retain the above copyright notice,
- * 	this list of conditions and the following disclaimer.
+ *         this list of conditions and the following disclaimer.
  *
  * @par 2.Redistributions in binary form must reproduce the above copyright notice,
- * 	this list of conditions and the following disclaimer in the documentation
- * 	and/or other materials provided with the distribution.
+ *         this list of conditions and the following disclaimer in the documentation
+ *         and/or other materials provided with the distribution.
  *
  * @par 3.Neither the name of the copyright holder nor the names of its contributors
- * 	may be used to endorse or promote products derived from this software without
- * 	specific prior written permission.
+ *         may be used to endorse or promote products derived from this software without
+ *         specific prior written permission.
  *
  * @par THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * 	AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * 	IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * 	ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
- * 	LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * 	CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * 	SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * 	INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * 	CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * 	ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * 	POSSIBILITY OF SUCH DAMAGE.
+ *         AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ *         IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ *         ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+ *         LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ *         CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ *         SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ *         INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ *         CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ *         ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ *         POSSIBILITY OF SUCH DAMAGE.
  */
 /******************************************************************************/
-#ifndef _H_SBITS
-#define _H_SBITS
+#ifndef SBITS_H_
+#define SBITS_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -92,6 +92,9 @@ typedef uint16_t count_t;
 #define SBITS_VAR_WRITE_BUFFER(x) ((x & SBITS_USE_INDEX) ? 4 : 2)
 #define SBITS_VAR_READ_BUFFER(x) ((x & SBITS_USE_INDEX) ? 5 : 3)
 
+#define SBITS_FILE_MODE_W_PLUS_B 0  // Open file as read/write, creates file if doesn't exist, overwrites if it does. aka "w+b"
+#define SBITS_FILE_MODE_R_PLUS_B 1  // Open file as read/write, file must exist, keeps data if it does. aka "r+b"
+
 #define BYTE_TO_BINARY_PATTERN "%c%c%c%c%c%c%c%c"
 #define BYTE_TO_BINARY(byte)       \
     (byte & 0x80 ? '1' : '0'),     \
@@ -131,7 +134,7 @@ typedef struct {
      * @param	buffer		Pre-allocated space where data is read into
      * @param	pageNum		Page number to read. Is treated as an offset from the beginning of the file
      * @param	pageSize	Number of bytes in a page
-     * @param	file		The file to read from. This is the file data that was returned by sbitsFileInterface::open
+     * @param	file		The file to read from. This is the file data that was stored in sbitsState->dataFile etc
      * @return	1 for success and 0 for failure
      */
     int8_t (*read)(void *buffer, uint32_t pageNum, uint32_t pageSize, void *file);
@@ -141,16 +144,30 @@ typedef struct {
      * @param	buffer		The data to write to file
      * @param	pageNum		Page number to write. Is treated as an offset from the beginning of the file
      * @param	pageSize	Number of bytes in a page
-     * @param	file		The file data that was returned by sbitsFileInterface::open
+     * @param	file		The file data that was stored in sbitsState->dataFile etc
      * @return	1 for success and 0 for failure
      */
-    int8_t (*write)(const void *buffer, uint32_t pageNum, uint32_t pageSize, void *file);
+    int8_t (*write)(void *buffer, uint32_t pageNum, uint32_t pageSize, void *file);
 
     /**
      * @brief	Closes the file
      * @return	1 for success and 0 for failure
      */
     int8_t (*close)(void *file);
+
+    /**
+     * @brief
+     * @param	file	The data that was passed to sbits
+     * @param	flags	Flags that determine in which mode
+     * @return	1 for success and 0 for failure
+     */
+    int8_t (*open)(void *file, uint8_t mode);
+
+    /**
+     * @brief	Flushes file
+     * @return	1 for success and 0 for failure
+     */
+    int8_t (*flush)(void *file);
 } sbitsFileInterface;
 
 typedef struct {
@@ -158,25 +175,20 @@ typedef struct {
     void *indexFile;                                                      /* File for storing index records. */
     void *varFile;                                                        /* File for storing variable length data. */
     sbitsFileInterface *fileInterface;                                    /* Interface to the file storage */
-    id_t startAddress;                                                    /* Start address in memory space */
-    id_t endAddress;                                                      /* End address in memory space */
+    uint32_t numDataPages;                                                /* The number of pages will use for storing fixed records*/
+    uint32_t numIndexPages;                                               /* The number of pages will use for storing the data index */
+    uint32_t numVarPages;                                                 /* The number of pages will use for storing variable data */
     count_t eraseSizeInPages;                                             /* Erase size in pages */
-    id_t startDataPage;                                                   /* Start data page number */
-    id_t endDataPage;                                                     /* End data page number */
-    id_t numAvailVarPages;                                                /* Number of writable pages left before needing to delete */
-    id_t varAddressStart;                                                 /* Start address for the variable data page */
-    id_t varAddressEnd;                                                   /* End address for the variable data page */
-    count_t numVarPages;                                                  /* Number of variable pages */
-    id_t startIdxPage;                                                    /* Start index page number */
-    id_t endIdxPage;                                                      /* End index page number */
-    id_t firstDataPage;                                                   /* First data page number (physical location) */
-    id_t firstDataPageId;                                                 /* First data page number (logical page id) */
-    id_t currentVarLoc;                                                   /* Current variable address offset to write at (bytes from beginning of file) */
-    id_t nextVarPageId;                                                   /* Page number of next var page to be written */
-    id_t firstIdxPage;                                                    /* First data page number (physical location) */
-    id_t erasedEndPage;                                                   /* Physical page number of last erased page */
-    id_t erasedEndIdxPage;                                                /* Physical page number of last erased index page */
+    uint32_t numAvailDataPages;                                           /* Number of writable data pages left before needing to delete */
+    uint32_t numAvailIndexPages;                                          /* Number of writable index pages left before needing to delete */
+    uint32_t numAvailVarPages;                                            /* Number of writable var pages left before needing to delete */
+    uint32_t minDataPageId;                                               /* Lowest logical data page id that is saved on file */
+    uint32_t minIndexPageId;                                              /* Lowest logical index page id that is saved on file */
     uint64_t minVarRecordId;                                              /* Minimum record id that we still have variable data for */
+    id_t nextPageId;                                                      /* Next logical page id. Page id is an incrementing value and may not always be same as physical page id. */
+    id_t nextIdxPageId;                                                   /* Next logical page id for index. Page id is an incrementing value and may not always be same as physical page id. */
+    id_t nextVarPageId;                                                   /* Page number of next var page to be written */
+    id_t currentVarLoc;                                                   /* Current variable address offset to write at (bytes from beginning of file) */
     int8_t wrappedMemory;                                                 /* 1 if have wrapped around in memory, 0 otherwise */
     int8_t wrappedIdxMemory;                                              /* 1 if have wrapped around in index memory, 0 otherwise */
     int8_t wrappedVariableMemory;                                         /* 1 if have wrapped around in variable data memory, 0 otherwise */
@@ -193,10 +205,6 @@ typedef struct {
     int8_t headerSize;                                                    /* Size of header in bytes (calculated during init()) */
     int8_t bitmapSize;                                                    /* Size of bitmap in bytes */
     id_t avgKeyDiff;                                                      /* Estimate for difference between key values. Used for get() to predict location of record. */
-    id_t nextPageId;                                                      /* Next logical page id. Page id is an incrementing value and may not always be same as physical page id. */
-    id_t nextPageWriteId;                                                 /* Physical page id of next page to write. */
-    id_t nextIdxPageId;                                                   /* Next logical page id for index. Page id is an incrementing value and may not always be same as physical page id. */
-    id_t nextIdxPageWriteId;                                              /* Physical index page id of next page to write. */
     count_t maxRecordsPerPage;                                            /* Maximum records per page */
     count_t maxIdxRecordsPerPage;                                         /* Maximum index records per page */
     int8_t (*compareKey)(void *a, void *b);                               /* Function that compares two arbitrary keys passed as parameters */
@@ -220,12 +228,8 @@ typedef struct {
 } sbitsState;
 
 typedef struct {
-    id_t lastIterPage;       /* Last page read by iterator */
-    count_t lastIterRec;     /* Last record read by iterator */
-    id_t lastIdxIterPage;    /* Last index page read by iterator */
-    count_t lastIdxIterRec;  /* Last index record read by iterator */
-    int8_t wrappedMemory;    /* 1 if have wrapped around in memory during iterator search, 0 otherwise */
-    int8_t wrappedIdxMemory; /* 1 if have wrapped around in memory during index iterator search, 0 otherwise */
+    uint32_t nextDataPage; /* Next data page that the iterator should read */
+    uint16_t nextDataRec;  /* Next record on the data page tat the iterator should read */
     void *minKey;
     void *maxKey;
     void *minData;
