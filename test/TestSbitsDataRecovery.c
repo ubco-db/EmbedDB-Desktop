@@ -116,6 +116,8 @@ void sbits_parameters_initializes_from_data_file_with_twenty_seven_pages_correct
     initalizeSbitsFromFile();
     TEST_ASSERT_EQUAL_UINT64_MESSAGE(10, state->minKey, "SBITS minkey is not correctly identified after reload from data file.");
     TEST_ASSERT_EQUAL_UINT32_MESSAGE(27, state->nextDataPageId, "SBITS nextDataPageId is not correctly identified after reload from data file.");
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(0, state->minDataPageId, "SBITS minDataPageId was not correctly identified.");
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(66, state->numAvailDataPages, "SBITS numAvailDataPages is not correctly initialized.");
 }
 
 /* The setup function allocates 93 pages, so check to make sure it initalizes correctly when it is full */
@@ -125,14 +127,18 @@ void sbits_parameters_initializes_from_data_file_with_ninety_three_pages_correct
     initalizeSbitsFromFile();
     TEST_ASSERT_EQUAL_UINT64_MESSAGE(3457, state->minKey, "SBITS minkey is not correctly identified after reload from data file.");
     TEST_ASSERT_EQUAL_UINT32_MESSAGE(93, state->nextDataPageId, "SBITS nextDataPageId is not correctly identified after reload from data file.");
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(0, state->minDataPageId, "SBITS minDataPageId was not correctly identified.");
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(0, state->numAvailDataPages, "SBITS numAvailDataPages is not correctly initialized.");
 }
 
-void sbits_parameters_initializes_from_data_file_with_ninety_four_one_pages_correctly() {
+void sbits_parameters_initializes_from_data_file_with_ninety_four_pages_correctly() {
     insertRecordsLinearly(1645, 2548, 3949);
     tearDown();
     initalizeSbitsFromFile();
     TEST_ASSERT_EQUAL_UINT64_MESSAGE(1688, state->minKey, "SBITS minkey is not correctly identified after reload from data file.");
     TEST_ASSERT_EQUAL_UINT32_MESSAGE(94, state->nextDataPageId, "SBITS nextDataPageId is not correctly identified after reload from data file.");
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(1, state->minDataPageId, "SBITS minDataPageId was not correctly identified.");
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(0, state->numAvailDataPages, "SBITS numAvailDataPages is not correctly initialized.");
 }
 
 void sbits_parameters_initializes_correctly_from_data_file_with_four_hundred_seventeen_previous_page_inserts() {
@@ -141,6 +147,17 @@ void sbits_parameters_initializes_correctly_from_data_file_with_four_hundred_sev
     initalizeSbitsFromFile();
     TEST_ASSERT_EQUAL_UINT64_MESSAGE(15609, state->minKey, "SBITS minkey is not correctly identified after reload from data file.");
     TEST_ASSERT_EQUAL_UINT32_MESSAGE(417, state->nextDataPageId, "SBITS nextDataPageId is not correctly identified after reload from data file.");
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(324, state->minDataPageId, "SBITS minDataPageId was not correctly identified.");
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(0, state->numAvailDataPages, "SBITS numAvailDataPages is not correctly initialized.");
+}
+
+void sbits_parameters_initializes_correctly_from_data_file_with_no_data() {
+    tearDown();
+    initalizeSbitsFromFile();
+    TEST_ASSERT_EQUAL_UINT64_MESSAGE(UINT32_MAX, state->minKey, "SBITS minkey is not correctly identified after reload from data file.");
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(0, state->nextDataPageId, "SBITS nextDataPageId is not correctly identified after reload from data file.");
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(0, state->minDataPageId, "SBITS minDataPageId was not correctly identified.");
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(93, state->numAvailDataPages, "SBITS numAvailDataPages is not ");
 }
 
 void sbits_inserts_correctly_into_data_file_after_reload() {
@@ -238,11 +255,12 @@ int main(void) {
     UNITY_BEGIN();
     RUN_TEST(sbits_parameters_initializes_from_data_file_with_twenty_seven_pages_correctly);
     RUN_TEST(sbits_parameters_initializes_from_data_file_with_ninety_three_pages_correctly);
-    RUN_TEST(sbits_parameters_initializes_from_data_file_with_ninety_four_one_pages_correctly);
+    RUN_TEST(sbits_parameters_initializes_from_data_file_with_ninety_four_pages_correctly);
     RUN_TEST(sbits_parameters_initializes_correctly_from_data_file_with_four_hundred_seventeen_previous_page_inserts);
     RUN_TEST(sbits_inserts_correctly_into_data_file_after_reload);
     RUN_TEST(sbits_correctly_gets_records_after_reload_with_wrapped_data);
     RUN_TEST(sbits_prevents_duplicate_inserts_after_reload);
     RUN_TEST(sbits_queries_correctly_with_non_liner_data_after_reload);
+    RUN_TEST(sbits_parameters_initializes_correctly_from_data_file_with_no_data);
     return UNITY_END();
 }

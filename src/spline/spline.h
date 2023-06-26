@@ -84,14 +84,15 @@ void splineInit(spline *spl, id_t size, size_t maxError, uint8_t keySize);
  * @param	spl			Spline structure
  * @param	data		Array of sorted data
  * @param	size		Number of values in array
- * @param	maxError	Maximum error for each spline
+ * @param   maxError	Maximum error for each spline
  */
 void splineBuild(spline *spl, void **data, id_t size, size_t maxError);
 
 /**
- * @brief    Adds point to spline structure
- * @param    spl     Spline structure
- * @param    key     Data key to be added (must be incrementing)
+ * @brief   Adds point to spline structure
+ * @param   spl     Spline structure
+ * @param   key     Data key to be added (must be incrementing)
+ * @param   page    Page number for spline point to add
  */
 void splineAdd(spline *spl, void *key, uint32_t page);
 
