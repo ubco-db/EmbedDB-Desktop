@@ -439,7 +439,7 @@ int8_t sbitsInitIndexFromFile(sbitsState *state) {
 
     while (moreToRead && count < state->numIndexPages) {
         memcpy(&logicalIndexPageId, buffer, sizeof(id_t));
-        if (logicalIndexPageId == maxLogicaIndexPageId + 1) {
+        if (count == 0 || logicalIndexPageId == maxLogicaIndexPageId + 1) {
             maxLogicaIndexPageId = logicalIndexPageId;
             physicalIndexPageId++;
             moreToRead = !(readPage(state, physicalIndexPageId));

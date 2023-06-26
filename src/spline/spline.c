@@ -116,10 +116,6 @@ void splineAdd(spline *spl, void *key, uint32_t page) {
         return;
     }
 
-    if (!(keyVal > lastKeyVal)) {
-        printf("Hello\n");
-    }
-
     assert(keyVal > lastKeyVal);
 
     /* Last point added to spline, check if previous point is temporary - overwrite previous point if temporary */

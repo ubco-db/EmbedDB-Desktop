@@ -15,7 +15,7 @@ int main() {
         printf("Init not successfull.\n");
         return initStatus;
     }
-    int insertStatus = insertRecords(state, 313120, 10, 10);
+    int insertStatus = insertRecords(state, 31312, 10, 10);
     if (insertStatus != 0) {
         return insertStatus;
     }
@@ -101,8 +101,8 @@ int insertRecords(sbitsState *state, uint32_t numberOfRecords, int32_t startingK
     *((int32_t *)data) = startingKey;
     *((int32_t *)(data + 4)) = startingData;
     for (int32_t i = 0; i < numberOfRecords; i++) {
-        *((int32_t *)data) += i;
-        *((int32_t *)(data + 4)) += i;
+        *((int32_t *)data) += 1;
+        *((int32_t *)(data + 4)) += 1;
         int8_t result = sbitsPut(state, data, (void *)(data + 4));
         if (result != 0) {
             return result;
@@ -133,8 +133,8 @@ int queryAllRecords(sbitsState *state, uint32_t numberOfRecords, int32_t startin
     int32_t key = startingKey;
     int32_t data = startingData;
     for (int32_t i = 0; i < numberOfRecords; i++) {
-        key = startingKey += i;
-        data += i;
+        key = startingKey += 1;
+        data += 1;
         int8_t getStatus = sbitsGet(state, &key, (void *)result);
         if (getStatus != 0) {
             printf("ERROR: Failed to find: %lu\n", key);
