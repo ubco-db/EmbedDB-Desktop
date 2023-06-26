@@ -442,7 +442,7 @@ int8_t sbitsInitIndexFromFile(sbitsState *state) {
         if (count == 0 || logicalIndexPageId == maxLogicaIndexPageId + 1) {
             maxLogicaIndexPageId = logicalIndexPageId;
             physicalIndexPageId++;
-            moreToRead = !(readPage(state, physicalIndexPageId));
+            moreToRead = !(readIndexPage(state, physicalIndexPageId));
             count++;
         } else {
             haveWrappedInMemory = logicalIndexPageId == maxLogicaIndexPageId - state->numIndexPages + 1;

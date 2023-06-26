@@ -97,9 +97,28 @@ void sbits_index_file_correctly_reloads_with_one_page_of_data() {
     TEST_ASSERT_EQUAL_UINT32_MESSAGE(0, state->minIndexPageId, "SBITS minIndexPageId was initialized incorrectly when one index page was present in the index file.");
 }
 
+void sbits_index_file_correctly_reloads_with_four_pages_of_data() {
+    insertRecordsLinearly(100, 100, 125056);
+    tearDown();
+    initalizeSbitsFromFile();
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(4, state->nextIdxPageId, "SBITS nextIdxPageId was initialized incorrectly when four index pages were present in the index file.");
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(0, state->numAvailIndexPages, "SBITS nextIdxPageId was initialized incorrectly when four index pages were present in the index file.");
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(0, state->minIndexPageId, "SBITS minIndexPageId was initialized incorrectly when four index pages were present in the index file.");
+}
+
+void sbits_index_file_correctly_reloads_with_eleven_pages_of_data() {
+    insertRecordsLinearly(100, 100, 343792);
+    tearDown();
+    initalizeSbitsFromFile();
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(11, state->nextIdxPageId, "SBITS nextIdxPageId was initialized incorrectly when four index pages were present in the index file.");
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(0, state->numAvailIndexPages, "SBITS nextIdxPageId was initialized incorrectly when four index pages were present in the index file.");
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(7, state->minIndexPageId, "SBITS minIndexPageId was initialized incorrectly when four index pages were present in the index file.");
+}
+
 int main(void) {
     UNITY_BEGIN();
     RUN_TEST(sbits_index_file_correctly_reloads_with_no_data);
     RUN_TEST(sbits_index_file_correctly_reloads_with_one_page_of_data);
+    RUN_TEST(sbits_index_file_correctly_reloads_with_four_pages_of_data);
     return UNITY_END();
 }

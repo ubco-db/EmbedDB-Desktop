@@ -15,7 +15,7 @@ int main() {
         printf("Init not successfull.\n");
         return initStatus;
     }
-    int insertStatus = insertRecords(state, 31312, 10, 10);
+    int insertStatus = insertRecords(state, 3151, 10, 2465);
     if (insertStatus != 0) {
         return insertStatus;
     }
@@ -24,13 +24,13 @@ int main() {
     splinePrint(state->spl);
     resetStats(state);
 
-    // printf("\nQuery Testing:\n");
-    // int queryStatus = queryAllRecords(state, 3150, 10, 2465);
-    // if (queryStatus != 0) {
-    //     printf("Did not sucessfully query all records.\n");
-    //     return queryStatus;
-    // }
-    // printf("Queried all records sucessfully.\n");
+    printf("\nQuery Testing:\n");
+    int queryStatus = queryAllRecords(state, 3150, 10, 2465);
+    if (queryStatus != 0) {
+        printf("Did not sucessfully query all records.\n");
+        return queryStatus;
+    }
+    printf("Queried all records sucessfully.\n");
 
     printStats(state);
     sbitsClose(state);
@@ -47,18 +47,18 @@ int main() {
 
     resetStats(state);
 
-    // printf("\nQuery Testing:\n");
-    // queryStatus = queryAllRecords(state, 3150, 10, 2465);
-    // if (queryStatus != 0) {
-    //     printf("Did not sucessfully query all records.\n");
-    //     return queryStatus;
-    // }
-    // printf("Queried all records sucessfully.\n");
+    printf("\nQuery Testing:\n");
+    queryStatus = queryAllRecords(state, 3150, 10, 2465);
+    if (queryStatus != 0) {
+        printf("Did not sucessfully query all records.\n");
+        return queryStatus;
+    }
+    printf("Queried all records sucessfully.\n");
 
-    // int x = insertRecord(state, 4959685, 1);
-    // if (x == 1) {
-    //     printf("Failed to insert\n");
-    // }
+    int x = insertRecord(state, 4959685, 1);
+    if (x == 1) {
+        printf("Failed to insert\n");
+    }
 
     printStats(state);
     sbitsClose(state);
@@ -67,21 +67,21 @@ int main() {
 
 int initializeSbits(sbitsState *state) {
     // Initialize sbits State
+    state = malloc(sizeof(sbitsState));
     state->keySize = 4;
     state->dataSize = 4;
     state->pageSize = 512;
     state->bufferSizeInBlocks = 6;
     state->buffer = calloc(1, state->pageSize * state->bufferSizeInBlocks);
-    state->numDataPages = 10000;
-    state->numIndexPages = 4;
+    state->numDataPages = 65;
     state->numVarPages = 60;
-    state->eraseSizeInPages = 2;
+    state->eraseSizeInPages = 4;
     char dataPath[] = "build/artifacts/dataFile.bin", indexPath[] = "build/artifacts/indexFile.bin", varPath[] = "build/artifacts/varFile.bin";
     state->fileInterface = getFileInterface();
     state->dataFile = setupFile(dataPath);
     state->indexFile = setupFile(indexPath);
     state->varFile = setupFile(varPath);
-    state->parameters = SBITS_USE_INDEX;
+    state->parameters = SBITS_RESET_DATA;
     state->bitmapSize = 1;
     state->inBitmap = inBitmapInt8;
     state->updateBitmap = updateBitmapInt8;
@@ -101,8 +101,8 @@ int insertRecords(sbitsState *state, uint32_t numberOfRecords, int32_t startingK
     *((int32_t *)data) = startingKey;
     *((int32_t *)(data + 4)) = startingData;
     for (int32_t i = 0; i < numberOfRecords; i++) {
-        *((int32_t *)data) += 1;
-        *((int32_t *)(data + 4)) += 1;
+        *((int32_t *)data) += i;
+        *((int32_t *)(data + 4)) += i;
         int8_t result = sbitsPut(state, data, (void *)(data + 4));
         if (result != 0) {
             return result;
@@ -133,8 +133,8 @@ int queryAllRecords(sbitsState *state, uint32_t numberOfRecords, int32_t startin
     int32_t key = startingKey;
     int32_t data = startingData;
     for (int32_t i = 0; i < numberOfRecords; i++) {
-        key = startingKey += 1;
-        data += 1;
+        key = startingKey += i;
+        data += i;
         int8_t getStatus = sbitsGet(state, &key, (void *)result);
         if (getStatus != 0) {
             printf("ERROR: Failed to find: %lu\n", key);
