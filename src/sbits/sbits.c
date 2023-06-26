@@ -1426,7 +1426,7 @@ uint32_t sbitsVarDataStreamRead(sbitsState *state, sbitsVarDataStream *stream, v
         uint32_t amtToRead = __min(stream->totalBytes - stream->bytesRead, __min(state->pageSize - pageOffset, length - amtRead));
         memcpy((int8_t *)buffer + amtRead, (int8_t *)varDataBuf + pageOffset, amtToRead);
         amtRead += amtToRead;
-        stream->bytesRead += amtRead;
+        stream->bytesRead += amtToRead;
         pageOffset += amtToRead;
 
         // If we need to keep reading, read the next page
