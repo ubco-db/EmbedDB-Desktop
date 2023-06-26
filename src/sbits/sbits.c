@@ -227,10 +227,8 @@ int8_t sbitsInit(sbitsState *state, size_t indexMaxError) {
     /* Allocate file for data*/
     int8_t dataInitResult = 0;
     dataInitResult = sbitsInitData(state);
-    printf("Maed it to here\n");
 
     if (dataInitResult != 0) {
-        printf("There was an error here :(\n");
         return dataInitResult;
     }
 
@@ -463,8 +461,9 @@ int8_t sbitsInitIndexFromFile(sbitsState *state) {
 
         readIndexPage(state, physicalPageIDOfSmallestData);
         memcpy(&(state->minIndexPageId), buffer, sizeof(id_t));
-        state->numAvailIndexPages = (state->minIndexPageId % state->numIndexPages - maxLogicaIndexPageId % state->numIndexPages + state->numIndexPages) % state->numIndexPages;
+        state->numAvailIndexPages = state->numIndexPages + state->minIndexPageId - maxLogicaIndexPageId - 1;
     }
+
     return 0;
 }
 

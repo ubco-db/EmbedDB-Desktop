@@ -79,9 +79,10 @@ static inline int8_t splineIsRight(uint64_t x1, int64_t y1, uint64_t x2, int64_t
 }
 
 /**
- * @brief    Adds point to spline structure
- * @param    spl     Spline structure
- * @param    key     Data key to be added (must be incrementing)
+ * @brief   Adds point to spline structure
+ * @param   spl     Spline structure
+ * @param   key     Data key to be added (must be incrementing)
+ * @param   page    Page number for spline point to add
  */
 void splineAdd(spline *spl, void *key, uint32_t page) {
     spl->numAddCalls++;
@@ -113,6 +114,10 @@ void splineAdd(spline *spl, void *key, uint32_t page) {
     memcpy(&lastKeyVal, spl->lastKey, spl->keySize);
     if (keyVal == lastKeyVal) {
         return;
+    }
+
+    if (!(keyVal > lastKeyVal)) {
+        printf("Hello\n");
     }
 
     assert(keyVal > lastKeyVal);
