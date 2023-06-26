@@ -28,7 +28,6 @@ void setUp(void) {
     char dataPath[] = "build/artifacts/dataFile.bin", indexPath[] = "build/artifacts/indexFile.bin", varPath[] = "build/artifacts/varFile.bin";
     state->fileInterface = getFileInterface();
     state->dataFile = setupFile(dataPath);
-    state->indexFile = setupFile(indexPath);
     state->varFile = setupFile(varPath);
     state->parameters = SBITS_USE_VDATA | SBITS_RESET_DATA;
     state->bitmapSize = 1;
@@ -37,7 +36,9 @@ void setUp(void) {
     state->buildBitmapFromRange = buildBitmapInt8FromRange;
     state->compareKey = int32Comparator;
     state->compareData = int32Comparator;
+    int8_t result = sbitsInit(state, 1);
     resetStats(state);
+    TEST_ASSERT_EQUAL_INT8_MESSAGE(0, result, "SBITS did not initialize correctly.");
 }
 
 uint32_t randomData(void **data, uint32_t sizeLowerBound, uint32_t sizeUpperBound) {
@@ -88,7 +89,7 @@ void sbits_variable_data_page_numbers_are_correct() {
     insertRecords(1429, 1444, 64, 1, 10, 20, &linkedList);
     /* Number of records * average data size % page size */
     uint32_t numberOfPagesExpected = 53;
-    TEST_ASSERT_EQUAL_UINT32_MESSAGE(numberOfPagesExpected - 1, state->nextVarPageLogicalId, "SBITS next variable data logical page number is incorrect.");
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(numberOfPagesExpected - 1, state->nextVarPageId, "SBITS next variable data logical page number is incorrect.");
     uint32_t pageNumber;
     printf("Number of pages expected: %i\n", numberOfPagesExpected);
     void *buffer = (int8_t *)state->buffer + state->pageSize * SBITS_VAR_READ_BUFFER(state->parameters);
@@ -102,6 +103,7 @@ void sbits_variable_data_page_numbers_are_correct() {
 void tearDown(void) {
     sbitsClose(state);
     tearDownFile(state->dataFile);
+    tearDownFile(state->varFile);
     free(state->buffer);
     free(state->fileInterface);
     free(state);

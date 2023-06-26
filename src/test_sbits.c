@@ -335,7 +335,7 @@ void runalltests_sbits() {
                     rec++;
                 }
                 printf("Read records: %d\n", rec);
-                printf("Num: %lu KEY: %lu Perc: %d Records: %d Reads: %d \n", i, mv, ((state->numReads - reads) * 1000 / (state->nextPageId - state->minDataPageId)), rec, (state->numReads - reads));
+                printf("Num: %lu KEY: %lu Perc: %d Records: %d Reads: %d \n", i, mv, ((state->numReads - reads) * 1000 / (state->nextDataPageId - state->minDataPageId)), rec, (state->numReads - reads));
 
                 sbitsCloseIterator(&it);
                 free(itData);
@@ -454,7 +454,7 @@ void runalltests_sbits() {
                     rec++;
                 }
                 printf("Read records: %d\n", rec);
-                printf("Num: %lu KEY: %lu Perc: %d Records: %d Reads: %d \n", i, mv, ((state->numReads - reads) * 1000 / (state->nextPageId - state->minDataPageId)), rec, (state->numReads - reads));
+                printf("Num: %lu KEY: %lu Perc: %d Records: %d Reads: %d \n", i, mv, ((state->numReads - reads) * 1000 / (state->nextDataPageId - state->minDataPageId)), rec, (state->numReads - reads));
 
                 sbitsCloseIterator(&it);
                 free(itData);

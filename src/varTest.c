@@ -187,6 +187,8 @@ int main() {
         /* Insert records into structure */
         uint32_t start = clock();
 
+        resetStats(state);
+
         int32_t i;
         char vardata[15] = "Testing 000...";
         uint32_t numVarData = 0;
@@ -393,6 +395,7 @@ int main() {
                         // Check that the var data is correct
                         if (!dataEquals(varData, length, validationHead)) {
                             printf("ERROR: Wrong var data for: %lu\n", i);
+                            printf("Expected: %s Actual %s\n", validationHead->data, varData);
                         }
                     }
 
@@ -457,7 +460,7 @@ int main() {
                     rec++;
                 }
                 printf("Read records: %d\n", rec);
-                printf("Num: %lu KEY: %lu Perc: %d Records: %d Reads: %d \n", i, mv, ((state->numReads - reads) * 1000 / (state->nextPageId - state->minDataPageId + state->nextVarPageId)), rec, (state->numReads - reads));
+                printf("Num: %lu KEY: %lu Perc: %d Records: %d Reads: %d \n", i, mv, ((state->numReads - reads) * 1000 / (state->nextDataPageId - state->minDataPageId + state->nextVarPageId)), rec, (state->numReads - reads));
 
                 sbitsCloseIterator(&it);
                 free(varDataBuf);
@@ -521,6 +524,7 @@ int main() {
                             // Check that the var data is correct
                             if (!dataEquals(varData, length, validationHead)) {
                                 printf("ERROR: Wrong var data for: %lu\n", *key);
+                                printf("Expected: %s Actual %s\n", validationHead->data, varData);
                             }
                             Node *tmp = validationHead;
                             validationHead = validationHead->next;
@@ -652,7 +656,7 @@ int main() {
                 }
                 printf("Read records: %d\n", rec);
                 // printStats(state);
-                printf("Num: %lu KEY: %lu Perc: %.1f Records: %d Reads: %d \n", i, mv, ((state->numReads - reads) * 1000 / (state->nextPageId - state->minDataPageId + state->nextVarPageId - state->minVarRecordId)) / 10.0, rec, (state->numReads - reads));
+                printf("Num: %lu KEY: %lu Perc: %.1f Records: %d Reads: %d \n", i, mv, ((state->numReads - reads) * 1000 / (state->nextDataPageId - state->minDataPageId + state->nextVarPageId - state->minVarRecordId)) / 10.0, rec, (state->numReads - reads));
 
                 sbitsCloseIterator(&it);
                 free(varDataBuf);

@@ -88,6 +88,7 @@ int initializeSbits(sbitsState *state) {
     state->buildBitmapFromRange = buildBitmapInt8FromRange;
     state->compareKey = int32Comparator;
     state->compareData = int32Comparator;
+    return sbitsInit(state, 1);
     resetStats(state);
 }
 

@@ -187,7 +187,7 @@ typedef struct {
     uint32_t minDataPageId;                                               /* Lowest logical data page id that is saved on file */
     uint32_t minIndexPageId;                                              /* Lowest logical index page id that is saved on file */
     uint64_t minVarRecordId;                                              /* Minimum record id that we still have variable data for */
-    id_t nextPageId;                                                      /* Next logical page id. Page id is an incrementing value and may not always be same as physical page id. */
+    id_t nextDataPageId;                                                  /* Next logical page id. Page id is an incrementing value and may not always be same as physical page id. */
     id_t nextIdxPageId;                                                   /* Next logical page id for index. Page id is an incrementing value and may not always be same as physical page id. */
     id_t nextVarPageId;                                                   /* Page number of next var page to be written */
     id_t currentVarLoc;                                                   /* Current variable address offset to write at (bytes from beginning of file) */

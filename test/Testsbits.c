@@ -34,8 +34,7 @@ void setUp(void) {
 void sbits_initial_configuration_is_correct() {
     TEST_ASSERT_NOT_NULL_MESSAGE(state->dataFile, "SBITS file was not initialized correctly.");
     TEST_ASSERT_NULL_MESSAGE(state->varFile, "SBITS varFile was intialized for non-variable data.");
-    TEST_ASSERT_EQUAL_UINT32_MESSAGE(0, state->nextPageId, "SBITS nextPageId was not initialized correctly.");
-    TEST_ASSERT_EQUAL_INT8_MESSAGE(0, state->wrappedMemory, "SBITS did not initalized wrappedMemory correctly.");
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(0, state->nextDataPageId, "SBITS nextDataPageId was not initialized correctly.");
     TEST_ASSERT_EQUAL_INT8_MESSAGE(6, state->headerSize, "SBITS headerSize was not initialized correctly.");
     TEST_ASSERT_EQUAL_INT64_MESSAGE(UINT32_MAX, state->minKey, "SBITS minKey was not initialized correctly.");
     TEST_ASSERT_EQUAL_UINT32_MESSAGE(UINT32_MAX, state->bufferedPageId, "SBITS bufferedPageId was not initialized correctly.");
@@ -56,7 +55,7 @@ void sbits_put_inserts_single_record_correctly() {
     int8_t result = sbitsPut(state, data, (void *)(data + 4));
     TEST_ASSERT_EQUAL_INT8_MESSAGE(0, result, "sbitsPut did not correctly insert data (returned non-zero code)");
     TEST_ASSERT_EQUAL_UINT64_MESSAGE(15648, state->minKey, "sbitsPut did not update minimim key on first insert.");
-    TEST_ASSERT_EQUAL_UINT32_MESSAGE(0, state->nextPageId, "sbitsPut incremented next page to write and it should not have.");
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(0, state->nextDataPageId, "sbitsPut incremented next page to write and it should not have.");
     TEST_ASSERT_EQUAL_UINT32_MESSAGE(1, SBITS_GET_COUNT(state->buffer), "sbitsPut did not increment count in buffer correctly.");
     int32_t *sbitsPutResultKey = malloc(sizeof(int32_t));
     int32_t *sbitsPutResultData = malloc(sizeof(int32_t));
@@ -86,7 +85,7 @@ void sbits_put_inserts_eleven_records_correctly() {
         TEST_ASSERT_EQUAL_INT32_MESSAGE(*((int32_t *)(data + 4)), *sbitsPutResultData, "sbitsPut did not put correct data value in buffer.");
     }
     TEST_ASSERT_EQUAL_INT64_MESSAGE(16321, state->minKey, "sbitsPut did not update minimim key on first insert.");
-    TEST_ASSERT_EQUAL_UINT32_MESSAGE(0, state->nextPageId, "sbitsPut incremented next page to write and it should not have.");
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(0, state->nextDataPageId, "sbitsPut incremented next page to write and it should not have.");
     TEST_ASSERT_EQUAL_UINT32_MESSAGE(11, SBITS_GET_COUNT(state->buffer), "sbitsPut did not increment count in buffer correctly.");
     free(sbitsPutResultKey);
     free(sbitsPutResultData);
@@ -110,7 +109,7 @@ void sbits_put_inserts_one_page_of_records_correctly() {
         TEST_ASSERT_EQUAL_INT32_MESSAGE(*((int32_t *)(data + 4)), *sbitsPutResultData, "sbitsPut did not put correct data value in buffer.");
     }
     TEST_ASSERT_EQUAL_INT64_MESSAGE(100, state->minKey, "sbitsPut did not update minimim key on first insert.");
-    TEST_ASSERT_EQUAL_UINT32_MESSAGE(0, state->nextPageId, "sbitsPut incremented next page to write and it should not have.");
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(0, state->nextDataPageId, "sbitsPut incremented next page to write and it should not have.");
     TEST_ASSERT_EQUAL_UINT32_MESSAGE(63, SBITS_GET_COUNT(state->buffer), "sbitsPut did not increment count in buffer correctly.");
     free(sbitsPutResultKey);
     free(sbitsPutResultData);
@@ -130,7 +129,7 @@ void sbits_put_inserts_one_more_than_one_page_of_records_correctly() {
         TEST_ASSERT_EQUAL_INT8_MESSAGE(0, result, "sbitsPut did not correctly insert data (returned non-zero code)");
     }
     TEST_ASSERT_EQUAL_INT64_MESSAGE(4444444, state->minKey, "sbitsPut did not update minimim key on first insert.");
-    TEST_ASSERT_EQUAL_UINT32_MESSAGE(1, state->nextPageId, "sbitsPut did not move to next page after writing the first page of records.");
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(1, state->nextDataPageId, "sbitsPut did not move to next page after writing the first page of records.");
     TEST_ASSERT_EQUAL_UINT32_MESSAGE(1, SBITS_GET_COUNT(state->buffer), "sbitsPut did not reset buffer count to correct value after writing the page");
     free(sbitsPutResultKey);
     free(sbitsPutResultData);

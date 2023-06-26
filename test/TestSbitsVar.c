@@ -113,17 +113,17 @@ void test_get_when_1() {
 
 void test_get_when_almost_almost_full_page() {
     // Check that page gasn't been written
-    TEST_ASSERT_EQUAL_UINT32_MESSAGE(0, state->nextPageId, "sbits should not have written a page yet");
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(0, state->nextDataPageId, "sbits should not have written a page yet");
     // Check that there is still space for another record
     TEST_ASSERT_EACH_EQUAL_CHAR_MESSAGE(0, (int8_t *)state->buffer + SBITS_DATA_WRITE_BUFFER * state->pageSize + (state->pageSize - state->recordSize), state->recordSize, "There isn't space for another record in the buffer");
 }
 
 void test_get_when_almost_full_page() {
-    TEST_ASSERT_EQUAL_UINT32_MESSAGE(0, state->nextPageId, "sbits should not have written a page yet");
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(0, state->nextDataPageId, "sbits should not have written a page yet");
 }
 
 void test_get_when_full_page() {
-    TEST_ASSERT_EQUAL_UINT32_MESSAGE(1, state->nextPageId, "sbits should have written a page by now");
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(1, state->nextDataPageId, "sbits should have written a page by now");
 
     uint32_t key = 23, length;
     uint64_t expectedData = 23, data = 0;

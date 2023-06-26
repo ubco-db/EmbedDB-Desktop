@@ -57,7 +57,6 @@ void tearDown(void) {
     free(state->buffer);
     sbitsClose(state);
     tearDownFile(state->dataFile);
-    free(state->buffer);
     free(state->fileInterface);
     free(state);
 }
@@ -116,8 +115,7 @@ void sbits_parameters_initializes_from_data_file_with_twenty_seven_pages_correct
     tearDown();
     initalizeSbitsFromFile();
     TEST_ASSERT_EQUAL_UINT64_MESSAGE(10, state->minKey, "SBITS minkey is not correctly identified after reload from data file.");
-    TEST_ASSERT_EQUAL_UINT32_MESSAGE(27, state->nextPageId, "SBITS nextPageId is not correctly identified after reload from data file.");
-    TEST_ASSERT_EQUAL_INT8_MESSAGE(0, state->wrappedMemory, "SBITS wrappedMemory is not correctly identified after reload from data file.");
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(27, state->nextDataPageId, "SBITS nextDataPageId is not correctly identified after reload from data file.");
 }
 
 /* The setup function allocates 93 pages, so check to make sure it initalizes correctly when it is full */
@@ -126,8 +124,7 @@ void sbits_parameters_initializes_from_data_file_with_ninety_three_pages_correct
     tearDown();
     initalizeSbitsFromFile();
     TEST_ASSERT_EQUAL_UINT64_MESSAGE(3457, state->minKey, "SBITS minkey is not correctly identified after reload from data file.");
-    TEST_ASSERT_EQUAL_UINT32_MESSAGE(93, state->nextPageId, "SBITS nextPageId is not correctly identified after reload from data file.");
-    TEST_ASSERT_EQUAL_INT8_MESSAGE(0, state->wrappedMemory, "SBITS wrappedMemory is not correctly identified after reload from data file.");
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(93, state->nextDataPageId, "SBITS nextDataPageId is not correctly identified after reload from data file.");
 }
 
 void sbits_parameters_initializes_from_data_file_with_ninety_four_one_pages_correctly() {
@@ -135,8 +132,7 @@ void sbits_parameters_initializes_from_data_file_with_ninety_four_one_pages_corr
     tearDown();
     initalizeSbitsFromFile();
     TEST_ASSERT_EQUAL_UINT64_MESSAGE(1688, state->minKey, "SBITS minkey is not correctly identified after reload from data file.");
-    TEST_ASSERT_EQUAL_UINT32_MESSAGE(94, state->nextPageId, "SBITS nextPageId is not correctly identified after reload from data file.");
-    TEST_ASSERT_EQUAL_INT8_MESSAGE(1, state->wrappedMemory, "SBITS wrappedMemory is not32 correctly identified after reload from data file.");
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(94, state->nextDataPageId, "SBITS nextDataPageId is not correctly identified after reload from data file.");
 }
 
 void sbits_parameters_initializes_correctly_from_data_file_with_four_hundred_seventeen_previous_page_inserts() {
@@ -144,8 +140,7 @@ void sbits_parameters_initializes_correctly_from_data_file_with_four_hundred_sev
     tearDown();
     initalizeSbitsFromFile();
     TEST_ASSERT_EQUAL_UINT64_MESSAGE(15609, state->minKey, "SBITS minkey is not correctly identified after reload from data file.");
-    TEST_ASSERT_EQUAL_UINT32_MESSAGE(417, state->nextPageId, "SBITS nextPageId is not correctly identified after reload from data file.");
-    TEST_ASSERT_EQUAL_INT8_MESSAGE(1, state->wrappedMemory, "SBITS wrappedMemory is not32 correctly identified after reload from data file.");
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(417, state->nextDataPageId, "SBITS nextDataPageId is not correctly identified after reload from data file.");
 }
 
 void sbits_inserts_correctly_into_data_file_after_reload() {
