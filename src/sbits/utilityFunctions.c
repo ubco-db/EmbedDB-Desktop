@@ -9,6 +9,8 @@
 
 #include "utilityFunctions.h"
 
+#include <string.h>
+
 /* A bitmap with 8 buckets (bits). Range 0 to 100. */
 void updateBitmapInt8(void *data, void *bm) {
     // Note: Assuming int key is right at the start of the data record
@@ -33,8 +35,7 @@ void updateBitmapInt8(void *data, void *bm) {
         *bmval = *bmval | 1;
 }
 
-/* A bitmap with 8 buckets (bits). Range 0 to 100. Build bitmap based on min and
- * max value. */
+/* A bitmap with 8 buckets (bits). Range 0 to 100. Build bitmap based on min and max value. */
 void buildBitmapInt8FromRange(void *min, void *max, void *bm) {
     if (min == NULL && max == NULL) {
         *(uint8_t *)bm = 255; /* Everything */
@@ -146,7 +147,7 @@ void updateBitmapInt64(void *data, void *bm) {
     int8_t bmsize = 63;
     int8_t count = 0;
 
-    while (val > current && count < 63) {
+    while (val > current && count < bmsize) {
         current += stepSize;
         count++;
     }
@@ -203,10 +204,96 @@ void buildBitmapInt64FromRange(void *min, void *max, void *bm) {
 }
 
 int8_t int32Comparator(void *a, void *b) {
-    int32_t result = *((int32_t *)a) - *((int32_t *)b);
+    int32_t i1, i2;
+    memcpy(&i1, a, sizeof(int32_t));
+    memcpy(&i2, b, sizeof(int32_t));
+    int32_t result = i1 - i2;
     if (result < 0)
         return -1;
     if (result > 0)
         return 1;
     return 0;
+}
+
+int8_t int64Comparator(void *a, void *b) {
+    int64_t result = *((int64_t *)a) - *((int64_t *)b);
+    if (result < 0)
+        return -1;
+    if (result > 0)
+        return 1;
+    return 0;
+}
+
+typedef struct {
+    char *filename;
+    FILE *file;
+} FILE_INFO;
+
+void *setupFile(char *filename) {
+    FILE_INFO *fileInfo = malloc(sizeof(FILE_INFO));
+    int nameLen = strlen(filename);
+    fileInfo->filename = calloc(1, nameLen + 1);
+    memcpy(fileInfo->filename, filename, nameLen);
+    fileInfo->file = NULL;
+    return fileInfo;
+}
+
+void tearDownFile(void *file) {
+    FILE_INFO *fileInfo = (FILE_INFO *)file;
+    free(fileInfo->filename);
+    if (fileInfo != NULL)
+        fclose(fileInfo->file);
+    free(file);
+}
+
+int8_t FILE_READ(void *buffer, uint32_t pageNum, uint32_t pageSize, void *file) {
+    FILE_INFO *fileInfo = (FILE_INFO *)file;
+    fseek(fileInfo->file, pageSize * pageNum, SEEK_SET);
+    return fread(buffer, pageSize, 1, fileInfo->file);
+}
+
+int8_t FILE_WRITE(void *buffer, uint32_t pageNum, uint32_t pageSize, void *file) {
+    FILE_INFO *fileInfo = (FILE_INFO *)file;
+    fseek(fileInfo->file, pageNum * pageSize, SEEK_SET);
+    return fwrite(buffer, pageSize, 1, fileInfo->file);
+}
+
+int8_t FILE_CLOSE(void *file) {
+    FILE_INFO *fileInfo = (FILE_INFO *)file;
+    fclose(fileInfo->file);
+    fileInfo->file = NULL;
+    return 1;
+}
+
+int8_t FILE_FLUSH(void *file) {
+    FILE_INFO *fileInfo = (FILE_INFO *)file;
+    return fflush(fileInfo->file) == 0;
+}
+
+int8_t FILE_OPEN(void *file, uint8_t mode) {
+    FILE_INFO *fileInfo = (FILE_INFO *)file;
+
+    if (mode == SBITS_FILE_MODE_W_PLUS_B) {
+        fileInfo->file = fopen(fileInfo->filename, "w+b");
+    } else if (mode == SBITS_FILE_MODE_R_PLUS_B) {
+        fileInfo->file = fopen(fileInfo->filename, "r+b");
+    } else {
+        return 0;
+    }
+
+    if (fileInfo->file == NULL) {
+        return 0;
+    } else {
+        return 1;
+    }
+}
+
+sbitsFileInterface *getFileInterface() {
+    sbitsFileInterface *fileInterface = malloc(sizeof(sbitsFileInterface));
+    fileInterface->close = FILE_CLOSE;
+    fileInterface->read = FILE_READ;
+    fileInterface->write = FILE_WRITE;
+    fileInterface->open = FILE_OPEN;
+    fileInterface->flush = FILE_FLUSH;
+    return fileInterface;
 }

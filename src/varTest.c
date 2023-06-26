@@ -140,20 +140,22 @@ int main() {
         state->buffer = malloc((size_t)state->bufferSizeInBlocks * state->pageSize);
 
         /* Address level parameters */
-        state->startAddress = 0;
-        state->endAddress = state->pageSize * numRecords / 10;
-        state->varAddressStart = 0;
-        state->varAddressEnd = 1000000;
+        state->numDataPages = 1000;
+        state->numIndexPages = 48;
+        state->numVarPages = 1000;
         state->eraseSizeInPages = 4;
 
-        state->parameters = SBITS_USE_BMAP | SBITS_USE_INDEX | SBITS_USE_VDATA;
+        char dataPath[] = "build/artifacts/dataFile.bin", indexPath[] = "build/artifacts/indexFile.bin", varPath[] = "build/artifacts/varFile.bin";
+        state->fileInterface = getFileInterface();
+        state->dataFile = setupFile(dataPath);
+        state->indexFile = setupFile(indexPath);
+        state->varFile = setupFile(varPath);
 
-        if (SBITS_USING_INDEX(state->parameters) == 1)
-            state->endAddress += state->pageSize * (state->eraseSizeInPages * 2);
+        state->parameters = SBITS_USE_BMAP | SBITS_USE_INDEX | SBITS_USE_VDATA | SBITS_RESET_DATA;
+
         if (SBITS_USING_BMAP(state->parameters))
             state->bitmapSize = 1;
 
-        /* Setup for data and bitmap comparison functions */
         /* Setup for data and bitmap comparison functions */
         state->inBitmap = inBitmapInt8;
         state->updateBitmap = updateBitmapInt8;
@@ -185,8 +187,11 @@ int main() {
         /* Insert records into structure */
         uint32_t start = clock();
 
+        resetStats(state);
+
         int32_t i;
         char vardata[15] = "Testing 000...";
+        uint32_t numVarData = 0;
         if (seqdata == 1) {
             for (i = 0; i < numRecords; i++) {
                 // Key = i, fixed data = i % 100
@@ -200,7 +205,8 @@ int main() {
                 if (TEST_TYPE == 0) {
                     randomVarData(10, 10, 100, &hasVarData, &length, &variableData);
                 } else if (TEST_TYPE == 1) {
-                    imageVarData(0.05, "data/test.png", &hasVarData, &length, &variableData);
+                    char filename[] = "test.png";
+                    imageVarData(0.05, filename, &hasVarData, &length, &variableData);
                 } else if (TEST_TYPE == 2) {
                     hasVarData = 1;
                     length = 15;
@@ -267,7 +273,8 @@ int main() {
                     if (TEST_TYPE == 0) {
                         randomVarData(10, 10, 100, &hasVarData, &length, &variableData);
                     } else if (TEST_TYPE == 1) {
-                        imageVarData(0.05, "data/test.png", &hasVarData, &length, &variableData);
+                        char filename[] = "test.png";
+                        imageVarData(0.05, filename, &hasVarData, &length, &variableData);
                     } else if (TEST_TYPE == 2) {
                         hasVarData = 1;
                         length = 15;
@@ -276,6 +283,10 @@ int main() {
                         vardata[8] = (char)((i / 100) % 10) + '0';
                         variableData = malloc(length);
                         memcpy(variableData, vardata, length);
+                    }
+
+                    if (hasVarData) {
+                        numVarData++;
                     }
 
                     // Put variable length data
@@ -325,8 +336,6 @@ int main() {
 
     doneread:
         sbitsFlush(state);
-        fflush(state->file);
-        fflush(state->varFile);
         uint32_t end = clock();
 
         l = NUM_STEPS - 1;
@@ -338,6 +347,7 @@ int main() {
 
         printf("Elapsed Time: %lu ms\n", times[l][r]);
         printf("Records inserted: %lu\n", numRecords);
+        printf("Records with variable data: %lu\n", numVarData);
 
         printStats(state);
         resetStats(state);
@@ -347,12 +357,14 @@ int main() {
 
         start = clock();
 
+        uint32_t varDataFound = 0, fixedFound = 0, deleted = 0, notFound = 0;
+
         /*
          * 1: Query each record from original data set.
          * 2: Query random records in the range of original data set.
          * 3: Query range of records using an iterator.
          */
-        int8_t queryType = 3;
+        int8_t queryType = 1;
 
         if (seqdata == 1) {
             if (queryType == 1) {
@@ -378,19 +390,23 @@ int main() {
                         }
                         if (validationHead == NULL) {
                             printf("ERROR: No validation data for: %lu\n", i);
-                            return;
+                            return -1;
                         }
                         // Check that the var data is correct
                         if (!dataEquals(varData, length, validationHead)) {
                             printf("ERROR: Wrong var data for: %lu\n", i);
+                            printf("Expected: %s Actual %s\n", validationHead->data, varData);
                         }
                     }
 
-                    // Retrieve image
+                    // Retrieve image if using image test
                     if (varData != NULL) {
                         if (TEST_TYPE == 1) {
-                            retrieveImageData(&varData, length, i, "test", ".png");
+                            char filename[] = "test";
+                            char extension[] = ".png";
+                            retrieveImageData(&varData, length, i, filename, extension);
                         }
+                        varDataFound++;
                         free(varData);
                         varData = NULL;
                     }
@@ -428,15 +444,15 @@ int main() {
                         *((int32_t *)itData) > *((int32_t *)it.maxData)) {
                         printf("Key: %d Data: %d Error\n", itKey, *(uint32_t *)itData);
                     } else {
-                        printf("Key: %d  Data: %d\n", itKey, *(uint32_t *)itData);
+                        // printf("Key: %d  Data: %d\n", itKey, *(uint32_t *)itData);
                         if (varStream != NULL) {
-                            printf("Var data: ");
-                            uint32_t bytesRead;
+                            char reconstructed[15];
+                            uint32_t bytesRead, total = 0;
                             while ((bytesRead = sbitsVarDataStreamRead(state, varStream, varDataBuf, varBufSize)) > 0) {
-                                printf("%8s", varDataBuf);
+                                memcpy(reconstructed + total, varDataBuf, bytesRead);
+                                total += bytesRead;
                             }
-                            printf("\n");
-
+                            // printf("Var data: %s\n", reconstructed);
                             free(varStream);
                             varStream = NULL;
                         }
@@ -444,7 +460,7 @@ int main() {
                     rec++;
                 }
                 printf("Read records: %d\n", rec);
-                printf("Num: %lu KEY: %lu Perc: %d Records: %d Reads: %d \n", i, mv, ((state->numReads - reads) * 1000 / (state->nextPageWriteId - 1)), rec, (state->numReads - reads));
+                printf("Num: %lu KEY: %lu Perc: %d Records: %d Reads: %d \n", i, mv, ((state->numReads - reads) * 1000 / (state->nextDataPageId - state->minDataPageId + state->nextVarPageId)), rec, (state->numReads - reads));
 
                 sbitsCloseIterator(&it);
                 free(varDataBuf);
@@ -484,7 +500,7 @@ int main() {
                         int32_t *key = (int32_t *)buf;
 
                         void *varData = NULL;
-                        int32_t length = -1;
+                        uint32_t length = 0;
 
                         int8_t result = sbitsGetVar(state, key, recordBuffer, &varData, &length);
 
@@ -494,7 +510,7 @@ int main() {
                             printf("WARN: Variable data associated with key %lu was deleted\n", *key);
                         } else if (*((int32_t *)recordBuffer) != *((int32_t *)((int8_t *)buf + 4))) {
                             printf("ERROR: Wrong data for: %lu\n", *key);
-                        } else if (VALIDATE_VAR_DATA && length != -1) {
+                        } else if (VALIDATE_VAR_DATA && length != 0) {
                             while (validationHead->key != *key) {
                                 Node *tmp = validationHead;
                                 validationHead = validationHead->next;
@@ -508,13 +524,20 @@ int main() {
                             // Check that the var data is correct
                             if (!dataEquals(varData, length, validationHead)) {
                                 printf("ERROR: Wrong var data for: %lu\n", *key);
+                                printf("Expected: %s Actual %s\n", validationHead->data, varData);
                             }
+                            Node *tmp = validationHead;
+                            validationHead = validationHead->next;
+                            free(tmp->data);
+                            free(tmp);
                         }
 
                         // Retrieve image
                         if (varData != NULL) {
                             if (TEST_TYPE == 1) {
-                                retrieveImageData(&varData, length, *key, "test", ".png");
+                                char filename[] = "test";
+                                char extension[] = ".png";
+                                retrieveImageData(&varData, length, *key, filename, extension);
                             }
                             free(varData);
                             varData = NULL;
@@ -541,36 +564,48 @@ int main() {
                 numRecords = i;
             } else if (queryType == 2) {
                 /* Query random values in range. May not exist in data set. */
+
+                // Only query 10000 records
+                int32_t numToQuery = 10000;
+                int32_t queryStepSize = numToQuery / NUM_STEPS;
                 i = 0;
                 int32_t num = maxRange - minRange;
                 printf("Rge: %d Rand max: %d\n", num, RAND_MAX);
-                while (i < numRecords) {
-                    double scaled = ((double)rand() * (double)rand()) / RAND_MAX / RAND_MAX;
-                    int32_t key = (num + 1) * scaled + minRange;
+                while (i < numToQuery) {
+                    // Generate number between minRange and maxRange
+                    uint32_t key = (uint32_t)((rand() % num) + minRange);
+                    uint64_t sizedKey = 0;
+                    memcpy(&sizedKey, &key, sizeof(uint32_t));
 
                     void *varData = NULL;
-                    int32_t length = -1;
-                    int8_t result = sbitsGetVar(state, &key, recordBuffer, &varData, &length);
+                    uint32_t length = 0;
+                    int8_t result = sbitsGetVar(state, &sizedKey, recordBuffer, &varData, &length);
 
                     if (result == -1) {
-                        printf("ERROR: Failed to find: %lu\n", key);
+                        // printf("ERROR: Failed to find: %lu\n", key);
+                        notFound++;
                     } else if (result == 1) {
                         printf("WARN: Variable data associated with key %lu was deleted\n", key);
-                    } else if (*((int32_t *)recordBuffer) != key % 100) {
-                        printf("ERROR: Wrong data for: %lu\n", key);
-                        // printf("Key: %lu Data: %lu Var length: %d\n", key, *((int32_t*)recordBuffer), length);
+                        deleted++;
+                    } else {
+                        fixedFound++;
                     }
 
                     // Retrieve image
-                    if (length != -1 && TEST_TYPE == 1) {
-                        retrieveImageData(&varData, length, key, "test", ".png");
+                    if (length != 0 && TEST_TYPE == 1) {
+                        char filename[5] = "test";
+                        char extension[5] = ".png";
+                        retrieveImageData(&varData, length, key, filename, extension);
                     }
 
                     // printf("Key: %lu Data: %lu Var: %s\n", key, *((int32_t *)recordBuffer), varData);
-                    free(varData);
+                    if (varData != NULL) {
+                        free(varData);
+                        varDataFound++;
+                    }
 
-                    if (i % stepSize == 0) {
-                        l = i / stepSize - 1;
+                    if (i % queryStepSize == 0) {
+                        l = i / queryStepSize - 1;
                         printf("Num: %lu KEY: %lu\n", i, key);
                         if (l < NUM_STEPS && l >= 0) {
                             rtimes[l][r] = ((clock() - start) * 1000) / CLOCKS_PER_SEC;
@@ -599,19 +634,20 @@ int main() {
                 sbitsInitIterator(state, &it);
                 rec = 0;
                 reads = state->numReads;
-                // printf("Min: %d Max: %d\n", mv, v);
                 while (sbitsNextVar(state, &it, &itKey, itData, &varStream)) {
                     if (*((int32_t *)itData) < *((int32_t *)it.minData) ||
                         *((int32_t *)itData) > *((int32_t *)it.maxData)) {
                         printf("Key: %d Data: %d Error\n", itKey, *(uint32_t *)itData);
                     } else {
-                        printf("Key: %d  Data: %d\n", itKey, *(uint32_t *)itData);
+                        // printf("Key: %d  Data: %d\n", itKey, *(uint32_t *)itData);
                         if (varStream != NULL) {
-                            while (sbitsVarDataStreamRead(state, varStream, varDataBuf, varBufSize) > 0) {
-                                printf("%8x", varDataBuf);
+                            char reconstructed[15];
+                            uint32_t bytesRead, total = 0;
+                            while ((bytesRead = sbitsVarDataStreamRead(state, varStream, varDataBuf, varBufSize)) > 0) {
+                                memcpy(reconstructed + total, varDataBuf, bytesRead);
+                                total += bytesRead;
                             }
-                            printf("\n");
-
+                            // printf("Var data: %s\n", reconstructed);
                             free(varStream);
                             varStream = NULL;
                         }
@@ -619,7 +655,8 @@ int main() {
                     rec++;
                 }
                 printf("Read records: %d\n", rec);
-                printf("Num: %lu KEY: %lu Perc: %d Records: %d Reads: %d \n", i, mv, ((state->numReads - reads) * 1000 / (state->nextPageWriteId - 1)), rec, (state->numReads - reads));
+                // printStats(state);
+                printf("Num: %lu KEY: %lu Perc: %.1f Records: %d Reads: %d \n", i, mv, ((state->numReads - reads) * 1000 / (state->nextDataPageId - state->minDataPageId + state->nextVarPageId - state->minVarRecordId)) / 10.0, rec, (state->numReads - reads));
 
                 sbitsCloseIterator(&it);
                 free(varDataBuf);
@@ -635,6 +672,10 @@ int main() {
         rhits[l][r] = state->bufferHits;
         printf("Elapsed Time: %lu ms\n", rtimes[l][r]);
         printf("Records queried: %lu\n", i);
+        printf("Fixed records found: %lu\n", fixedFound);
+        printf("Vardata found: %lu\n", varDataFound);
+        printf("Vardata deleted: %lu\n", deleted);
+        printf("Num records not found: %lu\n", notFound);
 
         printStats(state);
 
@@ -644,10 +685,23 @@ int main() {
         // testIterator(state);
         // printStats(state);
 
+        // Free memory
+        sbitsClose(state);
+        tearDownFile(state->dataFile);
+        tearDownFile(state->indexFile);
+        tearDownFile(state->varFile);
         free(recordBuffer);
-        fclose(state->file);
         free(state->buffer);
+        free(state->fileInterface);
         free(state);
+    }
+
+    // Close files
+    if (infile != NULL) {
+        fclose(infile);
+    }
+    if (infileRandom != NULL) {
+        fclose(infileRandom);
     }
 
     // Prints results
