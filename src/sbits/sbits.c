@@ -326,6 +326,7 @@ int8_t sbitsInitDataFromFile(sbitsState *state) {
             break;
         }
     }
+
     if (count > 0) {
         state->nextDataPageId = maxLogicalPageId + 1;
         state->minDataPageId = 0;
@@ -335,7 +336,7 @@ int8_t sbitsInitDataFromFile(sbitsState *state) {
         }
         readPage(state, physicalPageIDOfSmallestData);
         memcpy(&(state->minDataPageId), buffer, sizeof(id_t));
-        state->numAvailDataPages = (state->minDataPageId % state->numDataPages - maxLogicalPageId % state->numDataPages + state->numDataPages) % state->numDataPages;
+        state->numAvailDataPages = state->numDataPages + state->minDataPageId - maxLogicalPageId - 1;
         if (state->keySize <= 4) {
             uint32_t minKey = 0;
             memcpy(&minKey, sbitsGetMinKey(state, buffer), state->keySize);
@@ -364,7 +365,6 @@ void sbitsInitSplineFromFile(sbitsState *state) {
     id_t pagesRead = 0;
     id_t numberOfPagesToRead = state->nextDataPageId - state->minDataPageId;
     while (pagesRead < numberOfPagesToRead) {
-        printf("Loop iteration: %i\n", pagesRead);
         readPage(state, pageNumberToRead % state->numDataPages);
         if (RADIX_BITS > 0) {
             radixsplineAddPoint(state->rdix, sbitsGetMinKey(state, buffer), pageNumberToRead++);

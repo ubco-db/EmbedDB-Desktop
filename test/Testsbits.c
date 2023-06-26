@@ -43,7 +43,7 @@ void sbits_initial_configuration_is_correct() {
     TEST_ASSERT_EQUAL_UINT16_MESSAGE(63, state->maxRecordsPerPage, "SBITS maxRecordsPerPage was not initialized correctly.");
     TEST_ASSERT_EQUAL_INT32_MESSAGE(63, state->maxError, "SBITS maxError was not initialized correctly.");
     TEST_ASSERT_EQUAL_UINT32_MESSAGE(1000, state->numDataPages, "SBITS numDataPages was not initialized correctly.");
-    TEST_ASSERT_EQUAL_UINT32_MESSAGE(0, state->minDataPageId, "SBITS firstDataPage was not initialized correctly.");
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(0, state->minDataPageId, "SBITS minDataPageId was not initialized correctly.");
     TEST_ASSERT_EQUAL_UINT32_MESSAGE(1, state->avgKeyDiff, "SBITS avgKeyDiff was not initialized correctly.");
     TEST_ASSERT_NOT_NULL_MESSAGE(state->spl, "SBITS spline was not initialized correctly.");
 }
