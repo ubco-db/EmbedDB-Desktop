@@ -1085,16 +1085,16 @@ int8_t sbitsGet(sbitsState *state, void *key, void *data) {
 
 /**
  * @brief	Given a key, returns data associated with key.
- * 			Note: Space for data must be already allocated.
  * 			Data is copied from database into data buffer.
  * @param	state	SBITS algorithm state structure
  * @param	key		Key for record
  * @param	data	Pre-allocated memory to copy data for record
+ * @param	varData	Return variable for variable data as a sbitsVarDataStream (Unallocated). Returns NULL if no variable data. **Be sure to free the stream after you are done with it**
  * @return	Return 0 if success. Non-zero value if error.
  * 			-1 : Error reading file
  * 			1  : Variable data was deleted to make room for newer data
  */
-int8_t sbitsGetVar(sbitsState *state, void *key, void *data, void **varData, uint32_t *length) {
+int8_t sbitsGetVar(sbitsState *state, void *key, void *data, sbitsVarDataStream **varData) {
     // Get the fixed data
     int8_t r = sbitsGet(state, key, data);
     if (r != 0) {
@@ -1133,10 +1133,42 @@ int8_t sbitsGetVar(sbitsState *state, void *key, void *data, void **varData, uin
     // Get length of data and move to the data portion of the record
     uint32_t dataLength;
     memcpy(&dataLength, (int8_t *)ptr + bufPos, sizeof(uint32_t));
-    *length = dataLength;
-    bufPos += sizeof(uint32_t);
-    // If the length was the last thing in the page, then we need to read the next page for the data
-    if (bufPos >= state->pageSize) {
+
+    // Allocate memory in the return pointer **TODO: Implement returning an iterator instead**
+
+    // Move var data address to the beginning of the data, past the data length
+    varDataOffset = (varDataOffset + sizeof(uint32_t)) % (state->numVarPages * state->pageSize);
+
+    // Create varDataStream
+    sbitsVarDataStream *varDataStream = malloc(sizeof(sbitsVarDataStream));
+    if (varDataStream == NULL) {
+        printf("ERROR: Failed to alloc memory for sbitsVarDataStream\n");
+        return 0;
+    }
+
+    varDataStream->dataStart = varDataOffset;
+    varDataStream->totalBytes = dataLength;
+    varDataStream->bytesRead = 0;
+    varDataStream->pageOffset = UINT16_MAX;  // Set flag that the next read is the first read
+
+    *varData = varDataStream;
+
+    /*
+    *varData = malloc(dataLength);
+if (*varData == NULL) {
+    printf("Malloc failed while reading in var data\n");
+    exit(1);
+}
+
+uint32_t amtRead = 0;
+while (amtRead < dataLength) {
+    // Read either the rest of the data or the rest of the page
+    uint16_t amtToRead = __min(dataLength - amtRead, state->pageSize - bufPos);
+    memcpy((int8_t *)*varData + amtRead, (int8_t *)ptr + bufPos, amtToRead);
+    amtRead += amtToRead;
+
+    // If we need to keep reading, read the next page
+    if (amtRead != dataLength) {
         pageNum = (pageNum + 1) % state->numVarPages;
         if (readVariablePage(state, pageNum) != 0) {
             return -1;
@@ -1144,31 +1176,8 @@ int8_t sbitsGetVar(sbitsState *state, void *key, void *data, void **varData, uin
         // Skip past the header
         bufPos = state->variableDataHeaderSize;
     }
-
-    // Allocate memory in the return pointer **TODO: Implement returning an iterator instead**
-    *varData = malloc(dataLength);
-    if (*varData == NULL) {
-        printf("Malloc failed while reading in var data\n");
-        exit(1);
-    }
-
-    uint32_t amtRead = 0;
-    while (amtRead < dataLength) {
-        // Read either the rest of the data or the rest of the page
-        uint16_t amtToRead = __min(dataLength - amtRead, state->pageSize - bufPos);
-        memcpy((int8_t *)*varData + amtRead, (int8_t *)ptr + bufPos, amtToRead);
-        amtRead += amtToRead;
-
-        // If we need to keep reading, read the next page
-        if (amtRead != dataLength) {
-            pageNum = (pageNum + 1) % state->numVarPages;
-            if (readVariablePage(state, pageNum) != 0) {
-                return -1;
-            }
-            // Skip past the header
-            bufPos = state->variableDataHeaderSize;
-        }
-    }
+}
+    */
 
     return 0;
 }

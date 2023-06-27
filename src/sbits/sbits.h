@@ -289,12 +289,12 @@ int8_t sbitsGet(sbitsState *state, void *key, void *data);
  * @param	state	SBITS algorithm state structure
  * @param	key		Key for record
  * @param	data	Pre-allocated memory to copy data for record
- * @param	varData	Un-allocated memory where the variable length data will be returned
+ * @param	varData	Return variable for variable data as a sbitsVarDataStream (Unallocated). Returns NULL if no variable data. **Be sure to free the stream after you are done with it**
  * @return	Return 0 if success. Non-zero value if error.
  * 			-1 : Error reading file
  * 			1  : Variable data was deleted to make room for newer data
  */
-int8_t sbitsGetVar(sbitsState *state, void *key, void *data, void **varData, uint32_t *length);
+int8_t sbitsGetVar(sbitsState *state, void *key, void *data, sbitsVarDataStream **varData);
 
 /**
  * @brief	Initialize iterator on sbits structure.
