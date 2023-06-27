@@ -325,33 +325,34 @@ int8_t sbitsInitDataFromFile(sbitsState *state) {
         }
     }
 
-    if (count > 0) {
-        state->nextDataPageId = maxLogicalPageId + 1;
-        state->minDataPageId = 0;
-        id_t physicalPageIDOfSmallestData = 0;
-        if (haveWrappedInMemory) {
-            physicalPageIDOfSmallestData = logicalPageId % state->numDataPages;
-        }
-        readPage(state, physicalPageIDOfSmallestData);
-        memcpy(&(state->minDataPageId), buffer, sizeof(id_t));
-        state->numAvailDataPages = state->numDataPages + state->minDataPageId - maxLogicalPageId - 1;
-        if (state->keySize <= 4) {
-            uint32_t minKey = 0;
-            memcpy(&minKey, sbitsGetMinKey(state, buffer), state->keySize);
-            state->minKey = minKey;
-        } else {
-            uint64_t minKey = 0;
-            memcpy(&minKey, sbitsGetMinKey(state, buffer), state->keySize);
-            state->minKey = minKey;
-        }
+    if (count == 0)
+        return 0;
 
-        /* Put largest key back into the buffer */
-        readPage(state, state->nextDataPageId - 1);
+    state->nextDataPageId = maxLogicalPageId + 1;
+    state->minDataPageId = 0;
+    id_t physicalPageIDOfSmallestData = 0;
+    if (haveWrappedInMemory) {
+        physicalPageIDOfSmallestData = logicalPageId % state->numDataPages;
+    }
+    readPage(state, physicalPageIDOfSmallestData);
+    memcpy(&(state->minDataPageId), buffer, sizeof(id_t));
+    state->numAvailDataPages = state->numDataPages + state->minDataPageId - maxLogicalPageId - 1;
+    if (state->keySize <= 4) {
+        uint32_t minKey = 0;
+        memcpy(&minKey, sbitsGetMinKey(state, buffer), state->keySize);
+        state->minKey = minKey;
+    } else {
+        uint64_t minKey = 0;
+        memcpy(&minKey, sbitsGetMinKey(state, buffer), state->keySize);
+        state->minKey = minKey;
+    }
 
-        updateAverageKeyDifference(state, buffer);
-        if (SEARCH_METHOD == 2) {
-            sbitsInitSplineFromFile(state);
-        }
+    /* Put largest key back into the buffer */
+    readPage(state, state->nextDataPageId - 1);
+
+    updateAverageKeyDifference(state, buffer);
+    if (SEARCH_METHOD == 2) {
+        sbitsInitSplineFromFile(state);
     }
 
     return 0;
@@ -424,7 +425,7 @@ int8_t sbitsInitIndex(sbitsState *state) {
 }
 
 int8_t sbitsInitIndexFromFile(sbitsState *state) {
-    printf("Attempt to initialize from existing index file\n");
+    printf("Attempting to initialize from existing index file\n");
 
     id_t logicalIndexPageId = 0;
     id_t maxLogicaIndexPageId = 0;
@@ -450,19 +451,17 @@ int8_t sbitsInitIndexFromFile(sbitsState *state) {
         }
     }
 
-    if (count > 0) {
-        state->nextIdxPageId = maxLogicaIndexPageId + 1;
-        state->minIndexPageId = 0;
+    if (count == 0)
+        return 0;
 
-        id_t physicalPageIDOfSmallestData = 0;
-        if (haveWrappedInMemory) {
-            physicalPageIDOfSmallestData = logicalIndexPageId % state->numIndexPages;
-        }
-
-        readIndexPage(state, physicalPageIDOfSmallestData);
-        memcpy(&(state->minIndexPageId), buffer, sizeof(id_t));
-        state->numAvailIndexPages = state->numIndexPages + state->minIndexPageId - maxLogicaIndexPageId - 1;
+    state->nextIdxPageId = maxLogicaIndexPageId + 1;
+    id_t physicalPageIDOfSmallestData = 0;
+    if (haveWrappedInMemory) {
+        physicalPageIDOfSmallestData = logicalIndexPageId % state->numIndexPages;
     }
+    readIndexPage(state, physicalPageIDOfSmallestData);
+    memcpy(&(state->minIndexPageId), buffer, sizeof(id_t));
+    state->numAvailIndexPages = state->numIndexPages + state->minIndexPageId - maxLogicaIndexPageId - 1;
 
     return 0;
 }
@@ -496,6 +495,60 @@ int8_t sbitsInitVarData(sbitsState *state) {
 }
 
 int8_t sbitsInitVarDataFromFile(sbitsState *state) {
+    printf("Attempting to initialize from existing variable data file.\n");
+    void *buffer = (int8_t *)state->buffer + state->pageSize * SBITS_VAR_READ_BUFFER(state->parameters);
+    id_t logicalVariablePageId = 0;
+    id_t maxLogicaVariablePageId = 0;
+    id_t physicalVariablePageId = 0;
+    int8_t moreToRead = !(readVariablePage(state, physicalVariablePageId));
+    uint32_t count = 0;
+    bool haveWrappedInMemory = false;
+    while (moreToRead && count < state->numVarPages) {
+        memcpy(&logicalVariablePageId, buffer, sizeof(id_t));
+        if (count == 0 || logicalVariablePageId == maxLogicaVariablePageId + 1) {
+            maxLogicaVariablePageId = logicalVariablePageId;
+            physicalVariablePageId++;
+            moreToRead = !(readVariablePage(state, physicalVariablePageId));
+            count++;
+        } else {
+            haveWrappedInMemory = physicalVariablePageId == maxLogicaVariablePageId - state->numIndexPages + 1;
+            break;
+        }
+    }
+
+    if (count == 0)
+        return 0;
+
+    /* Read page with largest key on it */
+    int8_t *maximumKey = malloc(sizeof(state->keySize));
+    int8_t *dataBuffer = malloc(sizeof(state->dataSize));
+    readVariablePage(state, physicalVariablePageId - 1);
+    memcpy(maximumKey, (int8_t*)buffer + sizeof(id_t), sizeof(state->keySize));
+    sbitsGet(state, maximumKey, dataBuffer);
+    void *dataBuffer = (int8_t *)state->buffer + state->pageSize * SBITS_DATA_READ_BUFFER;
+    id_t logicalDataPageNumber = 0;
+    memcpy(&logicalDataPageNumber, buffer, sizeof(id_t));
+
+
+    state->nextVarPageId = maxLogicaVariablePageId + 1;
+    id_t physicalPageIDOfSmallestData = 0;
+    if (haveWrappedInMemory) {
+        state->numAvailVarPages = 0;
+        physicalPageIDOfSmallestData = logicalVariablePageId % state->numIndexPages;
+        // currentVarLoc
+    } else {
+        state->numAvailVarPages = state->numVarPages - count;
+        state->currentVarLoc = count * state->pageSize + state->variableDataHeaderSize;
+    }
+    readVariablePage(state, physicalPageIDOfSmallestData);
+    uint64_t minVarId = 0;
+    memcpy(&(minVarId), (int8_t *)buffer + sizeof(id_t), sizeof(id_t));
+    minVarId += 1;
+    state->minVarRecordId = minVarId;
+
+    state->currentVarLoc;
+    free(maximumKey);
+    free(dataBuffer);
     return 0;
 }
 
