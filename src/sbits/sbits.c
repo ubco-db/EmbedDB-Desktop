@@ -478,7 +478,7 @@ int8_t sbitsInitVarData(sbitsState *state) {
 
     if (!SBITS_RESETING_DATA(state->parameters)) {
         int8_t openResult = state->fileInterface->open(state->varFile, SBITS_FILE_MODE_R_PLUS_B);
-        if (openResult & 0) {
+        if (openResult) {
             return sbitsInitVarDataFromFile(state);
         }
         printf("Unable to open variable data file. Attempting to initialize a new one.\n");
@@ -511,7 +511,7 @@ int8_t sbitsInitVarDataFromFile(sbitsState *state) {
             moreToRead = !(readVariablePage(state, physicalVariablePageId));
             count++;
         } else {
-            haveWrappedInMemory = physicalVariablePageId == maxLogicaVariablePageId - state->numIndexPages + 1;
+            haveWrappedInMemory = physicalVariablePageId == maxLogicaVariablePageId - state->numVarPages + 1;
             break;
         }
     }
@@ -522,14 +522,19 @@ int8_t sbitsInitVarDataFromFile(sbitsState *state) {
     state->nextVarPageId = maxLogicaVariablePageId + 1;
     id_t minVarPageId = 0;
     if (haveWrappedInMemory) {
+        printf("Hello world\n");
         id_t physicalPageIDOfSmallestData = logicalVariablePageId % state->numVarPages;
         readVariablePage(state, physicalPageIDOfSmallestData);
         memcpy(&(state->minVarRecordId), (int8_t *)buffer + sizeof(id_t), sizeof(state->keySize));
         memcpy(&minVarPageId, buffer, sizeof(id_t));
-        state->minVarRecordId++;
+        minVarPageId;
     }
+    printf("numVarPages: %i\n", state->numVarPages);
+    printf("minVarPageId: %i\n", minVarPageId);
+    printf("maxLogicaVariablePageId: %i\n", maxLogicaVariablePageId);
 
     state->numAvailVarPages = state->numVarPages + minVarPageId - maxLogicaVariablePageId - 1;
+    printf("numAvailVarPages: %i\n", state->numAvailVarPages);
     state->currentVarLoc = state->nextVarPageId % state->numVarPages * state->pageSize + state->variableDataHeaderSize;
 
     return 0;

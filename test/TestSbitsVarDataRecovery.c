@@ -30,7 +30,7 @@ void setUp(void) {
     state->dataFile = setupFile(dataPath);
     state->varFile = setupFile(varPath);
     state->parameters = SBITS_USE_VDATA | SBITS_RESET_DATA;
-    state->bitmapSize = 1;
+    state->bitmapSize = 0;
     state->inBitmap = inBitmapInt8;
     state->updateBitmap = updateBitmapInt8;
     state->buildBitmapFromRange = buildBitmapInt8FromRange;
@@ -39,6 +39,42 @@ void setUp(void) {
     int8_t result = sbitsInit(state, 1);
     resetStats(state);
     TEST_ASSERT_EQUAL_INT8_MESSAGE(0, result, "SBITS did not initialize correctly.");
+}
+
+void initalizeSbitsFromFile(void) {
+    // Initialize sbits State
+    state = malloc(sizeof(sbitsState));
+    state->keySize = 4;
+    state->dataSize = 4;
+    state->pageSize = 512;
+    state->bufferSizeInBlocks = 6;
+    state->buffer = calloc(1, state->pageSize * state->bufferSizeInBlocks);
+    state->numDataPages = 65;
+    state->numVarPages = 75;
+    state->eraseSizeInPages = 4;
+    char dataPath[] = "build/artifacts/dataFile.bin", indexPath[] = "build/artifacts/indexFile.bin", varPath[] = "build/artifacts/varFile.bin";
+    state->fileInterface = getFileInterface();
+    state->dataFile = setupFile(dataPath);
+    state->varFile = setupFile(varPath);
+    state->parameters = SBITS_USE_VDATA;
+    state->bitmapSize = 0;
+    state->inBitmap = inBitmapInt8;
+    state->updateBitmap = updateBitmapInt8;
+    state->buildBitmapFromRange = buildBitmapInt8FromRange;
+    state->compareKey = int32Comparator;
+    state->compareData = int32Comparator;
+    int8_t result = sbitsInit(state, 1);
+    resetStats(state);
+    TEST_ASSERT_EQUAL_INT8_MESSAGE(0, result, "SBITS did not initialize correctly.");
+}
+
+void tearDown(void) {
+    sbitsClose(state);
+    tearDownFile(state->dataFile);
+    tearDownFile(state->varFile);
+    free(state->buffer);
+    free(state->fileInterface);
+    free(state);
 }
 
 uint32_t randomData(void **data, uint32_t sizeLowerBound, uint32_t sizeUpperBound) {
@@ -98,19 +134,61 @@ void sbits_variable_data_page_numbers_are_correct() {
         memcpy(&pageNumber, buffer, sizeof(id_t));
         TEST_ASSERT_EQUAL_UINT32_MESSAGE(i, pageNumber, "SBITS variable data did not have the correct page number.");
     }
+    free(linkedList);
 }
 
-void tearDown(void) {
-    sbitsClose(state);
-    tearDownFile(state->dataFile);
-    tearDownFile(state->varFile);
-    free(state->buffer);
-    free(state->fileInterface);
-    free(state);
+void sbits_variable_data_reloads_with_no_data_correctly() {
+    tearDown();
+    initalizeSbitsFromFile();
+    TEST_ASSERT_EQUAL_INT8_MESSAGE(8, state->variableDataHeaderSize, "SBITS variableDataHeaderSize did not have the correct value after initializing variable data from a file with no records.");
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(8, state->currentVarLoc, "SBITS currentVarLoc did not have the correct value after initializing variable data from a file with no records.");
+    TEST_ASSERT_EQUAL_UINT64_MESSAGE(0, state->minVarRecordId, "SBITS minVarRecordId did not have the correct value after initializing variable data from a file with no records.");
+    TEST_ASSERT_EQUAL_UINT64_MESSAGE(75, state->numAvailVarPages, "SBITS numAvailVarPages did not have the correct value after initializing variable data from a file with no records.");
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(0, state->nextVarPageId, "SBITS nextVarPageId did not have the correct value after initializing variable data from a file with no records.");
+}
+
+void sbits_variable_data_reloads_with_one_page_of_data_correctly() {
+    Node *linkedList;
+    insertRecords(15, 100, 10, 1, 25, 41, &linkedList);
+    tearDown();
+    initalizeSbitsFromFile();
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(520, state->currentVarLoc, "SBITS currentVarLoc did not have the correct value after initializing variable data from a file with one page of records.");
+    TEST_ASSERT_EQUAL_UINT64_MESSAGE(0, state->minVarRecordId, "SBITS minVarRecordId did not have the correct value after initializing variable data from a file with one page of records.");
+    TEST_ASSERT_EQUAL_UINT64_MESSAGE(74, state->numAvailVarPages, "SBITS numAvailVarPages did not have the correct value after initializing variable data from a file with one page of records.");
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(1, state->nextVarPageId, "SBITS nextVarPageId did not have the correct value after initializing variable data from a file with one page of records.");
+    free(linkedList);
+}
+
+void sbits_variable_data_reloads_with_fifteen_pages_of_data_correctly() {
+    Node *linkedList;
+    insertRecords(525, 100, 10, 10, 80, 120, &linkedList);
+    tearDown();
+    initalizeSbitsFromFile();
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(7688, state->currentVarLoc, "SBITS currentVarLoc did not have the correct value after initializing variable data from a file with one page of records.");
+    TEST_ASSERT_EQUAL_UINT64_MESSAGE(0, state->minVarRecordId, "SBITS minVarRecordId did not have the correct value after initializing variable data from a file with one page of records.");
+    TEST_ASSERT_EQUAL_UINT64_MESSAGE(60, state->numAvailVarPages, "SBITS numAvailVarPages did not have the correct value after initializing variable data from a file with one page of records.");
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(15, state->nextVarPageId, "SBITS nextVarPageId did not have the correct value after initializing variable data from a file with one page of records.");
+    free(linkedList);
+}
+
+void sbits_variable_data_reloads_with_one_hundred_five_pages_of_data_correctly() {
+    Node *linkedList;
+    insertRecords(3675, 100, 10, 10, 80, 120, &linkedList);
+    tearDown();
+    initalizeSbitsFromFile();
+    //TEST_ASSERT_EQUAL_UINT32_MESSAGE(15368, state->currentVarLoc, "SBITS currentVarLoc did not have the correct value after initializing variable data from a file with one page of records.");
+    // TEST_ASSERT_EQUAL_UINT64_MESSAGE(1360, state->minVarRecordId, "SBITS minVarRecordId did not have the correct value after initializing variable data from a file with one page of records.");
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(0, state->numAvailVarPages, "SBITS numAvailVarPages did not have the correct value after initializing variable data from a file with one page of records.");
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(105, state->nextVarPageId, "SBITS nextVarPageId did not have the correct value after initializing variable data from a file with one page of records.");
+    free(linkedList);
 }
 
 int main(void) {
     UNITY_BEGIN();
     RUN_TEST(sbits_variable_data_page_numbers_are_correct);
+    RUN_TEST(sbits_variable_data_reloads_with_no_data_correctly);
+    RUN_TEST(sbits_variable_data_reloads_with_one_page_of_data_correctly);
+    RUN_TEST(sbits_variable_data_reloads_with_fifteen_pages_of_data_correctly);
+    RUN_TEST(sbits_variable_data_reloads_with_one_hundred_five_pages_of_data_correctly);
     return UNITY_END();
 }
