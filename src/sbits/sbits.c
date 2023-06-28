@@ -1624,7 +1624,7 @@ id_t writeVariablePage(sbitsState *state, void *buffer) {
     state->numAvailVarPages--;
     state->numWrites++;
 
-    return state->nextIdxPageId - 1;
+    return state->nextVarPageId - 1;
 }
 
 /**
