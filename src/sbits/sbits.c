@@ -1134,8 +1134,6 @@ int8_t sbitsGetVar(sbitsState *state, void *key, void *data, sbitsVarDataStream 
     uint32_t dataLength;
     memcpy(&dataLength, (int8_t *)ptr + bufPos, sizeof(uint32_t));
 
-    // Allocate memory in the return pointer **TODO: Implement returning an iterator instead**
-
     // Move var data address to the beginning of the data, past the data length
     varDataOffset = (varDataOffset + sizeof(uint32_t)) % (state->numVarPages * state->pageSize);
 
