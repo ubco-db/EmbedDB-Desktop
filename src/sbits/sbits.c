@@ -1592,13 +1592,13 @@ id_t writeVariablePage(sbitsState *state, void *buffer) {
     }
 
     // Make sure the address being witten to wraps around
-    state->nextVarPageId %= state->numVarPages;
+    id_t physicalPageId = state->nextVarPageId % state->numVarPages;
 
     // Erase data if needed
     if (state->numAvailVarPages <= 0) {
         state->numAvailVarPages += state->eraseSizeInPages;
         // Last page that is deleted
-        id_t pageNum = (state->nextVarPageId + state->eraseSizeInPages - 1) % state->numVarPages;
+        id_t pageNum = (physicalPageId + state->eraseSizeInPages - 1) % state->numVarPages;
 
         // Read in that page so we can update which records we still have the data for
         if (readVariablePage(state, pageNum) != 0) {
@@ -1614,7 +1614,7 @@ id_t writeVariablePage(sbitsState *state, void *buffer) {
     memcpy(buf, &state->nextVarPageId, sizeof(id_t));
 
     // Write to file
-    uint32_t val = state->fileInterface->write(buffer, state->nextVarPageId, state->pageSize, state->varFile);
+    uint32_t val = state->fileInterface->write(buffer, physicalPageId, state->pageSize, state->varFile);
     if (val == 0) {
         printf("Failed to write vardata page: %lu\n", state->nextVarPageId);
         return -1;

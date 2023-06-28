@@ -23,7 +23,7 @@ void setUp(void) {
     state->bufferSizeInBlocks = 6;
     state->buffer = calloc(1, state->pageSize * state->bufferSizeInBlocks);
     state->numDataPages = 65;
-    state->numVarPages = 60;
+    state->numVarPages = 75;
     state->eraseSizeInPages = 4;
     char dataPath[] = "build/artifacts/dataFile.bin", indexPath[] = "build/artifacts/indexFile.bin", varPath[] = "build/artifacts/varFile.bin";
     state->fileInterface = getFileInterface();
@@ -88,7 +88,7 @@ void sbits_variable_data_page_numbers_are_correct() {
     Node *linkedList;
     insertRecords(1429, 1444, 64, 1, 10, 20, &linkedList);
     /* Number of records * average data size % page size */
-    uint32_t numberOfPagesExpected = 53;
+    uint32_t numberOfPagesExpected = 69;
     TEST_ASSERT_EQUAL_UINT32_MESSAGE(numberOfPagesExpected - 1, state->nextVarPageId, "SBITS next variable data logical page number is incorrect.");
     uint32_t pageNumber;
     printf("Number of pages expected: %i\n", numberOfPagesExpected);
