@@ -15,7 +15,7 @@
  * 1 = Image data
  * 2 = Set length string
  */
-#define TEST_TYPE 2
+#define TEST_TYPE 1
 
 // Cursed linkedList for tracking data
 typedef struct Node {
@@ -26,10 +26,10 @@ typedef struct Node {
 } Node;
 
 uint32_t readImageFromFile(void **data, char *filename);
-void writeDataToFile(void *data, char *filename, uint32_t length);
+void writeDataToFile(sbitsState *state, sbitsVarDataStream *data, char *filename);
 void imageVarData(float chance, char *filename, uint8_t *usingVarData, uint32_t *length, void **varData);
-void retrieveImageData(void **varData, uint32_t length, int32_t key, char *filename, char *filetype);
-uint8_t dataEquals(void *varData, uint32_t length, Node *node);
+void retrieveImageData(sbitsState *state, sbitsVarDataStream *varStream, int32_t key, char *filename, char *filetype);
+uint8_t dataEquals(sbitsState *state, sbitsVarDataStream *varStream, Node *node);
 void randomVarData(uint32_t chance, uint32_t sizeLowerBound, uint32_t sizeUpperBound, uint8_t *usingVarData, uint32_t *length, void **varData);
 int retrieveData(sbitsState *state, int32_t key, int8_t *recordBuffer);
 
@@ -205,7 +205,7 @@ int main() {
                 if (TEST_TYPE == 0) {
                     randomVarData(10, 10, 100, &hasVarData, &length, &variableData);
                 } else if (TEST_TYPE == 1) {
-                    char filename[] = "test.png";
+                    char filename[] = "data/test.png";
                     imageVarData(0.05, filename, &hasVarData, &length, &variableData);
                 } else if (TEST_TYPE == 2) {
                     hasVarData = 1;
@@ -232,6 +232,7 @@ int main() {
                         free(variableData);
                         variableData = NULL;
                     }
+                    numVarData++;
                     // printf("Using var data: KEY: %d\n", i);
                 }
 
@@ -306,6 +307,7 @@ int main() {
                             free(variableData);
                             variableData = NULL;
                         }
+                        numVarData++;
                         // printf("Using var data: KEY: %d\n", i);
                     }
 
@@ -321,8 +323,7 @@ int main() {
                         }
                     }
                     i++;
-                    /* Allows stopping at set number of records instead of
-                     * reading entire file */
+                    /* Allows stopping at set number of records instead of reading entire file */
                     if (i == numRecords) {
                         maxRange = *((uint32_t *)buf);
                         printf("Num: %lu KEY: %lu\n", i, *((int32_t *)buf));
@@ -376,13 +377,17 @@ int main() {
                     *((uint32_t *)keyBuf) = i;
                     int8_t result = sbitsGetVar(state, keyBuf, recordBuffer, &varStream);
 
-                    if (result == -1) {
+                    if (result == 0) {
+                        fixedFound++;
+                    } else if (result == -1) {
                         printf("ERROR: Failed to find: %lu\n", i);
+                        notFound++;
                     } else if (result == 1) {
                         printf("WARN: Variable data associated with key %lu was deleted\n", i);
+                        deleted++;
                     } else if (*((int32_t *)recordBuffer) != i % 100) {
                         printf("ERROR: Wrong data for: %lu\n", i);
-                    } /*else if (VALIDATE_VAR_DATA && dataStream != NULL) {
+                    } else if (VALIDATE_VAR_DATA && varStream != NULL) {
                         while (validationHead->key != i) {
                             Node *tmp = validationHead;
                             validationHead = validationHead->next;
@@ -394,15 +399,19 @@ int main() {
                             return -1;
                         }
                         // Check that the var data is correct
-                        if (!dataEquals(varData, length, validationHead)) {
+                        if (!dataEquals(state, varStream, validationHead)) {
                             printf("ERROR: Wrong var data for: %lu\n", i);
-                            printf("Expected: %s Actual %s\n", validationHead->data, varData);
                         }
-                    }*/
+                    }
 
-                    // Retrieve image if using image test
                     if (varStream != NULL) {
-                        if (TEST_TYPE == 2) {
+                        if (TEST_TYPE == 1) {
+                            // Retrieve image if using image test
+                            char filename[] = "test";
+                            char extension[] = ".png";
+                            retrieveImageData(state, varStream, i, filename, extension);
+                        } else if (TEST_TYPE == 2) {
+                            // Print string if using string test
                             char reconstructed[15];
                             uint32_t bytesRead, total = 0;
                             while ((bytesRead = sbitsVarDataStreamRead(state, varStream, varDataBuf, varBufSize)) > 0) {
@@ -513,35 +522,37 @@ int main() {
 
                         if (result == -1) {
                             printf("ERROR: Failed to find: %lu\n", *key);
+                            notFound++;
                         } else if (result == 1) {
                             printf("WARN: Variable data associated with key %lu was deleted\n", *key);
+                            deleted++;
                         } else if (*((int32_t *)recordBuffer) != *((int32_t *)((int8_t *)buf + 4))) {
                             printf("ERROR: Wrong data for: %lu\n", *key);
-                        } /*else if (VALIDATE_VAR_DATA && varStream != NULL) {
-                            while (validationHead->key != *key) {
+                        } else if (VALIDATE_VAR_DATA && varStream != NULL) {
+                            while (validationHead->key != i) {
                                 Node *tmp = validationHead;
                                 validationHead = validationHead->next;
                                 free(tmp->data);
                                 free(tmp);
                             }
                             if (validationHead == NULL) {
-                                printf("ERROR: No validation data for: %lu\n", *key);
-                                return 1;
+                                printf("ERROR: No validation data for: %lu\n", i);
+                                return -1;
                             }
                             // Check that the var data is correct
-                            if (!dataEquals(varData, length, validationHead)) {
-                                printf("ERROR: Wrong var data for: %lu\n", *key);
-                                printf("Expected: %s Actual %s\n", validationHead->data, varData);
+                            if (!dataEquals(state, varStream, validationHead)) {
+                                printf("ERROR: Wrong var data for: %lu\n", i);
                             }
-                            Node *tmp = validationHead;
-                            validationHead = validationHead->next;
-                            free(tmp->data);
-                            free(tmp);
-                        }*/
+                        }
 
-                        // Retrieve image
                         if (varStream != NULL) {
-                            if (TEST_TYPE == 2) {
+                            if (TEST_TYPE == 1) {
+                                // Retrieve image if using image test
+                                char filename[] = "test";
+                                char extension[] = ".png";
+                                retrieveImageData(state, varStream, i, filename, extension);
+                            } else if (TEST_TYPE == 2) {
+                                // Print string if using string test
                                 char reconstructed[15];
                                 uint32_t bytesRead, total = 0;
                                 while ((bytesRead = sbitsVarDataStreamRead(state, varStream, varDataBuf, varBufSize)) > 0) {
@@ -552,6 +563,7 @@ int main() {
                             }
                             free(varStream);
                             varStream = NULL;
+                            varDataFound++;
                         }
 
                         if (i % stepSize == 0) {
@@ -605,16 +617,24 @@ int main() {
                         fixedFound++;
                     }
 
-                    // Retrieve image
-                    /*if (varStream != NULL && TEST_TYPE == 1) {
-                        char filename[5] = "test";
-                        char extension[5] = ".png";
-                        retrieveImageData(&varData, length, key, filename, extension);
-                    }*/
-
-                    // printf("Key: %lu Data: %lu Var: %s\n", key, *((int32_t *)recordBuffer), varData);
                     if (varStream != NULL) {
+                        if (TEST_TYPE == 1) {
+                            // Retrieve image if using image test
+                            char filename[] = "test";
+                            char extension[] = ".png";
+                            retrieveImageData(state, varStream, i, filename, extension);
+                        } else if (TEST_TYPE == 2) {
+                            // Print string if using string test
+                            char reconstructed[15];
+                            uint32_t bytesRead, total = 0;
+                            while ((bytesRead = sbitsVarDataStreamRead(state, varStream, varDataBuf, varBufSize)) > 0) {
+                                memcpy(reconstructed + total, varDataBuf, bytesRead);
+                                total += bytesRead;
+                            }
+                            printf("Var data: %s\n", reconstructed);
+                        }
                         free(varStream);
+                        varStream = NULL;
                         varDataFound++;
                     }
 
@@ -841,17 +861,27 @@ uint32_t readImageFromFile(void **data, char *filename) {
     return file_size;
 }
 
-void writeDataToFile(void *data, char *filename, uint32_t length) {
+void writeDataToFile(sbitsState *state, sbitsVarDataStream *data, char *filename) {
+    if (data == NULL) {
+        printf("There's no data here bud. Can't write image\n");
+        return;
+    }
+
     FILE *file = fopen(filename, "w+b");
     if (file == NULL) {
         printf("Failed to open the file\n");
         return;
     }
 
-    // Write the data to the file
-    size_t bytes_written = fwrite(data, 1, length, file);
-    if (bytes_written != length) {
-        printf("Failed to write to the file\n");
+    // Get data from iterator
+    char buf[512];
+    uint32_t numBytes;
+    while ((numBytes = sbitsVarDataStreamRead(state, data, buf, 512)) > 0) {
+        // Write the data to the file
+        size_t bytes_written = fwrite(buf, 1, numBytes, file);
+        if (bytes_written != numBytes) {
+            printf("Failed to write to the file\n");
+        }
     }
 
     fclose(file);
@@ -884,7 +914,7 @@ void randomVarData(uint32_t chance, uint32_t sizeLowerBound, uint32_t sizeUpperB
     }
 }
 
-void retrieveImageData(void **varData, uint32_t length, int32_t key, char *filename, char *filetype) {
+void retrieveImageData(sbitsState *state, sbitsVarDataStream *varStream, int32_t key, char *filename, char *filetype) {
     int numDigits = log10(key) + 1;
     char *keyAsString = calloc(numDigits, sizeof(char));
     char destinationFolder[17] = "build/artifacts/";
@@ -899,11 +929,22 @@ void retrieveImageData(void **varData, uint32_t length, int32_t key, char *filen
     strncpy(file + filenameLength + destinationFolderLength, keyAsString, numDigits);
     strncpy(file + filenameLength + numDigits + destinationFolderLength, filetype, filetypeLength);
     strncpy(file + totalLength, "\0", 1);
-    writeDataToFile(*varData, file, length);
+    writeDataToFile(state, varStream, file);
 }
 
-uint8_t dataEquals(void *varData, uint32_t length, Node *node) {
-    return length == node->length && memcmp(varData, node->data, length) == 0;
+uint8_t dataEquals(sbitsState *state, sbitsVarDataStream *varStream, Node *node) {
+    if (varStream == NULL) {
+        return 0;
+    } else {
+        void *data = malloc(node->length + 1);
+        uint32_t length = sbitsVarDataStreamRead(state, varStream, data, node->length + 1);
+
+        // Reset iterator
+        varStream->bytesRead = 0;
+        varStream->fileOffset = varStream->dataStart;  // Set flag that the next read is the first read
+
+        return length == node->length && memcmp(data, node->data, length) == 0;
+    }
 }
 
 int retrieveData(sbitsState *state, int32_t key, int8_t *recordBuffer) {
