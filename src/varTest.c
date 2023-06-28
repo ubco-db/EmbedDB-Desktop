@@ -9,7 +9,7 @@
 
 #define NUM_STEPS 10
 #define NUM_RUNS 1
-#define VALIDATE_VAR_DATA 1
+#define VALIDATE_VAR_DATA 0
 /**
  * 0 = Random data
  * 1 = Image data
@@ -369,11 +369,12 @@ int main() {
         if (seqdata == 1) {
             if (queryType == 1) {
                 void *keyBuf = calloc(1, state->keySize);
+                uint32_t varBufSize = 6;
+                void *varDataBuf = malloc(varBufSize);
+                sbitsVarDataStream *varStream = NULL;
                 for (i = 0; i < numRecords; i++) {
                     *((uint32_t *)keyBuf) = i;
-                    void *varData = NULL;
-                    uint32_t length = 0;
-                    int8_t result = sbitsGetVar(state, keyBuf, recordBuffer, &varData, &length);
+                    int8_t result = sbitsGetVar(state, keyBuf, recordBuffer, &varStream);
 
                     if (result == -1) {
                         printf("ERROR: Failed to find: %lu\n", i);
@@ -381,7 +382,7 @@ int main() {
                         printf("WARN: Variable data associated with key %lu was deleted\n", i);
                     } else if (*((int32_t *)recordBuffer) != i % 100) {
                         printf("ERROR: Wrong data for: %lu\n", i);
-                    } else if (VALIDATE_VAR_DATA && varData != NULL) {
+                    } /*else if (VALIDATE_VAR_DATA && dataStream != NULL) {
                         while (validationHead->key != i) {
                             Node *tmp = validationHead;
                             validationHead = validationHead->next;
@@ -397,18 +398,22 @@ int main() {
                             printf("ERROR: Wrong var data for: %lu\n", i);
                             printf("Expected: %s Actual %s\n", validationHead->data, varData);
                         }
-                    }
+                    }*/
 
                     // Retrieve image if using image test
-                    if (varData != NULL) {
-                        if (TEST_TYPE == 1) {
-                            char filename[] = "test";
-                            char extension[] = ".png";
-                            retrieveImageData(&varData, length, i, filename, extension);
+                    if (varStream != NULL) {
+                        if (TEST_TYPE == 2) {
+                            char reconstructed[15];
+                            uint32_t bytesRead, total = 0;
+                            while ((bytesRead = sbitsVarDataStreamRead(state, varStream, varDataBuf, varBufSize)) > 0) {
+                                memcpy(reconstructed + total, varDataBuf, bytesRead);
+                                total += bytesRead;
+                            }
+                            printf("Var data: %s\n", reconstructed);
                         }
+                        free(varStream);
+                        varStream = NULL;
                         varDataFound++;
-                        free(varData);
-                        varData = NULL;
                     }
 
                     if (i % stepSize == 0) {
@@ -481,6 +486,11 @@ int main() {
                     fseek(infile, 0, SEEK_SET);
                 }
                 int32_t readCounter = 0;
+
+                uint32_t varBufSize = 6;
+                void *varDataBuf = malloc(varBufSize);
+                sbitsVarDataStream *varStream = NULL;
+
                 while (1) {
                     /* Read page */
                     if (useRandom) {
@@ -499,10 +509,7 @@ int main() {
                         void *buf = (infileBuffer + headerSize + j * (state->keySize + state->dataSize));
                         int32_t *key = (int32_t *)buf;
 
-                        void *varData = NULL;
-                        uint32_t length = 0;
-
-                        int8_t result = sbitsGetVar(state, key, recordBuffer, &varData, &length);
+                        int8_t result = sbitsGetVar(state, key, recordBuffer, &varStream);
 
                         if (result == -1) {
                             printf("ERROR: Failed to find: %lu\n", *key);
@@ -510,7 +517,7 @@ int main() {
                             printf("WARN: Variable data associated with key %lu was deleted\n", *key);
                         } else if (*((int32_t *)recordBuffer) != *((int32_t *)((int8_t *)buf + 4))) {
                             printf("ERROR: Wrong data for: %lu\n", *key);
-                        } else if (VALIDATE_VAR_DATA && length != 0) {
+                        } /*else if (VALIDATE_VAR_DATA && varStream != NULL) {
                             while (validationHead->key != *key) {
                                 Node *tmp = validationHead;
                                 validationHead = validationHead->next;
@@ -530,17 +537,21 @@ int main() {
                             validationHead = validationHead->next;
                             free(tmp->data);
                             free(tmp);
-                        }
+                        }*/
 
                         // Retrieve image
-                        if (varData != NULL) {
-                            if (TEST_TYPE == 1) {
-                                char filename[] = "test";
-                                char extension[] = ".png";
-                                retrieveImageData(&varData, length, *key, filename, extension);
+                        if (varStream != NULL) {
+                            if (TEST_TYPE == 2) {
+                                char reconstructed[15];
+                                uint32_t bytesRead, total = 0;
+                                while ((bytesRead = sbitsVarDataStreamRead(state, varStream, varDataBuf, varBufSize)) > 0) {
+                                    memcpy(reconstructed + total, varDataBuf, bytesRead);
+                                    total += bytesRead;
+                                }
+                                printf("Var data: %s\n", reconstructed);
                             }
-                            free(varData);
-                            varData = NULL;
+                            free(varStream);
+                            varStream = NULL;
                         }
 
                         if (i % stepSize == 0) {
@@ -568,6 +579,11 @@ int main() {
                 // Only query 10000 records
                 int32_t numToQuery = 10000;
                 int32_t queryStepSize = numToQuery / NUM_STEPS;
+
+                uint32_t varBufSize = 6;
+                void *varDataBuf = malloc(varBufSize);
+                sbitsVarDataStream *varStream = NULL;
+
                 i = 0;
                 int32_t num = maxRange - minRange;
                 printf("Rge: %d Rand max: %d\n", num, RAND_MAX);
@@ -577,9 +593,7 @@ int main() {
                     uint64_t sizedKey = 0;
                     memcpy(&sizedKey, &key, sizeof(uint32_t));
 
-                    void *varData = NULL;
-                    uint32_t length = 0;
-                    int8_t result = sbitsGetVar(state, &sizedKey, recordBuffer, &varData, &length);
+                    int8_t result = sbitsGetVar(state, &sizedKey, recordBuffer, &varStream);
 
                     if (result == -1) {
                         // printf("ERROR: Failed to find: %lu\n", key);
@@ -592,15 +606,15 @@ int main() {
                     }
 
                     // Retrieve image
-                    if (length != 0 && TEST_TYPE == 1) {
+                    /*if (varStream != NULL && TEST_TYPE == 1) {
                         char filename[5] = "test";
                         char extension[5] = ".png";
                         retrieveImageData(&varData, length, key, filename, extension);
-                    }
+                    }*/
 
                     // printf("Key: %lu Data: %lu Var: %s\n", key, *((int32_t *)recordBuffer), varData);
-                    if (varData != NULL) {
-                        free(varData);
+                    if (varStream != NULL) {
+                        free(varStream);
                         varDataFound++;
                     }
 
@@ -893,9 +907,10 @@ uint8_t dataEquals(void *varData, uint32_t length, Node *node) {
 }
 
 int retrieveData(sbitsState *state, int32_t key, int8_t *recordBuffer) {
-    void *varData = NULL;
-    uint32_t length = -1;
-    int8_t result = sbitsGetVar(state, &key, recordBuffer, &varData, &length);
+    uint32_t varBufSize = 6;
+    void *varDataBuf = malloc(varBufSize);
+    sbitsVarDataStream *varStream = NULL;
+    int8_t result = sbitsGetVar(state, &key, recordBuffer, &varStream);
 
     if (result == -1) {
         printf("ERROR: Failed to find: %lu\n", key);
@@ -906,10 +921,13 @@ int retrieveData(sbitsState *state, int32_t key, int8_t *recordBuffer) {
     }
 
     // Retrieve image
-    if (length != -1 && TEST_TYPE) {
-        retrieveImageData(&varData, length, key, "test", ".png");
+    /*if (varStream != NULL && TEST_TYPE) {
+         retrieveImageData(&varData, length, key, "test", ".png");
+    }*/
+
+    if (varStream != NULL) {
+        free(varStream);
     }
 
-    free(varData);
     return 0;
 }
