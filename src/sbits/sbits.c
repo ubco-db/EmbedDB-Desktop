@@ -521,10 +521,10 @@ int8_t sbitsInitVarDataFromFile(sbitsState *state) {
 
     /* Read page with largest key on it */
     int8_t *maximumKey = malloc(sizeof(state->keySize));
-    int8_t *dataBuffer = malloc(sizeof(state->dataSize));
+    int8_t *dataReuslt = malloc(sizeof(state->dataSize));
     readVariablePage(state, physicalVariablePageId - 1);
     memcpy(maximumKey, (int8_t *)buffer + sizeof(id_t), sizeof(state->keySize));
-    sbitsGet(state, maximumKey, dataBuffer);
+    sbitsGet(state, maximumKey, dataReuslt);
     void *dataBuffer = (int8_t *)state->buffer + state->pageSize * SBITS_DATA_READ_BUFFER;
     id_t logicalDataPageNumber = 0;
     memcpy(&logicalDataPageNumber, buffer, sizeof(id_t));
@@ -710,7 +710,7 @@ int8_t sbitsPut(sbitsState *state, void *key, void *data) {
     if (count >= state->maxRecordsPerPage) {
         if (SBITS_USING_VDATA(state->parameters) && state->currentVarLoc % state->pageSize != state->variableDataHeaderSize) {
             id_t writePageNumber = writeVariablePage(state, (int8_t *)state->buffer + state->pageSize * SBITS_VAR_WRITE_BUFFER(state->parameters));
-            if (writeIndexPage == -1)
+            if (writePageNumber == -1)
                 return writePageNumber;
             initBufferPage(state, SBITS_VAR_WRITE_BUFFER(state->parameters));
             // Move data writing location to the beginning of the next page, leaving the room for the header
