@@ -1149,35 +1149,9 @@ int8_t sbitsGetVar(sbitsState *state, void *key, void *data, sbitsVarDataStream 
     varDataStream->dataStart = varDataOffset;
     varDataStream->totalBytes = dataLength;
     varDataStream->bytesRead = 0;
-    varDataStream->pageOffset = UINT16_MAX;  // Set flag that the next read is the first read
+    varDataStream->fileOffset = varDataOffset;
 
     *varData = varDataStream;
-
-    /*
-    *varData = malloc(dataLength);
-if (*varData == NULL) {
-    printf("Malloc failed while reading in var data\n");
-    exit(1);
-}
-
-uint32_t amtRead = 0;
-while (amtRead < dataLength) {
-    // Read either the rest of the data or the rest of the page
-    uint16_t amtToRead = __min(dataLength - amtRead, state->pageSize - bufPos);
-    memcpy((int8_t *)*varData + amtRead, (int8_t *)ptr + bufPos, amtToRead);
-    amtRead += amtToRead;
-
-    // If we need to keep reading, read the next page
-    if (amtRead != dataLength) {
-        pageNum = (pageNum + 1) % state->numVarPages;
-        if (readVariablePage(state, pageNum) != 0) {
-            return -1;
-        }
-        // Skip past the header
-        bufPos = state->variableDataHeaderSize;
-    }
-}
-    */
 
     return 0;
 }
@@ -1386,7 +1360,7 @@ int8_t sbitsNextVar(sbitsState *state, sbitsIterator *it, void *key, void *data,
         varDataStream->dataStart = varDataAddr;
         varDataStream->totalBytes = dataLen;
         varDataStream->bytesRead = 0;
-        varDataStream->pageOffset = UINT16_MAX;  // Set flag that the next read is the first read
+        varDataStream->fileOffset = varDataAddr;
 
         *varData = varDataStream;
 
@@ -1412,16 +1386,7 @@ uint32_t sbitsVarDataStreamRead(sbitsState *state, sbitsVarDataStream *stream, v
     }
 
     // Read in var page containing the data to read
-    uint32_t pageNum = ((stream->dataStart + stream->bytesRead) / state->pageSize) % state->numVarPages;
-    uint32_t pageOffset;
-    if (stream->pageOffset == UINT16_MAX) {
-        pageOffset = stream->dataStart % state->pageSize;
-    } else if (stream->pageOffset % state->pageSize == 0) {
-        pageOffset = state->variableDataHeaderSize;
-    } else {
-        pageOffset = stream->pageOffset;
-    }
-
+    uint32_t pageNum = (stream->fileOffset / state->pageSize) % state->numVarPages;
     if (readVariablePage(state, pageNum) != 0) {
         printf("ERROR: Couldn't read variable data page %d\n", pageNum);
         return 0;
@@ -1431,26 +1396,25 @@ uint32_t sbitsVarDataStreamRead(sbitsState *state, sbitsVarDataStream *stream, v
     void *varDataBuf = (int8_t *)state->buffer + state->pageSize * SBITS_VAR_READ_BUFFER(state->parameters);
     uint32_t amtRead = 0;
     while (amtRead < length && stream->bytesRead < stream->totalBytes) {
+        uint16_t pageOffset = stream->fileOffset % state->pageSize;
         uint32_t amtToRead = __min(stream->totalBytes - stream->bytesRead, __min(state->pageSize - pageOffset, length - amtRead));
         memcpy((int8_t *)buffer + amtRead, (int8_t *)varDataBuf + pageOffset, amtToRead);
         amtRead += amtToRead;
         stream->bytesRead += amtToRead;
-        pageOffset += amtToRead;
+        stream->fileOffset += amtToRead;
 
         // If we need to keep reading, read the next page
         if (amtRead < length && stream->bytesRead < stream->totalBytes) {
             pageNum = (pageNum + 1) % state->numVarPages;
             if (readVariablePage(state, pageNum) != 0) {
                 printf("ERROR: Couldn't read variable data page %d\n", pageNum);
-                stream->pageOffset = UINT16_MAX;
                 return 0;
             }
             // Skip past the header
-            pageOffset = state->variableDataHeaderSize;
+            stream->fileOffset += state->variableDataHeaderSize;
         }
     }
 
-    stream->pageOffset = pageOffset;
     return amtRead;
 }
 
