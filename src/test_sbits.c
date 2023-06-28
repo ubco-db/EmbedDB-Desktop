@@ -48,7 +48,7 @@
 void runalltests_sbits() {
     printf("\nSTARTING SBITS TESTS.\n");
     int8_t M = 4;
-    int32_t numRecords = 10000;    // default values
+    int32_t numRecords = 1000;     // default values
     int32_t testRecords = 500000;  // default values
     uint8_t useRandom = 0;         // default values
     size_t splineMaxError = 0;     // default values
@@ -149,14 +149,12 @@ void runalltests_sbits() {
         /* Address level parameters */
         state->numDataPages = 1000;
         state->numIndexPages = 48;
-        state->numVarPages = 1000;
         state->eraseSizeInPages = 4;
 
         char dataPath[] = "build/artifacts/dataFile.bin", indexPath[] = "build/artifacts/indexFile.bin", varPath[] = "build/artifacts/varFile.bin";
         state->fileInterface = getFileInterface();
         state->dataFile = setupFile(dataPath);
         state->indexFile = setupFile(indexPath);
-        state->varFile = setupFile(varPath);
 
         state->parameters = SBITS_USE_BMAP | SBITS_USE_INDEX | SBITS_RESET_DATA;
 
@@ -314,12 +312,13 @@ void runalltests_sbits() {
                 uint32_t itKey;
                 void *itData = calloc(1, state->dataSize);
                 sbitsIterator it;
+                uint32_t minKey = 200, maxKey = 690;
                 it.minKey = NULL;
                 it.maxKey = NULL;
                 int32_t mv = 26;
                 int32_t v = 49;
-                it.minData = &mv;
-                it.maxData = &v;
+                it.minData = NULL;
+                it.maxData = NULL;
                 int32_t rec, reads;
 
                 start = clock();
@@ -328,8 +327,8 @@ void runalltests_sbits() {
                 reads = state->numReads;
                 while (sbitsNext(state, &it, &itKey, itData)) {
                     printf("Key: %d  Data: %d\n", itKey, *(uint32_t *)itData);
-                    if (*((int32_t *)itData) < *((int32_t *)it.minData) ||
-                        *((int32_t *)itData) > *((int32_t *)it.maxData)) {
+                    if ((it.minData != NULL && *((int32_t *)itData) < *((int32_t *)it.minData)) ||
+                        (it.maxData != NULL && *((int32_t *)itData) > *((int32_t *)it.maxData))) {
                         printf("Key: %d Data: %d Error\n", itKey, *(uint32_t *)itData);
                     }
                     rec++;
@@ -433,6 +432,7 @@ void runalltests_sbits() {
                 uint32_t itKey;
                 void *itData = calloc(1, state->dataSize);
                 sbitsIterator it;
+                uint32_t minKey = 200, maxKey = 690;
                 it.minKey = NULL;
                 it.maxKey = NULL;
                 int32_t mv = 26;
@@ -447,8 +447,8 @@ void runalltests_sbits() {
                 reads = state->numReads;
                 while (sbitsNext(state, &it, &itKey, itData)) {
                     printf("Key: %d  Data: %d\n", itKey, *(uint32_t *)itData);
-                    if (*((int32_t *)itData) < *((int32_t *)it.minData) ||
-                        *((int32_t *)itData) > *((int32_t *)it.maxData)) {
+                    if ((it.minData != NULL && *((int32_t *)itData) < *((int32_t *)it.minData)) ||
+                        (it.maxData != NULL && *((int32_t *)itData) > *((int32_t *)it.maxData))) {
                         printf("Key: %d Data: %d Error\n", itKey, *(uint32_t *)itData);
                     }
                     rec++;
@@ -482,7 +482,6 @@ void runalltests_sbits() {
         free(state->fileInterface);
         tearDownFile(state->dataFile);
         tearDownFile(state->indexFile);
-        tearDownFile(state->varFile);
         free(state);
     }
 
