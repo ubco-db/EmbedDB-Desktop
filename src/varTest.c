@@ -31,7 +31,6 @@ void imageVarData(float chance, char *filename, uint8_t *usingVarData, uint32_t 
 void retrieveImageData(sbitsState *state, sbitsVarDataStream *varStream, int32_t key, char *filename, char *filetype);
 uint8_t dataEquals(sbitsState *state, sbitsVarDataStream *varStream, Node *node);
 void randomVarData(uint32_t chance, uint32_t sizeLowerBound, uint32_t sizeUpperBound, uint8_t *usingVarData, uint32_t *length, void **varData);
-int retrieveData(sbitsState *state, int32_t key, int8_t *recordBuffer);
 
 int main() {
     printf("\nSTARTING SBITS VARIABLE DATA TESTS.\n");
@@ -945,30 +944,4 @@ uint8_t dataEquals(sbitsState *state, sbitsVarDataStream *varStream, Node *node)
 
         return length == node->length && memcmp(data, node->data, length) == 0;
     }
-}
-
-int retrieveData(sbitsState *state, int32_t key, int8_t *recordBuffer) {
-    uint32_t varBufSize = 6;
-    void *varDataBuf = malloc(varBufSize);
-    sbitsVarDataStream *varStream = NULL;
-    int8_t result = sbitsGetVar(state, &key, recordBuffer, &varStream);
-
-    if (result == -1) {
-        printf("ERROR: Failed to find: %lu\n", key);
-    } else if (result == 1) {
-        printf("WARN: Variable data associated with key %lu was deleted\n", key);
-    } else if (*((int32_t *)recordBuffer) != key % 100) {
-        printf("ERROR: Wrong data for: %lu\n", key);
-    }
-
-    // Retrieve image
-    /*if (varStream != NULL && TEST_TYPE) {
-         retrieveImageData(&varData, length, key, "test", ".png");
-    }*/
-
-    if (varStream != NULL) {
-        free(varStream);
-    }
-
-    return 0;
 }
