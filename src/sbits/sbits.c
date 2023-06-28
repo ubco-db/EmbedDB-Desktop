@@ -708,15 +708,6 @@ int8_t sbitsPut(sbitsState *state, void *key, void *data) {
 
     /* Write current page if full */
     if (count >= state->maxRecordsPerPage) {
-        if (SBITS_USING_VDATA(state->parameters) && state->currentVarLoc % state->pageSize != state->variableDataHeaderSize) {
-            id_t writePageNumber = writeVariablePage(state, (int8_t *)state->buffer + state->pageSize * SBITS_VAR_WRITE_BUFFER(state->parameters));
-            if (writePageNumber == -1)
-                return writePageNumber;
-            initBufferPage(state, SBITS_VAR_WRITE_BUFFER(state->parameters));
-            // Move data writing location to the beginning of the next page, leaving the room for the header
-            state->currentVarLoc = (writePageNumber % state->numAvailVarPages) * state->pageSize + state->variableDataHeaderSize;
-        }
-
         // As the first buffer is the data write buffer, no manipulation is required
         id_t pageNum = writePage(state, state->buffer);
 
@@ -847,69 +838,73 @@ void updateAverageKeyDifference(sbitsState *state, void *buffer) {
  * @return	Return 0 if success. Non-zero value if error.
  */
 int8_t sbitsPutVar(sbitsState *state, void *key, void *data, void *variableData, uint32_t length) {
-    if (SBITS_USING_VDATA(state->parameters)) {
-        // Insert their data
-        if (variableData != NULL) {
-            // Check that there is enough space remaining in this page to start the insert of the variable data here
-            void *buf = (int8_t *)state->buffer + state->pageSize * (SBITS_VAR_WRITE_BUFFER(state->parameters));
-            if (state->currentVarLoc % state->pageSize > state->pageSize - 4) {
-                writeVariablePage(state, buf);
-                initBufferPage(state, SBITS_VAR_WRITE_BUFFER(state->parameters));
-                // Move data writing location to the beginning of the next page, leaving the room for the header
-                state->currentVarLoc += state->pageSize - state->currentVarLoc % state->pageSize + state->variableDataHeaderSize;
-            }
-
-            // Perform the regular insert
-            state->recordHasVarData = 1;
-            int8_t r;
-            if ((r = sbitsPut(state, key, data)) != 0) {
-                return r;
-            }
-
-            // Update the header to include the maximum key value stored on this page
-            memcpy((int8_t *)buf + sizeof(id_t), key, state->keySize);
-
-            // Write the length of the data item into the buffer
-            memcpy((uint8_t *)buf + state->currentVarLoc % state->pageSize, &length, sizeof(uint32_t));
-            state->currentVarLoc += 4;
-
-            // Check if we need to write after doing that
-            if (state->currentVarLoc % state->pageSize == 0) {
-                writeVariablePage(state, buf);
-                initBufferPage(state, SBITS_VAR_WRITE_BUFFER(state->parameters));
-
-                // Update the header to include the maximum key value stored on this page
-                memcpy((int8_t *)buf + sizeof(id_t), key, state->keySize);
-                state->currentVarLoc += state->variableDataHeaderSize;
-            }
-
-            int amtWritten = 0;
-            while (length > 0) {
-                // Copy data into the buffer. Write the min of the space left in this page and the remaining length of the data
-                uint16_t amtToWrite = __min(state->pageSize - state->currentVarLoc % state->pageSize, length);
-                memcpy((uint8_t *)buf + (state->currentVarLoc % state->pageSize), (uint8_t *)variableData + amtWritten, amtToWrite);
-                length -= amtToWrite;
-                amtWritten += amtToWrite;
-                state->currentVarLoc += amtToWrite;
-
-                // If we need to write the buffer to file
-                if (state->currentVarLoc % state->pageSize == 0) {
-                    writeVariablePage(state, buf);
-                    initBufferPage(state, SBITS_VAR_WRITE_BUFFER(state->parameters));
-
-                    // Update the header to include the maximum key value stored on this page and account for page number
-                    memcpy((int8_t *)buf + sizeof(id_t), key, state->keySize);
-                    state->currentVarLoc += state->variableDataHeaderSize;
-                }
-            }
-        } else {
-            // Var data enabled, but not provided
-            state->recordHasVarData = 0;
-            return sbitsPut(state, key, data);
-        }
-    } else {
+    if (!SBITS_USING_VDATA(state->parameters)) {
         printf("Error: Can't insert variable data because it is not enabled\n");
         return -1;
+    }
+
+    // Insert their data
+
+    /*
+     * Check that there is enough space remaining in this page to start the insert of the variable
+     * data here and if the data page will be written in sbitsGet
+     */
+    void *buf = (int8_t *)state->buffer + state->pageSize * (SBITS_VAR_WRITE_BUFFER(state->parameters));
+    if (state->currentVarLoc % state->pageSize > state->pageSize - 4 || SBITS_GET_COUNT(state->buffer) >= state->maxRecordsPerPage) {
+        writeVariablePage(state, buf);
+        initBufferPage(state, SBITS_VAR_WRITE_BUFFER(state->parameters));
+        // Move data writing location to the beginning of the next page, leaving the room for the header
+        state->currentVarLoc += state->pageSize - state->currentVarLoc % state->pageSize + state->variableDataHeaderSize;
+    }
+
+    if (variableData == NULL) {
+        // Var data enabled, but not provided
+        state->recordHasVarData = 0;
+        return sbitsPut(state, key, data);
+    }
+
+    // Perform the regular insert
+    state->recordHasVarData = 1;
+    int8_t r;
+    if ((r = sbitsPut(state, key, data)) != 0) {
+        return r;
+    }
+
+    // Update the header to include the maximum key value stored on this page
+    memcpy((int8_t *)buf + sizeof(id_t), key, state->keySize);
+
+    // Write the length of the data item into the buffer
+    memcpy((uint8_t *)buf + state->currentVarLoc % state->pageSize, &length, sizeof(uint32_t));
+    state->currentVarLoc += 4;
+
+    // Check if we need to write after doing that
+    if (state->currentVarLoc % state->pageSize == 0) {
+        writeVariablePage(state, buf);
+        initBufferPage(state, SBITS_VAR_WRITE_BUFFER(state->parameters));
+
+        // Update the header to include the maximum key value stored on this page
+        memcpy((int8_t *)buf + sizeof(id_t), key, state->keySize);
+        state->currentVarLoc += state->variableDataHeaderSize;
+    }
+
+    int amtWritten = 0;
+    while (length > 0) {
+        // Copy data into the buffer. Write the min of the space left in this page and the remaining length of the data
+        uint16_t amtToWrite = __min(state->pageSize - state->currentVarLoc % state->pageSize, length);
+        memcpy((uint8_t *)buf + (state->currentVarLoc % state->pageSize), (uint8_t *)variableData + amtWritten, amtToWrite);
+        length -= amtToWrite;
+        amtWritten += amtToWrite;
+        state->currentVarLoc += amtToWrite;
+
+        // If we need to write the buffer to file
+        if (state->currentVarLoc % state->pageSize == 0) {
+            writeVariablePage(state, buf);
+            initBufferPage(state, SBITS_VAR_WRITE_BUFFER(state->parameters));
+
+            // Update the header to include the maximum key value stored on this page and account for page number
+            memcpy((int8_t *)buf + sizeof(id_t), key, state->keySize);
+            state->currentVarLoc += state->variableDataHeaderSize;
+        }
     }
     return 0;
 }
