@@ -519,35 +519,19 @@ int8_t sbitsInitVarDataFromFile(sbitsState *state) {
     if (count == 0)
         return 0;
 
-    /* Read page with largest key on it */
-    int8_t *maximumKey = malloc(sizeof(state->keySize));
-    int8_t *dataReuslt = malloc(sizeof(state->dataSize));
-    readVariablePage(state, physicalVariablePageId - 1);
-    memcpy(maximumKey, (int8_t *)buffer + sizeof(id_t), sizeof(state->keySize));
-    sbitsGet(state, maximumKey, dataReuslt);
-    void *dataBuffer = (int8_t *)state->buffer + state->pageSize * SBITS_DATA_READ_BUFFER;
-    id_t logicalDataPageNumber = 0;
-    memcpy(&logicalDataPageNumber, buffer, sizeof(id_t));
-
     state->nextVarPageId = maxLogicaVariablePageId + 1;
-    id_t physicalPageIDOfSmallestData = 0;
+    id_t minVarPageId = 0;
     if (haveWrappedInMemory) {
-        state->numAvailVarPages = 0;
-        physicalPageIDOfSmallestData = logicalVariablePageId % state->numIndexPages;
-        // currentVarLoc
-    } else {
-        state->numAvailVarPages = state->numVarPages - count;
-        state->currentVarLoc = count * state->pageSize + state->variableDataHeaderSize;
+        id_t physicalPageIDOfSmallestData = logicalVariablePageId % state->numVarPages;
+        readVariablePage(state, physicalPageIDOfSmallestData);
+        memcpy(&(state->minVarRecordId), (int8_t *)buffer + sizeof(id_t), sizeof(state->keySize));
+        memcpy(&minVarPageId, buffer, sizeof(id_t));
+        state->minVarRecordId++;
     }
-    readVariablePage(state, physicalPageIDOfSmallestData);
-    uint64_t minVarId = 0;
-    memcpy(&(minVarId), (int8_t *)buffer + sizeof(id_t), sizeof(id_t));
-    minVarId += 1;
-    state->minVarRecordId = minVarId;
 
-    state->currentVarLoc;
-    free(maximumKey);
-    free(dataBuffer);
+    state->numAvailVarPages = state->numVarPages + minVarPageId - maxLogicaVariablePageId - 1;
+    state->currentVarLoc = state->nextVarPageId % state->numVarPages * state->pageSize + state->variableDataHeaderSize;
+
     return 0;
 }
 
