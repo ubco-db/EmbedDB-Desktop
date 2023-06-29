@@ -1164,6 +1164,7 @@ int8_t sbitsGetVar(sbitsState *state, void *key, void *data, sbitsVarDataStream 
     void *ptr = (int8_t *)state->buffer + SBITS_VAR_READ_BUFFER(state->parameters) * state->pageSize;
     id_t pageNum = (varDataOffset / state->pageSize) % state->numVarPages;
     if (readVariablePage(state, pageNum) != 0) {
+        printf("Not data to read\n");
         return -1;
     }
 

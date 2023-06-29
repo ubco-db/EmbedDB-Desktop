@@ -120,24 +120,19 @@ void insertRecordsWithRandomData(int32_t numberOfRecords, int32_t startingKey, i
     }
 }
 
-void insertRecords(int32_t numberOfRecords, int32_t startingKey, int32_t startingData, Node **linkedList) {
+void insertRecords(int32_t numberOfRecords, int32_t startingKey, int32_t startingData) {
     int32_t key = startingKey;
     int32_t data = startingData;
     int8_t *recordBuffer = (int8_t *)calloc(1, state->recordSize);
-    *linkedList = malloc(sizeof(Node));
-    Node *linkedListTail = *linkedList;
+    *((int32_t *)recordBuffer) = key;
+    *((int32_t *)(recordBuffer + state->keySize)) = startingData;
     char variableData[13] = "Hello World!";
     for (int32_t i = 0; i < numberOfRecords; i++) {
         *((int32_t *)recordBuffer) += 1;
         *((int32_t *)(recordBuffer + state->keySize)) += 1;
-        int8_t insertResult = sbitsPutVar(state, recordBuffer, (void *)(recordBuffer + state->keySize), variableData, 13);
+        printf("Key: %i Value: %i\n", *((int32_t *)recordBuffer), *((int32_t *)(recordBuffer + state->keySize)));
+        int8_t insertResult = sbitsPutVar(state, recordBuffer, (int8_t*)recordBuffer + state->keySize, variableData, 13);
         TEST_ASSERT_EQUAL_INT8_MESSAGE(0, insertResult, "SBITS failed to insert data.");
-        linkedListTail->key = i;
-        linkedListTail->data = variableData;
-        linkedListTail->length = 13;
-        linkedListTail->next = malloc(sizeof(Node));
-        linkedListTail = linkedListTail->next;
-        linkedListTail->length = 0;
     }
 }
 
@@ -193,40 +188,50 @@ void sbits_variable_data_reloads_with_fifteen_pages_of_data_correctly() {
 }
 
 void sbits_variable_data_reloads_with_one_hundred_six_pages_of_data_correctly() {
-    Node *linkedList;
-    insertRecords(2227, 100, 10, &linkedList);
+    insertRecords(2227, 100, 10);
     tearDown();
     initalizeSbitsFromFile();
     TEST_ASSERT_EQUAL_UINT32_MESSAGE(15880, state->currentVarLoc, "SBITS currentVarLoc did not have the correct value after initializing variable data from a file with one page of records.");
     TEST_ASSERT_EQUAL_UINT64_MESSAGE(672, state->minVarRecordId, "SBITS minVarRecordId did not have the correct value after initializing variable data from a file with one page of records.");
     TEST_ASSERT_EQUAL_UINT32_MESSAGE(0, state->numAvailVarPages, "SBITS numAvailVarPages did not have the correct value after initializing variable data from a file with one page of records.");
     TEST_ASSERT_EQUAL_UINT32_MESSAGE(106, state->nextVarPageId, "SBITS nextVarPageId did not have the correct value after initializing variable data from a file with one page of records.");
-    free(linkedList);
 }
 
 void sbits_variable_data_reloads_and_queries_with_thirty_one_pages_of_data_correctly() {
-    Node *linkedList;
     int32_t key = 1000;
-    int64_t data = 10;
-    insertRecords(651, key, data, &linkedList);
+    int32_t data = 10;
+    insertRecords(651, key, data);
+    sbitsFlush(state);
     tearDown();
     initalizeSbitsFromFile();
     int8_t *recordBuffer = (int8_t *)malloc(state->dataSize);
     char keyMessage[80];
     char dataMessage[100];
+    char varDataMessage[80];
+    char nullReturnMessage[60];
     char variableData[13] = "Hello World!";
     char variableDataBuffer[13];
+    sbitsVarDataStream *stream = NULL;
+    key = 1001;
+    data = 11;
     /* Records inserted before reload */
-    for (int i = 0; i < 3888; i++) {
-        int8_t getResult = sbitsGetVar(state, &key, recordBuffer);
+    for (int i = 0; i < 650; i++) {
+        int8_t getResult = sbitsGetVar(state, &key, recordBuffer, &stream);
         snprintf(keyMessage, 80, "SBITS get encountered an error fetching the data for key %i.", key);
-        snprintf(dataMessage, 100, "SBITS get did not return correct data for a record inserted before reloading (key %i).", key);
         TEST_ASSERT_EQUAL_INT8_MESSAGE(0, getResult, keyMessage);
-        TEST_ASSERT_EQUAL_INT64_MESSAGE(data, *((int64_t *)recordBuffer), dataMessage);
+        uint32_t streamBytesRead = 0;
+        snprintf(nullReturnMessage, 60, "SBITS get var returned null stream for key %i.", key);
+        TEST_ASSERT_NOT_NULL_MESSAGE(stream, nullReturnMessage);
+        streamBytesRead = sbitsVarDataStreamRead(state, stream, variableDataBuffer, 13);
+        snprintf(dataMessage, 100, "SBITS get did not return correct data for a record inserted before reloading (key %i).", key);
+        snprintf(varDataMessage, 80, "SBITS get var did not return the correct variable data for key %i.", key);
+        TEST_ASSERT_EQUAL_INT8_MESSAGE(0, getResult, keyMessage);
+        TEST_ASSERT_EQUAL_INT32_MESSAGE(data, *((int32_t *)recordBuffer), dataMessage);
+        TEST_ASSERT_EQUAL_UINT32_MESSAGE(13, streamBytesRead, "SBITS var data stream did not read the correct number of bytes.");
+        TEST_ASSERT_EQUAL_CHAR_ARRAY_MESSAGE(variableData, variableDataBuffer, 13, varDataMessage);
         key++;
         data++;
     }
-    free(linkedList);
 }
 
 int main(void) {
@@ -236,5 +241,6 @@ int main(void) {
     RUN_TEST(sbits_variable_data_reloads_with_one_page_of_data_correctly);
     RUN_TEST(sbits_variable_data_reloads_with_fifteen_pages_of_data_correctly);
     RUN_TEST(sbits_variable_data_reloads_with_one_hundred_six_pages_of_data_correctly);
+    RUN_TEST(sbits_variable_data_reloads_and_queries_with_thirty_one_pages_of_data_correctly);
     return UNITY_END();
 }
