@@ -67,7 +67,7 @@ $(PATHR)%.testpass: $(PATHB)%.$(TARGET_EXTENSION)
 	-./$< > $@ 2>&1
 
 $(PATHB)Test%.$(TARGET_EXTENSION): $(PATHO)Test%.o $(OBJECTS) $(PATHO)unity.o #$(PATHD)Test%.d
-	$(LINK) -o $@ $^
+	$(LINK) -o $@ $^ -lm
 
 $(PATHO)%.o:: $(PATHT)%.c
 	$(COMPILE) $(CFLAGS) $< -o $@ -lm
