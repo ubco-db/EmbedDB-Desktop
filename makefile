@@ -70,19 +70,19 @@ $(PATHB)Test%.$(TARGET_EXTENSION): $(PATHO)Test%.o $(OBJECTS) $(PATHO)unity.o #$
 	$(LINK) -o $@ $^
 
 $(PATHO)%.o:: $(PATHT)%.c
-	$(COMPILE) $(CFLAGS) $< -o $@
+	$(COMPILE) $(CFLAGS) $< -o $@ -lm
 
 $(PATHO)%.o:: $(PATHS)%.c
-	$(COMPILE) $(CFLAGS) $< -o $@
+	$(COMPILE) $(CFLAGS) $< -o $@ -lm
 
 $(PATHO)%.o:: $(PATHSPLINE)%.c
-	$(COMPILE) $(CFLAGS) $< -o $@
+	$(COMPILE) $(CFLAGS) $< -o $@ -lm
 
 $(PATHO)%.o:: $(PATHSBITS)%.c
-	$(COMPILE) $(CFLAGS) $< -o $@
+	$(COMPILE) $(CFLAGS) $< -o $@ -lm
 
 $(PATHO)%.o:: $(PATHU)%.c $(PATHU)%.h
-	$(COMPILE) $(CFLAGS) $< -o $@
+	$(COMPILE) $(CFLAGS) $< -o $@ -lm
 
 $(PATHD)%.d:: $(PATHT)%.c
 	$(DEPEND) $@ $<
