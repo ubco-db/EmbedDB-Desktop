@@ -45,6 +45,7 @@ extern "C" {
 #ifndef RADIXSPLINE_H
 #define RADIXSPLINE_H
 
+#include <math.h>
 #include <stdint.h>
 
 #define TO_BINARY_PATTERN "%c%c%c%c%c%c%c%c"
