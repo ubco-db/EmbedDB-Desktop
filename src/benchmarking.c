@@ -152,25 +152,152 @@ int main() {
     printf("Time: %dms\n", timeSelectKeyLargeResult);
     printf("Num reads: %d\n", numReadsSelectKeyLargeResult);
 
-    //////////////////////////////////////////////////////////
-    // SELECT * FROM r WHERE key >= 60000 AND key <= 360000 //
-    //////////////////////////////////////////////////////////
+    //////////////////////////
+    // SELECT range of keys //
+    //////////////////////////
+    printf("\nSELECT range of keys\n");
+    start = clock();
 
-    /////////////////////////////////////////////
-    // SELECT * FROM r WHERE data >= 950000000 //
-    /////////////////////////////////////////////
+    sbitsIterator itSelectKeyRange;
+    uint32_t minKeySelectKeyRange = minKey + (maxKey - minKey) * 0.15;
+    uint32_t maxKeySelectKeyRange = minKey + (maxKey - minKey) * 0.85;
+    itSelectKeyRange.minKey = &minKeySelectKeyRange;
+    itSelectKeyRange.maxKey = &maxKeySelectKeyRange;
+    itSelectKeyRange.minData = NULL;
+    itSelectKeyRange.maxData = NULL;
+    sbitsInitIterator(state, &itSelectKeyRange);
 
-    /////////////////////////////////////////////
-    // SELECT * FROM r WHERE data >= 970000000 //
-    /////////////////////////////////////////////
+    int numRecordsSelectKeyRange = 0;
+    int numReadsSelectKeyRange = state->numReads;
 
-    ///////////////////////////////////////////////////////////////////
-    // SELECT * FROM r WHERE data >= 950000000 AND data <= 970000000 //
-    ///////////////////////////////////////////////////////////////////
+    while (sbitsNext(state, &itSelectKeyRange, recordBuffer, recordBuffer + state->keySize)) {
+        numRecordsSelectKeyRange++;
+    }
 
-    ///////////////////////////////////////////////////////////////
-    // SELECT * FROM r WHERE key <= 400000 AND data >= 950000000 //
-    ///////////////////////////////////////////////////////////////
+    clock_t timeSelectKeyRange = (clock() - start) / (CLOCKS_PER_SEC / 1000);
+
+    numReadsSelectKeyRange = state->numReads - numReadsSelectKeyRange;
+
+    printf("Result size: %d\n", numRecordsSelectKeyRange);
+    printf("Time: %dms\n", timeSelectKeyRange);
+    printf("Num reads: %d\n", numReadsSelectKeyRange);
+
+    //////////////////////////////////
+    // SELECT by data, small result //
+    //////////////////////////////////
+    printf("\nSELECT by data, small result\n");
+    start = clock();
+
+    sbitsIterator itSelectDataSmallResult;
+    int32_t minDataSelectDataSmallResult = 700;
+    itSelectDataSmallResult.minKey = NULL;
+    itSelectDataSmallResult.maxKey = NULL;
+    itSelectDataSmallResult.minData = &minDataSelectDataSmallResult;
+    itSelectDataSmallResult.maxData = NULL;
+    sbitsInitIterator(state, &itSelectDataSmallResult);
+
+    int numRecordsSelectDataSmallResult = 0;
+    int numReadsSelectDataSmallResult = state->numReads;
+
+    while (sbitsNext(state, &itSelectDataSmallResult, recordBuffer, recordBuffer + state->keySize)) {
+        numRecordsSelectDataSmallResult++;
+    }
+
+    clock_t timeSelectDataSmallResult = (clock() - start) / (CLOCKS_PER_SEC / 1000);
+
+    numReadsSelectDataSmallResult = state->numReads - numReadsSelectDataSmallResult;
+
+    printf("Result size: %d\n", numRecordsSelectDataSmallResult);
+    printf("Time: %dms\n", timeSelectDataSmallResult);
+    printf("Num reads: %d\n", numReadsSelectDataSmallResult);
+
+    //////////////////////////////////
+    // SELECT by data, large result //
+    //////////////////////////////////
+    printf("\nSELECT by data, large result\n");
+    start = clock();
+
+    sbitsIterator itSelectDataLargeResult;
+    int32_t minDataSelectDataLargeResult = 420;
+    itSelectDataLargeResult.minKey = NULL;
+    itSelectDataLargeResult.maxKey = NULL;
+    itSelectDataLargeResult.minData = &minDataSelectDataLargeResult;
+    itSelectDataLargeResult.maxData = NULL;
+    sbitsInitIterator(state, &itSelectDataLargeResult);
+
+    int numRecordsSelectDataLargeResult = 0;
+    int numReadsSelectDataLargeResult = state->numReads;
+
+    while (sbitsNext(state, &itSelectDataLargeResult, recordBuffer, recordBuffer + state->keySize)) {
+        numRecordsSelectDataLargeResult++;
+    }
+
+    clock_t timeSelectDataLargeResult = (clock() - start) / (CLOCKS_PER_SEC / 1000);
+
+    numReadsSelectDataLargeResult = state->numReads - numReadsSelectDataLargeResult;
+
+    printf("Result size: %d\n", numRecordsSelectDataLargeResult);
+    printf("Time: %dms\n", timeSelectDataLargeResult);
+    printf("Num reads: %d\n", numReadsSelectDataLargeResult);
+
+    ///////////////////////
+    // SELECT data range //
+    ///////////////////////
+    printf("\nSELECT data range\n");
+    start = clock();
+
+    sbitsIterator itSelectDataRange;
+    int32_t minDataSelectDataRange = 420, maxDataSelectDataRange = 620;
+    itSelectDataRange.minKey = NULL;
+    itSelectDataRange.maxKey = NULL;
+    itSelectDataRange.minData = &minDataSelectDataRange;
+    itSelectDataRange.maxData = &maxDataSelectDataRange;
+    sbitsInitIterator(state, &itSelectDataRange);
+
+    int numRecordsSelectDataRange = 0;
+    int numReadsSelectDataRange = state->numReads;
+
+    while (sbitsNext(state, &itSelectDataRange, recordBuffer, recordBuffer + state->keySize)) {
+        numRecordsSelectDataRange++;
+    }
+
+    clock_t timeSelectDataRange = (clock() - start) / (CLOCKS_PER_SEC / 1000);
+
+    numReadsSelectDataRange = state->numReads - numReadsSelectDataRange;
+
+    printf("Result size: %d\n", numRecordsSelectDataRange);
+    printf("Time: %dms\n", timeSelectDataRange);
+    printf("Num reads: %d\n", numReadsSelectDataRange);
+
+    /////////////////////////////////
+    // SELECT on both key and data //
+    /////////////////////////////////
+    printf("\nSELECT on both key and data\n");
+    start = clock();
+
+    sbitsIterator itSelectKeyData;
+    uint32_t minKeySelectKeyData = minKey + (maxKey - minKey) * 0.4;
+    int32_t minDataSelectKeyData = 450, maxDataSelectKeyData = 650;
+    itSelectKeyData.minKey = &minKeySelectKeyData;
+    itSelectKeyData.maxKey = NULL;
+    itSelectKeyData.minData = &minDataSelectKeyData;
+    itSelectKeyData.maxData = &maxDataSelectKeyData;
+    sbitsInitIterator(state, &itSelectKeyData);
+
+    int numRecordsSelectKeyData = 0;
+    int numReadsSelectKeyData = state->numReads;
+
+    while (sbitsNext(state, &itSelectKeyData, recordBuffer, recordBuffer + state->keySize)) {
+        numRecordsSelectKeyData++;
+    }
+
+    clock_t timeSelectKeyData = (clock() - start) / (CLOCKS_PER_SEC / 1000);
+
+    numReadsSelectKeyData = state->numReads - numReadsSelectKeyData;
+
+    printf("Result size: %d\n", numRecordsSelectKeyData);
+    printf("Time: %dms\n", timeSelectKeyData);
+    printf("Num reads: %d\n", numReadsSelectKeyData);
 
     /////////////////
     // Close SBITS //
@@ -186,16 +313,72 @@ int main() {
 void updateCustomUWABitmap(void *data, void *bm) {
     int32_t temp = *(int32_t *)data;
 
-    int32_t min = 303;
-    int32_t max = 892;
-
-    int32_t index = (float)(temp - min) / (max - min) * 16;
-
-    if (index < 0) index = 0;
-    if (index > 15) index = 15;
+    /*  Custom, equi-depth buckets
+     *  Bucket  0: 303 -> 391 (0, 31250)
+     *	Bucket  1: 391 -> 418 (31251, 62502)
+     *	Bucket  2: 418 -> 436 (62503, 93754)
+     *	Bucket  3: 436 -> 454 (93755, 125006)
+     *	Bucket  4: 454 -> 469 (125007, 156258)
+     *	Bucket  5: 469 -> 484 (156259, 187510)
+     *	Bucket  6: 484 -> 502 (187511, 218762)
+     *	Bucket  7: 502 -> 522 (218763, 250014)
+     *	Bucket  8: 522 -> 542 (250015, 281265)
+     *	Bucket  9: 542 -> 560 (281266, 312517)
+     *	Bucket 10: 560 -> 577 (312518, 343769)
+     *	Bucket 11: 577 -> 594 (343770, 375021)
+     *	Bucket 12: 594 -> 615 (375022, 406273)
+     *	Bucket 13: 615 -> 642 (406274, 437525)
+     *	Bucket 14: 642 -> 685 (437526, 468777)
+     *	Bucket 15: 685 -> 892 (468778, 500029)
+     */
 
     uint16_t mask = 1;
-    mask <<= index;
+
+    int8_t mode = 0;  // 0 = equi-depth, 1 = equi-width
+    if (mode == 0) {
+        if (temp < 391) {
+            mask <<= 0;
+        } else if (temp < 418) {
+            mask <<= 1;
+        } else if (temp < 436) {
+            mask <<= 2;
+        } else if (temp < 454) {
+            mask <<= 3;
+        } else if (temp < 469) {
+            mask <<= 4;
+        } else if (temp < 484) {
+            mask <<= 5;
+        } else if (temp < 502) {
+            mask <<= 6;
+        } else if (temp < 522) {
+            mask <<= 7;
+        } else if (temp < 542) {
+            mask <<= 8;
+        } else if (temp < 560) {
+            mask <<= 9;
+        } else if (temp < 577) {
+            mask <<= 10;
+        } else if (temp < 594) {
+            mask <<= 11;
+        } else if (temp < 615) {
+            mask <<= 12;
+        } else if (temp < 642) {
+            mask <<= 13;
+        } else if (temp < 685) {
+            mask <<= 14;
+        } else {
+            mask <<= 15;
+        }
+    } else {
+        int shift = (temp - 303) / 16;
+        if (shift < 0) {
+            shift = 0;
+        } else if (shift > 15) {
+            shift = 15;
+        }
+        mask <<= shift;
+    }
+
     *(uint16_t *)bm |= mask;
 }
 
@@ -218,7 +401,7 @@ void buildCustomUWABitmapFromRange(void *min, void *max, void *bm) {
         if (min != NULL) {
             updateCustomUWABitmap(min, &minMap);
             // Turn on all bits below the bit for min value (cause the lsb are for the higher values)
-            minMap = minMap | (minMap - 1);
+            minMap = ~(minMap - 1);
             if (max == NULL) {
                 *(uint16_t *)bm = minMap;
                 return;
@@ -227,7 +410,7 @@ void buildCustomUWABitmapFromRange(void *min, void *max, void *bm) {
         if (max != NULL) {
             updateCustomUWABitmap(max, &maxMap);
             // Turn on all bits above the bit for max value (cause the msb are for the lower values)
-            maxMap = ~(maxMap - 1);
+            maxMap = maxMap | (maxMap - 1);
             if (min == NULL) {
                 *(uint16_t *)bm = maxMap;
                 return;
