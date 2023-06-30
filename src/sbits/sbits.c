@@ -511,10 +511,13 @@ int8_t sbitsInitVarDataFromFile(sbitsState *state) {
             moreToRead = !(readVariablePage(state, physicalVariablePageId));
             count++;
         } else {
-            haveWrappedInMemory = physicalVariablePageId == maxLogicaVariablePageId - state->numVarPages + 1;
+            haveWrappedInMemory = logicalVariablePageId == maxLogicaVariablePageId - state->numVarPages + 1;
             break;
         }
     }
+
+    printf("Count: %i\n", count);
+    printf("Have wrapped in memory: %i\n", haveWrappedInMemory);
 
     if (count == 0)
         return 0;
