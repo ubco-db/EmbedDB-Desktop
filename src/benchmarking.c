@@ -59,7 +59,7 @@ int main() {
     }
     sbitsFlush(state);
 
-    clock_t timeInsert = clock() - start;
+    clock_t timeInsert = (clock() - start) / (CLOCKS_PER_SEC / 1000);
 
     printf("Num Records inserted: %d\n", numRecords);
     printf("Time: %dms\n", timeInsert);
@@ -86,7 +86,7 @@ int main() {
         numRecordsSelectAll++;
     }
 
-    clock_t timeSelectAll = clock() - start;
+    clock_t timeSelectAll = (clock() - start) / (CLOCKS_PER_SEC / 1000);
 
     numReadsSelectAll = state->numReads - numReadsSelectAll;
 
@@ -115,7 +115,7 @@ int main() {
         numRecordsSelectKeySmallResult++;
     }
 
-    clock_t timeSelectKeySmallResult = clock() - start;
+    clock_t timeSelectKeySmallResult = (clock() - start) / (CLOCKS_PER_SEC / 1000);
 
     numReadsSelectKeySmallResult = state->numReads - numReadsSelectKeySmallResult;
 
@@ -144,7 +144,7 @@ int main() {
         numRecordsSelectKeyLargeResult++;
     }
 
-    clock_t timeSelectKeyLargeResult = clock() - start;
+    clock_t timeSelectKeyLargeResult = (clock() - start) / (CLOCKS_PER_SEC / 1000);
 
     numReadsSelectKeyLargeResult = state->numReads - numReadsSelectKeyLargeResult;
 
