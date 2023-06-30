@@ -917,7 +917,7 @@ void retrieveImageData(sbitsState *state, sbitsVarDataStream *varStream, int32_t
     int numDigits = log10(key) + 1;
     char *keyAsString = calloc(numDigits, sizeof(char));
     char destinationFolder[17] = "build/artifacts/";
-    itoa(key, keyAsString, 10);
+    sprintf(keyAsString, "%d", key);
     uint32_t destinationFolderLength = strlen(destinationFolder);
     uint32_t filenameLength = strlen(filename);
     uint32_t filetypeLength = strlen(filetype);

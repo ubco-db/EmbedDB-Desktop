@@ -241,7 +241,7 @@ void *setupFile(char *filename) {
 void tearDownFile(void *file) {
     FILE_INFO *fileInfo = (FILE_INFO *)file;
     free(fileInfo->filename);
-    if (fileInfo != NULL)
+    if (fileInfo->file != NULL)
         fclose(fileInfo->file);
     free(file);
 }
