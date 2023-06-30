@@ -271,8 +271,11 @@ sbitsCloseIterator(&it);
 **Be sure to flush buffers before closing, if needed.**
 
 ```c
-free(state->buffer);
 sbitsClose(state);
+tearDownFile(state->dataFile);
+tearDownFile(state->indexFile);
+tearDownFile(state->varFile);
 free(state->fileInterface);
+free(state->buffer);
 free(state);
 ```
