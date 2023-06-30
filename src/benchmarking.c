@@ -198,6 +198,7 @@ int main() {
 
     int numRecordsSelectDataSmallResult = 0;
     int numReadsSelectDataSmallResult = state->numReads;
+    int numIdxReadsSelectDataSmallResult = state->numIdxReads;
 
     while (sbitsNext(state, &itSelectDataSmallResult, recordBuffer, recordBuffer + state->keySize)) {
         numRecordsSelectDataSmallResult++;
@@ -206,10 +207,12 @@ int main() {
     clock_t timeSelectDataSmallResult = (clock() - start) / (CLOCKS_PER_SEC / 1000);
 
     numReadsSelectDataSmallResult = state->numReads - numReadsSelectDataSmallResult;
+    numIdxReadsSelectDataSmallResult = state->numIdxReads - numIdxReadsSelectDataSmallResult;
 
     printf("Result size: %d\n", numRecordsSelectDataSmallResult);
     printf("Time: %dms\n", timeSelectDataSmallResult);
     printf("Num reads: %d\n", numReadsSelectDataSmallResult);
+    printf("Num idx reads: %d\n", numIdxReadsSelectDataSmallResult);
 
     //////////////////////////////////
     // SELECT by data, large result //
@@ -227,6 +230,7 @@ int main() {
 
     int numRecordsSelectDataLargeResult = 0;
     int numReadsSelectDataLargeResult = state->numReads;
+    int numIdxReadsSelectDataLargeResult = state->numIdxReads;
 
     while (sbitsNext(state, &itSelectDataLargeResult, recordBuffer, recordBuffer + state->keySize)) {
         numRecordsSelectDataLargeResult++;
@@ -235,10 +239,12 @@ int main() {
     clock_t timeSelectDataLargeResult = (clock() - start) / (CLOCKS_PER_SEC / 1000);
 
     numReadsSelectDataLargeResult = state->numReads - numReadsSelectDataLargeResult;
+    numIdxReadsSelectDataLargeResult = state->numIdxReads - numIdxReadsSelectDataLargeResult;
 
     printf("Result size: %d\n", numRecordsSelectDataLargeResult);
     printf("Time: %dms\n", timeSelectDataLargeResult);
     printf("Num reads: %d\n", numReadsSelectDataLargeResult);
+    printf("Num idx reads: %d\n", numIdxReadsSelectDataLargeResult);
 
     ///////////////////////
     // SELECT data range //
@@ -256,6 +262,7 @@ int main() {
 
     int numRecordsSelectDataRange = 0;
     int numReadsSelectDataRange = state->numReads;
+    int numIdxReadsSelectDataRange = state->numIdxReads;
 
     while (sbitsNext(state, &itSelectDataRange, recordBuffer, recordBuffer + state->keySize)) {
         numRecordsSelectDataRange++;
@@ -264,10 +271,12 @@ int main() {
     clock_t timeSelectDataRange = (clock() - start) / (CLOCKS_PER_SEC / 1000);
 
     numReadsSelectDataRange = state->numReads - numReadsSelectDataRange;
+    numIdxReadsSelectDataRange = state->numIdxReads - numIdxReadsSelectDataRange;
 
     printf("Result size: %d\n", numRecordsSelectDataRange);
     printf("Time: %dms\n", timeSelectDataRange);
     printf("Num reads: %d\n", numReadsSelectDataRange);
+    printf("Num idx reads: %d\n", numIdxReadsSelectDataRange);
 
     /////////////////////////////////
     // SELECT on both key and data //
@@ -286,6 +295,7 @@ int main() {
 
     int numRecordsSelectKeyData = 0;
     int numReadsSelectKeyData = state->numReads;
+    int numIdxReadsSelectKeyData = state->numIdxReads;
 
     while (sbitsNext(state, &itSelectKeyData, recordBuffer, recordBuffer + state->keySize)) {
         numRecordsSelectKeyData++;
@@ -294,10 +304,12 @@ int main() {
     clock_t timeSelectKeyData = (clock() - start) / (CLOCKS_PER_SEC / 1000);
 
     numReadsSelectKeyData = state->numReads - numReadsSelectKeyData;
+    numIdxReadsSelectKeyData = state->numIdxReads - numIdxReadsSelectKeyData;
 
     printf("Result size: %d\n", numRecordsSelectKeyData);
     printf("Time: %dms\n", timeSelectKeyData);
     printf("Num reads: %d\n", numReadsSelectKeyData);
+    printf("Num idx reads: %d\n", numIdxReadsSelectKeyData);
 
     /////////////////
     // Close SBITS //
