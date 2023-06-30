@@ -35,6 +35,7 @@ SRCT = $(wildcard $(PATHT)*.c)
 
 VARTEST = $(PATHO)varTest.o
 TEST_SBITS = $(PATHO)test_sbits.o
+BENCHMARKING = $(PATHO)benchmarking.o
 
 COMPILE=gcc -c
 LINK=gcc
@@ -58,6 +59,14 @@ test_sbits: $(BUILD_PATHS) $(PATHB)test_sbits.$(TARGET_EXTENSION)
 
 $(PATHB)test_sbits.$(TARGET_EXTENSION): $(OBJECTS) $(TEST_SBITS)
 	$(LINK) -o $@ $^
+
+benchmark: $(BUILD_PATHS) $(PATHB)benchmarking.$(TARGET_EXTENSION)
+	@echo "Running benchmark"
+	-./$(PATHB)benchmarking.$(TARGET_EXTENSION)
+	@echo "Finished running benchmark file"
+
+$(PATHB)benchmarking.$(TARGET_EXTENSION): $(OBJECTS) $(BENCHMARKING)
+	$(LINK) -o $@ $^ -lm
 
 test: $(BUILD_PATHS) $(RESULTS)
 	pip install -r requirements.txt -q
