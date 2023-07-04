@@ -49,7 +49,7 @@ varTest: $(BUILD_PATHS) $(PATHB)varTest.$(TARGET_EXTENSION)
 	@echo "Finished running varTest file"
 
 $(PATHB)varTest.$(TARGET_EXTENSION): $(OBJECTS) $(VARTEST)
-	$(LINK) -o $@ $^
+	$(LINK) -o $@ $^ -lm
 
 test_sbits: $(BUILD_PATHS) $(PATHB)test_sbits.$(TARGET_EXTENSION)
 	@echo "Running test_sbits"
@@ -57,32 +57,32 @@ test_sbits: $(BUILD_PATHS) $(PATHB)test_sbits.$(TARGET_EXTENSION)
 	@echo "Finished running test_sbits file"
 
 $(PATHB)test_sbits.$(TARGET_EXTENSION): $(OBJECTS) $(TEST_SBITS)
-	$(LINK) -o $@ $^
+	$(LINK) -o $@ $^ -lm
 
 test: $(BUILD_PATHS) $(RESULTS)
 	pip install -r requirements.txt -q
 	python ./scripts/stylize_as_junit.py
 
 $(PATHR)%.testpass: $(PATHB)%.$(TARGET_EXTENSION)
-	-./$< > $@ 2>&1
+	-./$< > $@ 2>&1 -lm
 
 $(PATHB)Test%.$(TARGET_EXTENSION): $(PATHO)Test%.o $(OBJECTS) $(PATHO)unity.o #$(PATHD)Test%.d
-	$(LINK) -o $@ $^
+	$(LINK) -o $@ $^ -lm
 
 $(PATHO)%.o:: $(PATHT)%.c
-	$(COMPILE) $(CFLAGS) $< -o $@
+	$(COMPILE) $(CFLAGS) $< -o $@ -lm
 
 $(PATHO)%.o:: $(PATHS)%.c
-	$(COMPILE) $(CFLAGS) $< -o $@
+	$(COMPILE) $(CFLAGS) $< -o $@ -lm
 
 $(PATHO)%.o:: $(PATHSPLINE)%.c
-	$(COMPILE) $(CFLAGS) $< -o $@
+	$(COMPILE) $(CFLAGS) $< -o $@ -lm
 
 $(PATHO)%.o:: $(PATHSBITS)%.c
-	$(COMPILE) $(CFLAGS) $< -o $@
+	$(COMPILE) $(CFLAGS) $< -o $@ -lm
 
 $(PATHO)%.o:: $(PATHU)%.c $(PATHU)%.h
-	$(COMPILE) $(CFLAGS) $< -o $@
+	$(COMPILE) $(CFLAGS) $< -o $@ -lm
 
 $(PATHD)%.d:: $(PATHT)%.c
 	$(DEPEND) $@ $<
