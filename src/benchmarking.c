@@ -291,6 +291,7 @@ int main() {
 
     // Calculate averages
     int sum = 0;
+    printf("\nINSERT\n");
     printf("Time: ");
     printf("Num Records inserted: %d\n", numRecords);
     for (int i = 0; i < numRuns; i++) {
