@@ -168,12 +168,23 @@ sbitsFlush(state);
 sbitsGet(state, (void*) keyPtr, (void*) dataPtr);
 ```
 
-If the `SBITS_USE_VDATA` parameter is used, then `varPtr` is an un-allocated where the method can copy the vardata into and `length` is the number of bytes that were `malloc`ed and copied into `varPtr`
+If the `SBITS_USE_VDATA` parameter is used, then `varStream` is an un-allocated `sbitsVarDataStrem` where the method can return a data stream if there is vardata. You can then read chunks of the vardata from the stream. `bytesRead` is the actual number of bytes read into the buffer and is <= `varBufSize`
 
 ```c
-void* varPtr = NULL;
-uint32_t length = 0;
-sbitsGetVar(state, (void*) keyPtr, (void*) dataPtr, (void**) &varPtr, &length);
+sbitsVarDataStream *varStream = NULL;
+uint32_t varBufSize = 8;  // Choose any size
+void *varDataBuffer = malloc(varBufSize);
+
+sbitsGetVar(state, (void*) keyPtr, (void*) dataPtr, &varStream);
+
+if (varStream != NULL) {
+	uint32_t bytesRead;
+	while ((bytesRead = sbitsVarDataStreamRead(state, varStream, varDataBuf, varBufSize)) > 0) {
+		// Process data in varDataBuf
+	}
+	free(varStream);
+	varStream = NULL;
+}
 ```
 
 ## Iterate through items in tree
@@ -260,8 +271,11 @@ sbitsCloseIterator(&it);
 **Be sure to flush buffers before closing, if needed.**
 
 ```c
-free(state->buffer);
 sbitsClose(state);
+tearDownFile(state->dataFile);
+tearDownFile(state->indexFile);
+tearDownFile(state->varFile);
 free(state->fileInterface);
+free(state->buffer);
 free(state);
 ```
