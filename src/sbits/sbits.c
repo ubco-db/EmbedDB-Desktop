@@ -874,7 +874,7 @@ int8_t sbitsPutVar(sbitsState *state, void *key, void *data, void *variableData,
     int amtWritten = 0;
     while (length > 0) {
         // Copy data into the buffer. Write the min of the space left in this page and the remaining length of the data
-        uint16_t amtToWrite = __min(state->pageSize - state->currentVarLoc % state->pageSize, length);
+        uint16_t amtToWrite = min(state->pageSize - state->currentVarLoc % state->pageSize, length);
         memcpy((uint8_t *)buf + (state->currentVarLoc % state->pageSize), (uint8_t *)variableData + amtWritten, amtToWrite);
         length -= amtToWrite;
         amtWritten += amtToWrite;
@@ -1228,7 +1228,7 @@ void sbitsInitIterator(sbitsState *state, sbitsIterator *it) {
         }
 
         // Use the low bound as the start for our search
-        it->nextDataPage = __max(lowbound, state->minDataPageId);
+        it->nextDataPage = max(lowbound, state->minDataPageId);
     } else {
         it->nextDataPage = state->minDataPageId;
     }
@@ -1451,7 +1451,7 @@ uint32_t sbitsVarDataStreamRead(sbitsState *state, sbitsVarDataStream *stream, v
     uint32_t amtRead = 0;
     while (amtRead < length && stream->bytesRead < stream->totalBytes) {
         uint16_t pageOffset = stream->fileOffset % state->pageSize;
-        uint32_t amtToRead = __min(stream->totalBytes - stream->bytesRead, __min(state->pageSize - pageOffset, length - amtRead));
+        uint32_t amtToRead = min(stream->totalBytes - stream->bytesRead, min(state->pageSize - pageOffset, length - amtRead));
         memcpy((int8_t *)buffer + amtRead, (int8_t *)varDataBuf + pageOffset, amtToRead);
         amtRead += amtToRead;
         stream->bytesRead += amtToRead;
