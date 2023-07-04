@@ -186,9 +186,9 @@ int main() {
         itSelectDataSmallResult.maxData = NULL;
         sbitsInitIterator(state, &itSelectDataSmallResult);
 
-        int numRecordsSelectDataSmallResult = 0;
-        int numReadsSelectDataSmallResult = state->numReads;
-        int numIdxReadsSelectDataSmallResult = state->numIdxReads;
+        numRecordsSelectDataSmallResult = 0;
+        numReadsSelectDataSmallResult = state->numReads;
+        numIdxReadsSelectDataSmallResult = state->numIdxReads;
 
         while (sbitsNext(state, &itSelectDataSmallResult, recordBuffer, recordBuffer + state->keySize)) {
             numRecordsSelectDataSmallResult++;
@@ -291,7 +291,7 @@ int main() {
 
     // Calculate averages
     int sum = 0;
-    printf("Time: \n");
+    printf("Time: ");
     printf("Num Records inserted: %d\n", numRecords);
     for (int i = 0; i < numRuns; i++) {
         printf("%d ", timeInsert[i]);
@@ -303,7 +303,7 @@ int main() {
 
     sum = 0;
     printf("\nSELECT * FROM r\n");
-    printf("Time: \n");
+    printf("Time: ");
     for (int i = 0; i < numRuns; i++) {
         printf("%d ", timeSelectAll[i]);
         sum += timeSelectAll[i];
@@ -314,7 +314,7 @@ int main() {
 
     sum = 0;
     printf("\nSELECT by key, small result\n");
-    printf("Time: \n");
+    printf("Time: ");
     for (int i = 0; i < numRuns; i++) {
         printf("%d ", timeSelectKeySmallResult[i]);
         sum += timeSelectKeySmallResult[i];
@@ -325,7 +325,7 @@ int main() {
 
     sum = 0;
     printf("\nSELECT by key, large result\n");
-    printf("Time: \n");
+    printf("Time: ");
     for (int i = 0; i < numRuns; i++) {
         printf("%d ", timeSelectKeyLargeResult[i]);
         sum += timeSelectKeyLargeResult[i];
@@ -336,7 +336,7 @@ int main() {
 
     sum = 0;
     printf("\nSELECT by data, small result\n");
-    printf("Time: \n");
+    printf("Time: ");
     for (int i = 0; i < numRuns; i++) {
         printf("%d ", timeSelectDataSmallResult[i]);
         sum += timeSelectDataSmallResult[i];
@@ -348,7 +348,7 @@ int main() {
 
     sum = 0;
     printf("\nSELECT by data, large result\n");
-    printf("Time: \n");
+    printf("Time: ");
     for (int i = 0; i < numRuns; i++) {
         printf("%d ", timeSelectDataLargeResult[i]);
         sum += timeSelectDataLargeResult[i];
@@ -360,7 +360,7 @@ int main() {
 
     sum = 0;
     printf("\nSELECT by data range\n");
-    printf("Time: \n");
+    printf("Time: ");
     for (int i = 0; i < numRuns; i++) {
         printf("%d ", timeSelectDataRange[i]);
         sum += timeSelectDataRange[i];
@@ -372,7 +372,7 @@ int main() {
 
     sum = 0;
     printf("\nSELECT by key and data\n");
-    printf("Time: \n");
+    printf("Time: ");
     for (int i = 0; i < numRuns; i++) {
         printf("%d ", timeSelectKeyData[i]);
         sum += timeSelectKeyData[i];
