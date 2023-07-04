@@ -1,0 +1,310 @@
+rm -f build/objs/*.o
+rm -f build/*.out
+rm -f build/results/*.testpass
+rm -f build/artifacts/*.png
+rm -f build/artifacts/*.bin
+rm -f build/results/*.xml
+gcc -c -I. -IUnity/src/ -Isrc/ -DTEST src/sbits/sbits.c -o build/objs/sbits.o -lm
+gcc -c -I. -IUnity/src/ -Isrc/ -DTEST src/spline/spline.c -o build/objs/spline.o -lm
+gcc -c -I. -IUnity/src/ -Isrc/ -DTEST src/spline/radixspline.c -o build/objs/radixspline.o -lm
+gcc -c -I. -IUnity/src/ -Isrc/ -DTEST src/sbits/utilityFunctions.c -o build/objs/utilityFunctions.o -lm
+gcc -c -I. -IUnity/src/ -Isrc/ -DTEST src/benchmarking.c -o build/objs/benchmarking.o -lm
+gcc -o build/benchmarking.out build/objs/sbits.o build/objs/spline.o build/objs/radixspline.o build/objs/utilityFunctions.o build/objs/benchmarking.o -lm
+Running benchmark
+./build/benchmarking.out
+Initializing SBITS.
+Buffer size: 4  Page size: 512
+Key size: 4 Data size: 12 Record size: 16
+Use index: 1  Max/min: 0 Sum: 0 Bmap: 1
+Header size: 8  Records per page: 31
+Initializing SBITS.
+Buffer size: 4  Page size: 512
+Key size: 4 Data size: 12 Record size: 16
+Use index: 1  Max/min: 0 Sum: 0 Bmap: 1
+Header size: 8  Records per page: 31
+Initializing SBITS.
+Buffer size: 4  Page size: 512
+Key size: 4 Data size: 12 Record size: 16
+Use index: 1  Max/min: 0 Sum: 0 Bmap: 1
+Header size: 8  Records per page: 31
+Initializing SBITS.
+Buffer size: 4  Page size: 512
+Key size: 4 Data size: 12 Record size: 16
+Use index: 1  Max/min: 0 Sum: 0 Bmap: 1
+Header size: 8  Records per page: 31
+Initializing SBITS.
+Buffer size: 4  Page size: 512
+Key size: 4 Data size: 12 Record size: 16
+Use index: 1  Max/min: 0 Sum: 0 Bmap: 1
+Header size: 8  Records per page: 31
+Initializing SBITS.
+Buffer size: 4  Page size: 512
+Key size: 4 Data size: 12 Record size: 16
+Use index: 1  Max/min: 0 Sum: 0 Bmap: 1
+Header size: 8  Records per page: 31
+Initializing SBITS.
+Buffer size: 4  Page size: 512
+Key size: 4 Data size: 12 Record size: 16
+Use index: 1  Max/min: 0 Sum: 0 Bmap: 1
+Header size: 8  Records per page: 31
+Initializing SBITS.
+Buffer size: 4  Page size: 512
+Key size: 4 Data size: 12 Record size: 16
+Use index: 1  Max/min: 0 Sum: 0 Bmap: 1
+Header size: 8  Records per page: 31
+Initializing SBITS.
+Buffer size: 4  Page size: 512
+Key size: 4 Data size: 12 Record size: 16
+Use index: 1  Max/min: 0 Sum: 0 Bmap: 1
+Header size: 8  Records per page: 31
+Initializing SBITS.
+Buffer size: 4  Page size: 512
+Key size: 4 Data size: 12 Record size: 16
+Use index: 1  Max/min: 0 Sum: 0 Bmap: 1
+Header size: 8  Records per page: 31
+Initializing SBITS.
+Buffer size: 4  Page size: 512
+Key size: 4 Data size: 12 Record size: 16
+Use index: 1  Max/min: 0 Sum: 0 Bmap: 1
+Header size: 8  Records per page: 31
+Initializing SBITS.
+Buffer size: 4  Page size: 512
+Key size: 4 Data size: 12 Record size: 16
+Use index: 1  Max/min: 0 Sum: 0 Bmap: 1
+Header size: 8  Records per page: 31
+Initializing SBITS.
+Buffer size: 4  Page size: 512
+Key size: 4 Data size: 12 Record size: 16
+Use index: 1  Max/min: 0 Sum: 0 Bmap: 1
+Header size: 8  Records per page: 31
+Initializing SBITS.
+Buffer size: 4  Page size: 512
+Key size: 4 Data size: 12 Record size: 16
+Use index: 1  Max/min: 0 Sum: 0 Bmap: 1
+Header size: 8  Records per page: 31
+Initializing SBITS.
+Buffer size: 4  Page size: 512
+Key size: 4 Data size: 12 Record size: 16
+Use index: 1  Max/min: 0 Sum: 0 Bmap: 1
+Header size: 8  Records per page: 31
+Initializing SBITS.
+Buffer size: 4  Page size: 512
+Key size: 4 Data size: 12 Record size: 16
+Use index: 1  Max/min: 0 Sum: 0 Bmap: 1
+Header size: 8  Records per page: 31
+Initializing SBITS.
+Buffer size: 4  Page size: 512
+Key size: 4 Data size: 12 Record size: 16
+Use index: 1  Max/min: 0 Sum: 0 Bmap: 1
+Header size: 8  Records per page: 31
+Initializing SBITS.
+Buffer size: 4  Page size: 512
+Key size: 4 Data size: 12 Record size: 16
+Use index: 1  Max/min: 0 Sum: 0 Bmap: 1
+Header size: 8  Records per page: 31
+Initializing SBITS.
+Buffer size: 4  Page size: 512
+Key size: 4 Data size: 12 Record size: 16
+Use index: 1  Max/min: 0 Sum: 0 Bmap: 1
+Header size: 8  Records per page: 31
+Initializing SBITS.
+Buffer size: 4  Page size: 512
+Key size: 4 Data size: 12 Record size: 16
+Use index: 1  Max/min: 0 Sum: 0 Bmap: 1
+Header size: 8  Records per page: 31
+Initializing SBITS.
+Buffer size: 4  Page size: 512
+Key size: 4 Data size: 12 Record size: 16
+Use index: 1  Max/min: 0 Sum: 0 Bmap: 1
+Header size: 8  Records per page: 31
+Initializing SBITS.
+Buffer size: 4  Page size: 512
+Key size: 4 Data size: 12 Record size: 16
+Use index: 1  Max/min: 0 Sum: 0 Bmap: 1
+Header size: 8  Records per page: 31
+Initializing SBITS.
+Buffer size: 4  Page size: 512
+Key size: 4 Data size: 12 Record size: 16
+Use index: 1  Max/min: 0 Sum: 0 Bmap: 1
+Header size: 8  Records per page: 31
+Initializing SBITS.
+Buffer size: 4  Page size: 512
+Key size: 4 Data size: 12 Record size: 16
+Use index: 1  Max/min: 0 Sum: 0 Bmap: 1
+Header size: 8  Records per page: 31
+Initializing SBITS.
+Buffer size: 4  Page size: 512
+Key size: 4 Data size: 12 Record size: 16
+Use index: 1  Max/min: 0 Sum: 0 Bmap: 1
+Header size: 8  Records per page: 31
+Initializing SBITS.
+Buffer size: 4  Page size: 512
+Key size: 4 Data size: 12 Record size: 16
+Use index: 1  Max/min: 0 Sum: 0 Bmap: 1
+Header size: 8  Records per page: 31
+Initializing SBITS.
+Buffer size: 4  Page size: 512
+Key size: 4 Data size: 12 Record size: 16
+Use index: 1  Max/min: 0 Sum: 0 Bmap: 1
+Header size: 8  Records per page: 31
+Initializing SBITS.
+Buffer size: 4  Page size: 512
+Key size: 4 Data size: 12 Record size: 16
+Use index: 1  Max/min: 0 Sum: 0 Bmap: 1
+Header size: 8  Records per page: 31
+Initializing SBITS.
+Buffer size: 4  Page size: 512
+Key size: 4 Data size: 12 Record size: 16
+Use index: 1  Max/min: 0 Sum: 0 Bmap: 1
+Header size: 8  Records per page: 31
+Initializing SBITS.
+Buffer size: 4  Page size: 512
+Key size: 4 Data size: 12 Record size: 16
+Use index: 1  Max/min: 0 Sum: 0 Bmap: 1
+Header size: 8  Records per page: 31
+Initializing SBITS.
+Buffer size: 4  Page size: 512
+Key size: 4 Data size: 12 Record size: 16
+Use index: 1  Max/min: 0 Sum: 0 Bmap: 1
+Header size: 8  Records per page: 31
+Initializing SBITS.
+Buffer size: 4  Page size: 512
+Key size: 4 Data size: 12 Record size: 16
+Use index: 1  Max/min: 0 Sum: 0 Bmap: 1
+Header size: 8  Records per page: 31
+Initializing SBITS.
+Buffer size: 4  Page size: 512
+Key size: 4 Data size: 12 Record size: 16
+Use index: 1  Max/min: 0 Sum: 0 Bmap: 1
+Header size: 8  Records per page: 31
+Initializing SBITS.
+Buffer size: 4  Page size: 512
+Key size: 4 Data size: 12 Record size: 16
+Use index: 1  Max/min: 0 Sum: 0 Bmap: 1
+Header size: 8  Records per page: 31
+Initializing SBITS.
+Buffer size: 4  Page size: 512
+Key size: 4 Data size: 12 Record size: 16
+Use index: 1  Max/min: 0 Sum: 0 Bmap: 1
+Header size: 8  Records per page: 31
+Initializing SBITS.
+Buffer size: 4  Page size: 512
+Key size: 4 Data size: 12 Record size: 16
+Use index: 1  Max/min: 0 Sum: 0 Bmap: 1
+Header size: 8  Records per page: 31
+Initializing SBITS.
+Buffer size: 4  Page size: 512
+Key size: 4 Data size: 12 Record size: 16
+Use index: 1  Max/min: 0 Sum: 0 Bmap: 1
+Header size: 8  Records per page: 31
+Initializing SBITS.
+Buffer size: 4  Page size: 512
+Key size: 4 Data size: 12 Record size: 16
+Use index: 1  Max/min: 0 Sum: 0 Bmap: 1
+Header size: 8  Records per page: 31
+Initializing SBITS.
+Buffer size: 4  Page size: 512
+Key size: 4 Data size: 12 Record size: 16
+Use index: 1  Max/min: 0 Sum: 0 Bmap: 1
+Header size: 8  Records per page: 31
+Initializing SBITS.
+Buffer size: 4  Page size: 512
+Key size: 4 Data size: 12 Record size: 16
+Use index: 1  Max/min: 0 Sum: 0 Bmap: 1
+Header size: 8  Records per page: 31
+Initializing SBITS.
+Buffer size: 4  Page size: 512
+Key size: 4 Data size: 12 Record size: 16
+Use index: 1  Max/min: 0 Sum: 0 Bmap: 1
+Header size: 8  Records per page: 31
+Initializing SBITS.
+Buffer size: 4  Page size: 512
+Key size: 4 Data size: 12 Record size: 16
+Use index: 1  Max/min: 0 Sum: 0 Bmap: 1
+Header size: 8  Records per page: 31
+Initializing SBITS.
+Buffer size: 4  Page size: 512
+Key size: 4 Data size: 12 Record size: 16
+Use index: 1  Max/min: 0 Sum: 0 Bmap: 1
+Header size: 8  Records per page: 31
+Initializing SBITS.
+Buffer size: 4  Page size: 512
+Key size: 4 Data size: 12 Record size: 16
+Use index: 1  Max/min: 0 Sum: 0 Bmap: 1
+Header size: 8  Records per page: 31
+Initializing SBITS.
+Buffer size: 4  Page size: 512
+Key size: 4 Data size: 12 Record size: 16
+Use index: 1  Max/min: 0 Sum: 0 Bmap: 1
+Header size: 8  Records per page: 31
+Initializing SBITS.
+Buffer size: 4  Page size: 512
+Key size: 4 Data size: 12 Record size: 16
+Use index: 1  Max/min: 0 Sum: 0 Bmap: 1
+Header size: 8  Records per page: 31
+Initializing SBITS.
+Buffer size: 4  Page size: 512
+Key size: 4 Data size: 12 Record size: 16
+Use index: 1  Max/min: 0 Sum: 0 Bmap: 1
+Header size: 8  Records per page: 31
+Initializing SBITS.
+Buffer size: 4  Page size: 512
+Key size: 4 Data size: 12 Record size: 16
+Use index: 1  Max/min: 0 Sum: 0 Bmap: 1
+Header size: 8  Records per page: 31
+Initializing SBITS.
+Buffer size: 4  Page size: 512
+Key size: 4 Data size: 12 Record size: 16
+Use index: 1  Max/min: 0 Sum: 0 Bmap: 1
+Header size: 8  Records per page: 31
+Initializing SBITS.
+Buffer size: 4  Page size: 512
+Key size: 4 Data size: 12 Record size: 16
+Use index: 1  Max/min: 0 Sum: 0 Bmap: 1
+Header size: 8  Records per page: 31
+
+INSERT
+Time: Num Records inserted: 500000
+852 852 851 853 851 853 852 852 852 851 852 852 852 852 850 851 851 851 852 851 852 850 851 852 851 852 852 851 853 886 851 852 851 852 852 855 853 853 851 853 853 853 851 851 851 852 851 853 850 852 ~ 852ms
+Num data pages written: 16130
+Num index pages written: 66
+
+SELECT * FROM r
+Time: 186 185 185 185 185 185 185 185 186 185 186 186 186 186 186 186 186 185 185 185 186 185 186 185 186 186 186 186 186 186 186 186 186 186 186 186 186 186 186 186 186 186 185 185 186 185 186 186 186 186 ~ 185ms
+Result size: 500000
+Num reads: 16130
+
+SELECT by key, small result
+Time: 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 ~ 20ms
+Result size: 50703
+Num reads: 1638
+
+SELECT by key, large result
+Time: 182 182 182 182 182 182 182 182 182 182 182 182 182 182 182 182 182 182 182 182 182 182 182 182 182 183 182 182 183 183 183 183 183 183 182 183 183 183 183 183 182 182 182 182 182 182 182 182 182 183 ~ 182ms
+Result size: 449449
+Num reads: 14501
+
+SELECT by data, small result
+Time: 18 18 18 18 18 18 18 18 18 18 18 18 18 18 18 18 18 18 18 18 18 18 18 18 18 18 18 18 18 18 18 18 18 18 18 18 18 18 18 18 18 18 18 18 18 18 18 18 18 18 ~ 18ms
+Result size: 23534
+Num reads: 1206
+Num idx reads: 66
+
+SELECT by data, large result
+Time: 184 184 184 184 184 184 184 184 184 184 184 184 184 184 184 184 185 184 184 184 184 184 184 185 184 185 184 184 185 185 185 185 185 185 185 185 184 184 185 185 185 184 184 185 185 184 184 184 185 185 ~ 184ms
+Result size: 434839
+Num reads: 14454
+Num idx reads: 66
+
+SELECT by data range
+Time: 172 172 172 172 171 172 172 172 172 172 172 172 172 172 172 172 172 172 172 172 172 172 172 172 172 172 172 172 172 172 172 172 172 172 172 172 172 172 172 172 172 172 172 172 172 172 172 172 172 172 ~ 171ms
+Result size: 348475
+Num reads: 12668
+Num idx reads: 66
+
+SELECT by key and data
+Time: 114 114 114 114 114 113 114 114 114 114 114 114 114 114 114 114 114 114 114 114 114 114 114 114 114 114 114 114 114 114 114 114 114 114 114 114 114 114 114 114 114 114 114 114 114 114 114 114 114 114 ~ 113ms
+Result size: 205973
+Num reads: 7873
+Num idx reads: 40
+Finished running benchmark file
