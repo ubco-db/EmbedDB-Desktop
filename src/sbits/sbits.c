@@ -498,20 +498,20 @@ int8_t sbitsInitVarDataFromFile(sbitsState *state) {
     printf("Attempting to initialize from existing variable data file.\n");
     void *buffer = (int8_t *)state->buffer + state->pageSize * SBITS_VAR_READ_BUFFER(state->parameters);
     id_t logicalVariablePageId = 0;
-    id_t maxLogicaVariablePageId = 0;
+    id_t maxLogicalVariablePageId = 0;
     id_t physicalVariablePageId = 0;
     int8_t moreToRead = !(readVariablePage(state, physicalVariablePageId));
     uint32_t count = 0;
     bool haveWrappedInMemory = false;
     while (moreToRead && count < state->numVarPages) {
         memcpy(&logicalVariablePageId, buffer, sizeof(id_t));
-        if (count == 0 || logicalVariablePageId == maxLogicaVariablePageId + 1) {
-            maxLogicaVariablePageId = logicalVariablePageId;
+        if (count == 0 || logicalVariablePageId == maxLogicalVariablePageId + 1) {
+            maxLogicalVariablePageId = logicalVariablePageId;
             physicalVariablePageId++;
             moreToRead = !(readVariablePage(state, physicalVariablePageId));
             count++;
         } else {
-            haveWrappedInMemory = logicalVariablePageId == maxLogicaVariablePageId - state->numVarPages + 1;
+            haveWrappedInMemory = logicalVariablePageId == maxLogicalVariablePageId - state->numVarPages + 1;
             break;
         }
     }
@@ -519,7 +519,7 @@ int8_t sbitsInitVarDataFromFile(sbitsState *state) {
     if (count == 0)
         return 0;
 
-    state->nextVarPageId = maxLogicaVariablePageId + 1;
+    state->nextVarPageId = maxLogicalVariablePageId + 1;
     id_t minVarPageId = 0;
     if (haveWrappedInMemory) {
         id_t physicalPageIDOfSmallestData = logicalVariablePageId % state->numVarPages;
@@ -529,7 +529,7 @@ int8_t sbitsInitVarDataFromFile(sbitsState *state) {
         state->minVarRecordId++;
     }
 
-    state->numAvailVarPages = state->numVarPages + minVarPageId - maxLogicaVariablePageId - 1;
+    state->numAvailVarPages = state->numVarPages + minVarPageId - maxLogicalVariablePageId - 1;
     state->currentVarLoc = state->nextVarPageId % state->numVarPages * state->pageSize + state->variableDataHeaderSize;
 
     return 0;
