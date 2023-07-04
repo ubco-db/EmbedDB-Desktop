@@ -516,9 +516,6 @@ int8_t sbitsInitVarDataFromFile(sbitsState *state) {
         }
     }
 
-    printf("Count: %i\n", count);
-    printf("Have wrapped in memory: %i\n", haveWrappedInMemory);
-
     if (count == 0)
         return 0;
 
@@ -529,6 +526,7 @@ int8_t sbitsInitVarDataFromFile(sbitsState *state) {
         readVariablePage(state, physicalPageIDOfSmallestData);
         memcpy(&(state->minVarRecordId), (int8_t *)buffer + sizeof(id_t), state->keySize);
         memcpy(&minVarPageId, buffer, sizeof(id_t));
+        state->minVarRecordId++;
     }
 
     state->numAvailVarPages = state->numVarPages + minVarPageId - maxLogicaVariablePageId - 1;
