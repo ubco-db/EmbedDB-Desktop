@@ -67,7 +67,7 @@ sqlite_benchmark: $(BUILD_PATHS) $(PATHB)sqliteBenchmarking.$(TARGET_EXTENSION)
 	@echo "Finished running sqliteBenchmarking file"
 
 $(PATHB)sqliteBenchmarking.$(TARGET_EXTENSION): $(OBJECTS) $(PATHO)sqlite3.o $(SQLITE_BENCHMARK)
-	$(LINK) -o $@ $^ -lm -Isqlite
+	$(LINK) -o $@ $^ -lm
 
 test: $(BUILD_PATHS) $(RESULTS)
 	pip install -r requirements.txt -q
@@ -92,7 +92,7 @@ $(PATHO)%.o:: $(PATHSBITS)%.c
 	$(COMPILE) $(CFLAGS) $< -o $@ -lm
 
 $(PATHO)%.o:: $(PATHSQLITE)%.c
-	$(COMPILE) $(CFLAGS) $< -o $@ -lm -Isqlite
+	$(COMPILE) $(CFLAGS) $< -o $@ -lm
 
 $(PATHO)%.o:: $(PATHU)%.c $(PATHU)%.h
 	$(COMPILE) $(CFLAGS) $< -o $@ -lm
