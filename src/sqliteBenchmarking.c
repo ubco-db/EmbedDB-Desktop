@@ -10,7 +10,7 @@ int createTableIntBlob();
 int createTableIntIntIntInt();
 int setupDatabase();
 void dropDatabase();
-void printNumRecords();
+int getNumRecords();
 
 sqlite3 *db = NULL;
 
@@ -31,134 +31,44 @@ sqlite3 *db = NULL;
 #define RUN_TRANSACTION 1
 
 int main() {
-    ///////////
-    // Setup //
-    ///////////
+    int numRuns = 5;
 
-    setupDatabase();
-    createTableIntText();
+    clock_t timeInsertNTText[numRuns],
+        timeInsertNTBlob[numRuns],
+        timeInsertNTInt[numRuns],
+        timeInsertTText[numRuns],
+        timeInsertTBlob[numRuns],
+        timeInsertTInt[numRuns];
+    uint32_t numRecordsInsertNTText,
+        numRecordsInsertNTBlob,
+        numRecordsInsertNTInt,
+        numRecordsInsertTText,
+        numRecordsInsertTBlob,
+        numRecordsInsertTInt;
 
-    sqlite3_stmt *query = NULL;
-    int8_t recordSize = 16;
-    int8_t dataSize = 12;
-    int8_t keySize = 4;
+    for (int run = 0; run < numRuns; run++) {
+        ///////////
+        // Setup //
+        ///////////
 
-    ////////////////////////////////////////////////
-    // Insert uwa dataset no transaction int text //
-    ////////////////////////////////////////////////
-    printf("\nINSERT WITH NO TRANSACTION INT TEXT\n");
-    char const insert[] = "INSERT INTO keyValue VALUES (?, ?);";
-    int numRecords = 0;
-    FILE *dataset = fopen("data/uwa500K.bin", "rb");
-    char dataPage[512];
-
-    clock_t start = clock();
-    sqlite3_exec(db, "BEGIN TRANSACTION", NULL, NULL, NULL);
-    sqlite3_prepare_v2(db, insert, 36, &query, NULL);
-    while (fread(dataPage, 512, 1, dataset)) {
-        uint16_t count = *(uint16_t *)(dataPage + 4);
-        for (int record = 1; record <= count; record++) {
-            sqlite3_bind_int(query, 1, *(uint32_t *)(dataPage + record * recordSize));
-            sqlite3_bind_text(query, 2, (char *)(dataPage + record * recordSize + keySize), dataSize, SQLITE_STATIC);
-            sqlite3_step(query);
-            sqlite3_reset(query);
-            numRecords++;
-        }
-    }
-    sqlite3_finalize(query);
-    sqlite3_exec(db, "END TRANSACTION", NULL, NULL, NULL);
-    clock_t timeInsert = (clock() - start) / (CLOCKS_PER_SEC / 1000);
-
-    printNumRecords();
-    printf("Num Records inserted: %d\n", numRecords);
-    printf("Time: %dms\n", timeInsert);
-
-    dropDatabase();
-    db = NULL;
-    query = NULL;
-
-    ////////////////////////////////////////////////
-    // Insert uwa dataset no transaction int blob //
-    ////////////////////////////////////////////////
-    printf("\nINSERT WITH NO TRANSACTION INT BLOB\n");
-    setupDatabase();
-    createTableIntBlob();
-    numRecords = 0;
-    fseek(dataset, 0, SEEK_SET);
-
-    start = clock();
-    sqlite3_exec(db, "BEGIN TRANSACTION", NULL, NULL, NULL);
-    sqlite3_prepare_v2(db, insert, 36, &query, NULL);
-    while (fread(dataPage, 512, 1, dataset)) {
-        uint16_t count = *(uint16_t *)(dataPage + 4);
-        for (int record = 1; record <= count; record++) {
-            sqlite3_bind_int(query, 1, *(uint32_t *)(dataPage + record * recordSize));
-            sqlite3_bind_blob(query, 2, (void *)(dataPage + record * recordSize + keySize), dataSize, NULL);
-            sqlite3_step(query);
-            sqlite3_reset(query);
-            numRecords++;
-        }
-    }
-    sqlite3_finalize(query);
-    sqlite3_exec(db, "END TRANSACTION", NULL, NULL, NULL);
-    timeInsert = (clock() - start) / (CLOCKS_PER_SEC / 1000);
-
-    printNumRecords();
-    printf("Num Records inserted: %d\n", numRecords);
-    printf("Time: %dms\n", timeInsert);
-
-    dropDatabase();
-    db = NULL;
-    query = NULL;
-
-    ///////////////////////////////////////////////////////
-    // Insert uwa dataset no transaction int int int int //
-    ///////////////////////////////////////////////////////
-    printf("\nINSERT WITH NO TRANSACTION INT INT INT INT\n");
-    char const insertInts[] = "INSERT INTO keyValue VALUES (?, ?, ?, ?);";
-    setupDatabase();
-    createTableIntIntIntInt();
-    numRecords = 0;
-    fseek(dataset, 0, SEEK_SET);
-
-    start = clock();
-    sqlite3_exec(db, "BEGIN TRANSACTION", NULL, NULL, NULL);
-    sqlite3_prepare_v2(db, insertInts, 42, &query, NULL);
-    while (fread(dataPage, 512, 1, dataset)) {
-        uint16_t count = *(uint16_t *)(dataPage + 4);
-        for (int record = 1; record <= count; record++) {
-            sqlite3_bind_int(query, 1, *(uint32_t *)(dataPage + record * recordSize));
-            sqlite3_bind_int(query, 2, *(int32_t *)(dataPage + record * recordSize + keySize));
-            sqlite3_bind_int(query, 3, *(int32_t *)(dataPage + record * recordSize + keySize + 4));
-            sqlite3_bind_int(query, 4, *(int32_t *)(dataPage + record * recordSize + keySize + 8));
-            sqlite3_step(query);
-            sqlite3_reset(query);
-            numRecords++;
-        }
-    }
-    sqlite3_finalize(query);
-    sqlite3_exec(db, "END TRANSACTION", NULL, NULL, NULL);
-    timeInsert = (clock() - start) / (CLOCKS_PER_SEC / 1000);
-
-    printNumRecords();
-    printf("Num Records inserted: %d\n", numRecords);
-    printf("Time: %dms\n", timeInsert);
-
-    dropDatabase();
-    db = NULL;
-    query = NULL;
-
-    if (RUN_TRANSACTION == 1) {
-        //////////////////////////////////////////////////
-        // Insert uwa dataset with transaction int text //
-        //////////////////////////////////////////////////
         setupDatabase();
         createTableIntText();
-        printf("\nINSERT WITH TRANSACTION INT TEXT\n");
-        numRecords = 0;
-        fseek(dataset, 0, SEEK_SET);
 
-        start = clock();
+        sqlite3_stmt *query = NULL;
+        int8_t recordSize = 16;
+        int8_t dataSize = 12;
+        int8_t keySize = 4;
+
+        ////////////////////////////////////////////////
+        // Insert uwa dataset no transaction int text //
+        ////////////////////////////////////////////////
+        char const insert[] = "INSERT INTO keyValue VALUES (?, ?);";
+        FILE *dataset = fopen("data/uwa500K.bin", "rb");
+        char dataPage[512];
+
+        timeInsertNTText[run] = clock();
+
+        sqlite3_exec(db, "BEGIN TRANSACTION", NULL, NULL, NULL);
         sqlite3_prepare_v2(db, insert, 36, &query, NULL);
         while (fread(dataPage, 512, 1, dataset)) {
             uint16_t count = *(uint16_t *)(dataPage + 4);
@@ -167,30 +77,28 @@ int main() {
                 sqlite3_bind_text(query, 2, (char *)(dataPage + record * recordSize + keySize), dataSize, SQLITE_STATIC);
                 sqlite3_step(query);
                 sqlite3_reset(query);
-                numRecords++;
             }
         }
         sqlite3_finalize(query);
-        timeInsert = (clock() - start) / (CLOCKS_PER_SEC / 1000);
+        sqlite3_exec(db, "END TRANSACTION", NULL, NULL, NULL);
 
-        printNumRecords();
-        printf("Num Records inserted: %d\n", numRecords);
-        printf("Time: %dms\n", timeInsert);
+        timeInsertNTText[run] = (clock() - timeInsertNTText[run]) / (CLOCKS_PER_SEC / 1000);
+        numRecordsInsertNTText = getNumRecords();
 
         dropDatabase();
         db = NULL;
         query = NULL;
 
-        //////////////////////////////////////////////////
-        // Insert uwa dataset with transaction int blob //
-        //////////////////////////////////////////////////
-        printf("\nINSERT WITH TRANSACTION INT BLOB\n");
+        ////////////////////////////////////////////////
+        // Insert uwa dataset no transaction int blob //
+        ////////////////////////////////////////////////
         setupDatabase();
         createTableIntBlob();
-        numRecords = 0;
         fseek(dataset, 0, SEEK_SET);
 
-        start = clock();
+        timeInsertNTBlob[run] = clock();
+
+        sqlite3_exec(db, "BEGIN TRANSACTION", NULL, NULL, NULL);
         sqlite3_prepare_v2(db, insert, 36, &query, NULL);
         while (fread(dataPage, 512, 1, dataset)) {
             uint16_t count = *(uint16_t *)(dataPage + 4);
@@ -199,30 +107,29 @@ int main() {
                 sqlite3_bind_blob(query, 2, (void *)(dataPage + record * recordSize + keySize), dataSize, NULL);
                 sqlite3_step(query);
                 sqlite3_reset(query);
-                numRecords++;
             }
         }
         sqlite3_finalize(query);
-        timeInsert = (clock() - start) / (CLOCKS_PER_SEC / 1000);
+        sqlite3_exec(db, "END TRANSACTION", NULL, NULL, NULL);
 
-        printNumRecords();
-        printf("Num Records inserted: %d\n", numRecords);
-        printf("Time: %dms\n", timeInsert);
+        timeInsertNTBlob[run] = (clock() - timeInsertNTBlob[run]) / (CLOCKS_PER_SEC / 1000);
+        numRecordsInsertNTBlob = getNumRecords();
 
         dropDatabase();
         db = NULL;
         query = NULL;
 
-        /////////////////////////////////////////////////////////
-        // Insert uwa dataset with transaction int int int int //
-        /////////////////////////////////////////////////////////
-        printf("\nINSERT WITH TRANSACTION INT INT INT INT\n");
+        ///////////////////////////////////////////////////////
+        // Insert uwa dataset no transaction int int int int //
+        ///////////////////////////////////////////////////////
+        char const insertInts[] = "INSERT INTO keyValue VALUES (?, ?, ?, ?);";
         setupDatabase();
         createTableIntIntIntInt();
-        numRecords = 0;
         fseek(dataset, 0, SEEK_SET);
 
-        start = clock();
+        timeInsertNTInt[run] = clock();
+
+        sqlite3_exec(db, "BEGIN TRANSACTION", NULL, NULL, NULL);
         sqlite3_prepare_v2(db, insertInts, 42, &query, NULL);
         while (fread(dataPage, 512, 1, dataset)) {
             uint16_t count = *(uint16_t *)(dataPage + 4);
@@ -233,20 +140,171 @@ int main() {
                 sqlite3_bind_int(query, 4, *(int32_t *)(dataPage + record * recordSize + keySize + 8));
                 sqlite3_step(query);
                 sqlite3_reset(query);
-                numRecords++;
             }
         }
         sqlite3_finalize(query);
-        timeInsert = (clock() - start) / (CLOCKS_PER_SEC / 1000);
+        sqlite3_exec(db, "END TRANSACTION", NULL, NULL, NULL);
 
-        printNumRecords();
-        printf("Num Records inserted: %d\n", numRecords);
-        printf("Time: %dms\n", timeInsert);
+        timeInsertNTInt[run] = (clock() - timeInsertNTInt[run]) / (CLOCKS_PER_SEC / 1000);
+        numRecordsInsertNTInt = getNumRecords();
 
         dropDatabase();
         db = NULL;
         query = NULL;
+
+        if (RUN_TRANSACTION == 1) {
+            //////////////////////////////////////////////////
+            // Insert uwa dataset with transaction int text //
+            //////////////////////////////////////////////////
+            setupDatabase();
+            createTableIntText();
+            fseek(dataset, 0, SEEK_SET);
+
+            timeInsertTText[run] = clock();
+
+            sqlite3_prepare_v2(db, insert, 36, &query, NULL);
+            while (fread(dataPage, 512, 1, dataset)) {
+                uint16_t count = *(uint16_t *)(dataPage + 4);
+                for (int record = 1; record <= count; record++) {
+                    sqlite3_bind_int(query, 1, *(uint32_t *)(dataPage + record * recordSize));
+                    sqlite3_bind_text(query, 2, (char *)(dataPage + record * recordSize + keySize), dataSize, SQLITE_STATIC);
+                    sqlite3_step(query);
+                    sqlite3_reset(query);
+                }
+            }
+            sqlite3_finalize(query);
+
+            timeInsertTText[run] = (clock() - timeInsertTText[run]) / (CLOCKS_PER_SEC / 1000);
+            numRecordsInsertTText = getNumRecords();
+
+            dropDatabase();
+            db = NULL;
+            query = NULL;
+
+            //////////////////////////////////////////////////
+            // Insert uwa dataset with transaction int blob //
+            //////////////////////////////////////////////////
+            setupDatabase();
+            createTableIntBlob();
+            fseek(dataset, 0, SEEK_SET);
+
+            timeInsertTBlob[run] = clock();
+
+            sqlite3_prepare_v2(db, insert, 36, &query, NULL);
+            while (fread(dataPage, 512, 1, dataset)) {
+                uint16_t count = *(uint16_t *)(dataPage + 4);
+                for (int record = 1; record <= count; record++) {
+                    sqlite3_bind_int(query, 1, *(uint32_t *)(dataPage + record * recordSize));
+                    sqlite3_bind_blob(query, 2, (void *)(dataPage + record * recordSize + keySize), dataSize, NULL);
+                    sqlite3_step(query);
+                    sqlite3_reset(query);
+                }
+            }
+            sqlite3_finalize(query);
+
+            timeInsertTBlob[run] = (clock() - timeInsertTBlob[run]) / (CLOCKS_PER_SEC / 1000);
+            numRecordsInsertTBlob = getNumRecords();
+
+            dropDatabase();
+            db = NULL;
+            query = NULL;
+
+            /////////////////////////////////////////////////////////
+            // Insert uwa dataset with transaction int int int int //
+            /////////////////////////////////////////////////////////
+            setupDatabase();
+            createTableIntIntIntInt();
+            fseek(dataset, 0, SEEK_SET);
+
+            timeInsertTInt[run] = clock();
+
+            sqlite3_prepare_v2(db, insertInts, 42, &query, NULL);
+            while (fread(dataPage, 512, 1, dataset)) {
+                uint16_t count = *(uint16_t *)(dataPage + 4);
+                for (int record = 1; record <= count; record++) {
+                    sqlite3_bind_int(query, 1, *(uint32_t *)(dataPage + record * recordSize));
+                    sqlite3_bind_int(query, 2, *(int32_t *)(dataPage + record * recordSize + keySize));
+                    sqlite3_bind_int(query, 3, *(int32_t *)(dataPage + record * recordSize + keySize + 4));
+                    sqlite3_bind_int(query, 4, *(int32_t *)(dataPage + record * recordSize + keySize + 8));
+                    sqlite3_step(query);
+                    sqlite3_reset(query);
+                }
+            }
+            sqlite3_finalize(query);
+
+            timeInsertTInt[run] = (clock() - timeInsertTInt[run]) / (CLOCKS_PER_SEC / 1000);
+            numRecordsInsertTInt = getNumRecords();
+
+            dropDatabase();
+            db = NULL;
+            query = NULL;
+        }
     }
+
+    ///////////////////////////
+    // Print out the results //
+    ///////////////////////////
+    int sum = 0;
+    printf("\nINSERT WITHOUT TRANSACTION INT TEXT\n");
+    printf("Time: ");
+    for (int i = 0; i < numRuns; i++) {
+        printf("%d ", timeInsertNTText[i]);
+        sum += timeInsertNTText[i];
+    }
+    printf("~ %dms\n", sum / numRuns);
+    printf("Num Records inserted: %d\n", numRecordsInsertNTText);
+
+    sum = 0;
+    printf("\nINSERT WITHOUT TRANSACTION INT BLOB\n");
+    printf("Time: ");
+    for (int i = 0; i < numRuns; i++) {
+        printf("%d ", timeInsertNTBlob[i]);
+        sum += timeInsertNTBlob[i];
+    }
+    printf("~ %dms\n", sum / numRuns);
+    printf("Num Records inserted: %d\n", numRecordsInsertNTBlob);
+
+    sum = 0;
+    printf("\nINSERT WITHOUT TRANSACTION INT INT INT INT\n");
+    printf("Time: ");
+    for (int i = 0; i < numRuns; i++) {
+        printf("%d ", timeInsertNTInt[i]);
+        sum += timeInsertNTInt[i];
+    }
+    printf("~ %dms\n", sum / numRuns);
+    printf("Num Records inserted: %d\n", numRecordsInsertNTInt);
+
+    sum = 0;
+    printf("\nINSERT WITH TRANSACTION INT TEXT\n");
+    printf("Time: ");
+    for (int i = 0; i < numRuns; i++) {
+        printf("%d ", timeInsertTText[i]);
+        sum += timeInsertTText[i];
+    }
+    printf("~ %dms\n", sum / numRuns);
+    printf("Num Records inserted: %d\n", numRecordsInsertTText);
+
+    sum = 0;
+    printf("\nINSERT WITH TRANSACTION INT BLOB\n");
+    printf("Time: ");
+    for (int i = 0; i < numRuns; i++) {
+        printf("%d ", timeInsertTBlob[i]);
+        sum += timeInsertTBlob[i];
+    }
+    printf("~ %dms\n", sum / numRuns);
+    printf("Num Records inserted: %d\n", numRecordsInsertTBlob);
+
+    sum = 0;
+    printf("\nINSERT WITH TRANSACTION INT INT INT INT\n");
+    printf("Time: ");
+    for (int i = 0; i < numRuns; i++) {
+        printf("%d ", timeInsertTInt[i]);
+        sum += timeInsertTInt[i];
+    }
+    printf("~ %dms\n", sum / numRuns);
+    printf("Num Records inserted: %d\n", numRecordsInsertTInt);
+
+    return 0;
 }
 
 int createTableIntText() {
@@ -334,12 +392,12 @@ int setupDatabase() {
     return 0;
 }
 
-void printNumRecords() {
+int getNumRecords() {
     sqlite3_stmt *numRecords = NULL;
     sqlite3_prepare_v2(db, "SELECT COUNT(*) FROM keyValue;", -1, &numRecords, NULL);
     int result = sqlite3_step(numRecords);
     int num = sqlite3_column_int(numRecords, 0);
-    printf("Number of records: %i\n", num);
     sqlite3_step(numRecords);
     sqlite3_finalize(numRecords);
+    return num;
 }
