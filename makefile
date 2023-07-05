@@ -108,6 +108,7 @@ clean:
 	$(CLEANUP) $(PATHR)*.testpass
 	$(CLEANUP) $(PATHA)*.png
 	$(CLEANUP) $(PATHA)*.bin
+	$(CLEANUP) $(PATHA)*.db
 	$(CLEANUP) $(PATHR)*.xml
 
 .PRECIOUS: $(PATHB)Test%.$(TARGET_EXTENSION)
