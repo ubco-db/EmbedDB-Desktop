@@ -20,9 +20,11 @@ int main() {
         timeSelectDataSmallResult[numRuns],
         timeSelectDataLargeResult[numRuns],
         timeSelectDataRange[numRuns],
-        timeSelectKeyData[numRuns];
-    uint32_t numRecords, numRecordsSelectAll, numRecordsSelectKeySmallResult, numRecordsSelectKeyLargeResult, numRecordsSelectKeyRange, numRecordsSelectDataSmallResult, numRecordsSelectDataLargeResult, numRecordsSelectDataRange, numRecordsSelectKeyData;
-    uint32_t numWrites, numReadsSelectAll, numReadsSelectKeySmallResult, numReadsSelectKeyLargeResult, numReadsSelectKeyRange, numReadsSelectDataSmallResult, numReadsSelectDataLargeResult, numReadsSelectDataRange, numReadsSelectKeyData;
+        timeSelectKeyData[numRuns],
+        timeSeqKV[numRuns],
+        timeRandKV[numRuns];
+    uint32_t numRecords, numRecordsSelectAll, numRecordsSelectKeySmallResult, numRecordsSelectKeyLargeResult, numRecordsSelectKeyRange, numRecordsSelectDataSmallResult, numRecordsSelectDataLargeResult, numRecordsSelectDataRange, numRecordsSelectKeyData, numRecordsSeqKV, numRecordsRandKV;
+    uint32_t numWrites, numReadsSelectAll, numReadsSelectKeySmallResult, numReadsSelectKeyLargeResult, numReadsSelectKeyRange, numReadsSelectDataSmallResult, numReadsSelectDataLargeResult, numReadsSelectDataRange, numReadsSelectKeyData, numReadsSeqKV, numReadsRandKV;
     uint32_t numIdxWrites, numIdxReadsSelectDataSmallResult, numIdxReadsSelectDataLargeResult, numIdxReadsSelectDataRange, numIdxReadsSelectKeyData;
 
     for (int run = 0; run < numRuns; run++) {
@@ -56,13 +58,13 @@ int main() {
         ////////////////////////
         // Insert uwa dataset //
         ////////////////////////
+        FILE *dataset = fopen("data/uwa500K.bin", "rb");
         clock_t start = clock();
 
         numRecords = 0;
         uint32_t minKey = 946713600;
         uint32_t maxKey = 977144040;
 
-        FILE *dataset = fopen("data/uwa500K.bin", "rb");
         char dataPage[512];
         while (fread(dataPage, 512, 1, dataset)) {
             uint16_t count = *(uint16_t *)(dataPage + 4);
@@ -278,6 +280,51 @@ int main() {
         numReadsSelectKeyData = state->numReads - numReadsSelectKeyData;
         numIdxReadsSelectKeyData = state->numIdxReads - numIdxReadsSelectKeyData;
 
+        //////////////////////////
+        // Sequential Key-Value //
+        //////////////////////////
+        fseek(dataset, 0, SEEK_SET);
+        start = clock();
+
+        numRecordsSeqKV = 0;
+        numReadsSeqKV = state->numReads;
+
+        while (fread(dataPage, 512, 1, dataset)) {
+            uint16_t count = *(uint16_t *)(dataPage + 4);
+            for (int record = 1; record <= count; record++) {
+                sbitsGet(state, dataPage + record * state->recordSize, recordBuffer);
+                numRecordsSeqKV++;
+            }
+        }
+
+        timeSeqKV[run] = (clock() - start) / (CLOCKS_PER_SEC / 1000);
+        numReadsSeqKV = state->numReads - numReadsSeqKV;
+
+        fclose(dataset);
+
+        //////////////////////
+        // Random Key-Value //
+        //////////////////////
+        FILE *randomDataset = fopen("data/uwa500K_randomized.bin", "rb");
+
+        start = clock();
+
+        numRecordsRandKV = 0;
+        numReadsRandKV = state->numReads;
+
+        while (fread(dataPage, 512, 1, randomDataset)) {
+            uint16_t count = *(uint16_t *)(dataPage + 4);
+            for (int record = 1; record <= count; record++) {
+                sbitsGet(state, dataPage + record * state->recordSize, recordBuffer);
+                numRecordsRandKV++;
+            }
+        }
+
+        timeRandKV[run] = (clock() - start) / (CLOCKS_PER_SEC / 1000);
+        numReadsRandKV = state->numReads - numReadsRandKV;
+
+        fclose(randomDataset);
+
         /////////////////
         // Close SBITS //
         /////////////////
@@ -293,12 +340,12 @@ int main() {
     int sum = 0;
     printf("\nINSERT\n");
     printf("Time: ");
-    printf("Num Records inserted: %d\n", numRecords);
     for (int i = 0; i < numRuns; i++) {
         printf("%d ", timeInsert[i]);
         sum += timeInsert[i];
     }
     printf("~ %dms\n", sum / numRuns);
+    printf("Num Records inserted: %d\n", numRecords);
     printf("Num data pages written: %d\n", numWrites);
     printf("Num index pages written: %d\n", numIdxWrites);
 
@@ -382,6 +429,28 @@ int main() {
     printf("Result size: %d\n", numRecordsSelectKeyData);
     printf("Num reads: %d\n", numReadsSelectKeyData);
     printf("Num idx reads: %d\n", numIdxReadsSelectKeyData);
+
+    sum = 0;
+    printf("\nSequential Key-Value\n");
+    printf("Time: ");
+    for (int i = 0; i < numRuns; i++) {
+        printf("%d ", timeSeqKV[i]);
+        sum += timeSeqKV[i];
+    }
+    printf("~ %dms\n", sum / numRuns);
+    printf("Result size: %d\n", numRecordsSeqKV);
+    printf("Num reads: %d\n", numReadsSeqKV);
+
+    sum = 0;
+    printf("\nRandom Key-Value\n");
+    printf("Time: ");
+    for (int i = 0; i < numRuns; i++) {
+        printf("%d ", timeRandKV[i]);
+        sum += timeRandKV[i];
+    }
+    printf("~ %dms\n", sum / numRuns);
+    printf("Result size: %d\n", numRecordsRandKV);
+    printf("Num reads: %d\n", numReadsRandKV);
 
     return 0;
 }
