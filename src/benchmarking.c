@@ -14,103 +14,65 @@ void testRawPerformance() { /* Tests storage raw read and write performance */
     printf("Starting RAW performance test.\n");
 
     char buffer[512];
-    unsigned long startMillis;
+    clock_t start;
     /* SD Card */
-    FILE *fp = fopen("myfile.bin", "w+b");
+    FILE *fp = fopen("build/artifacts/myfile.bin", "w+b");
     if (fp == NULL) {
         printf("Error opening file.\n");
         return;
     }
 
     // Test time to write 1000 blocks
-    startMillis = millis();
+    int numWrites = 100000;
+    start = clock();
 
-    for (int i = 0; i < 1000; i++) {
+    for (int i = 0; i < numWrites; i++) {
         if (0 == fwrite(buffer, 512, 1, fp)) {
             printf("Write error.\n");
         }
     }
-    printf("Write time: %lu\n", millis() - startMillis);
+    printf("Write time: %lums (%.2f B/ms)\n", (clock() - start) / (CLOCKS_PER_SEC / 1000), (float)numWrites / ((clock() - start) / (CLOCKS_PER_SEC / 1000)));
     fflush(fp);
 
-    startMillis = millis();
+    start = clock();
 
-    for (int i = 0; i < 1000; i++) {
-        unsigned long num = rand() % 1000;
+    for (int i = 0; i < numWrites; i++) {
+        unsigned long num = rand() % numWrites;
         fseek(fp, num * 512, SEEK_SET);
         if (0 == fwrite(buffer, 512, 1, fp)) {
             printf("Write error.\n");
         }
     }
-    printf("Random write time: %lu\n", millis() - startMillis);
+    printf("Random write time: %lums (%.2f B/ms)\n", (clock() - start) / (CLOCKS_PER_SEC / 1000), (float)numWrites / ((clock() - start) / (CLOCKS_PER_SEC / 1000)));
     fflush(fp);
 
     // Time to read 1000 blocks
     fseek(fp, 0, SEEK_SET);
-    startMillis = millis();
-    for (int i = 0; i < 1000; i++) {
+    start = clock();
+    for (int i = 0; i < numWrites; i++) {
         if (0 == fread(buffer, 512, 1, fp)) {
             printf("Read error.\n");
         }
     }
-    printf("Read time: %lu\n", millis() - startMillis);
+    printf("Read time: %lums (%.2f B/ms)\n", (clock() - start) / (CLOCKS_PER_SEC / 1000), (float)numWrites / ((clock() - start) / (CLOCKS_PER_SEC / 1000)));
 
     fseek(fp, 0, SEEK_SET);
     // Time to read 1000 blocks randomly
-    startMillis = millis();
+    start = clock();
     srand(1);
-    for (int i = 0; i < 1000; i++) {
-        unsigned long num = rand() % 1000;
+    for (int i = 0; i < numWrites; i++) {
+        unsigned long num = rand() % numWrites;
         fseek(fp, num * 512, SEEK_SET);
         if (0 == fread(buffer, 512, 1, fp)) {
             printf("Read error.\n");
         }
     }
-    printf("Random Read time: %lu\n", millis() - startMillis);
-
-    /* Data flash storage */
-    startMillis = millis();
-
-    for (int i = 0; i < 1000; i++) {
-        if (0 == dfwrite(i, buffer, 512)) {
-            printf("Write error.\n");
-        }
-    }
-    printf("Write time: %lu\n", millis() - startMillis);
-
-    startMillis = millis();
-
-    for (int i = 0; i < 1000; i++) {
-        unsigned long num = rand() % 1000;
-        if (0 == dfwrite(num, buffer, 512)) {
-            printf("Write error.\n");
-        }
-    }
-    printf("Random write time: %lu\n", millis() - startMillis);
-
-    // Time to read 1000 blocks
-    startMillis = millis();
-    for (int i = 0; i < 1000; i++) {
-        if (0 == dfread(i, buffer, 512)) {
-            printf("Read error.\n");
-        }
-    }
-    printf("Read time: %lu\n", millis() - startMillis);
-
-    // Time to read 1000 blocks randomly
-    startMillis = millis();
-    srand(1);
-    for (int i = 0; i < 1000; i++) {
-        unsigned long num = rand() % 1000;
-        if (0 == dfread(num, buffer, 512)) {
-            printf("Read error.\n");
-        }
-    }
-    printf("Random Read time: %lu\n", millis() - startMillis);
+    printf("Random Read time: %lums (%.2f B/ms)\n", (clock() - start) / (CLOCKS_PER_SEC / 1000), (float)numWrites / ((clock() - start) / (CLOCKS_PER_SEC / 1000)));
 }
 
 int main() {
     testRawPerformance();
+    return 0;
 
     int numRuns = 50;
     clock_t timeInsert[numRuns],
