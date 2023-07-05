@@ -68,7 +68,7 @@ sqlite_benchmark: $(BUILD_PATHS) $(PATHB)sqliteBenchmarking.$(TARGET_EXTENSION)
 	@echo "Finished running sqliteBenchmarking file"
 
 $(PATHB)sqliteBenchmarking.$(TARGET_EXTENSION): $(OBJECTS) $(PATHO)sqlite3.o $(SQLITE_BENCHMARK)
-	$(LINK) -o $@ $^ -lm
+	$(LINK) -o $@ $^ -lm -ldl -lpthread
 
 sbits_benchmark: $(BUILD_PATHS) $(PATHB)benchmarking.$(TARGET_EXTENSION)
 	@echo "Running benchmark"
@@ -101,7 +101,7 @@ $(PATHO)%.o:: $(PATHSBITS)%.c
 	$(COMPILE) $(CFLAGS) $< -o $@ -lm
 
 $(PATHO)%.o:: $(PATHSQLITE)%.c
-	$(COMPILE) $(CFLAGS) $< -o $@ -lm -ldl
+	$(COMPILE) $(CFLAGS) $< -o $@ -lm
 
 $(PATHO)%.o:: $(PATHU)%.c $(PATHU)%.h
 	$(COMPILE) $(CFLAGS) $< -o $@ -lm
