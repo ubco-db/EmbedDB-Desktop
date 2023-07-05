@@ -23,7 +23,7 @@ void testRawPerformance() { /* Tests storage raw read and write performance */
     }
 
     // Test time to write 1000 blocks
-    int numWrites = 100000;
+    int numWrites = 1000000;
     start = clock();
 
     for (int i = 0; i < numWrites; i++) {
@@ -31,7 +31,7 @@ void testRawPerformance() { /* Tests storage raw read and write performance */
             printf("Write error.\n");
         }
     }
-    printf("Write time: %lums (%.2f B/ms)\n", (clock() - start) / (CLOCKS_PER_SEC / 1000), (float)numWrites / ((clock() - start) / (CLOCKS_PER_SEC / 1000)));
+    printf("Write time: %lums (%.2f MB/s)\n", (clock() - start) / (CLOCKS_PER_SEC / 1000), (double)numWrites * 512 / 1000000 / ((clock() - start) / (CLOCKS_PER_SEC / 1000)) * 1000);
     fflush(fp);
 
     start = clock();
@@ -43,7 +43,7 @@ void testRawPerformance() { /* Tests storage raw read and write performance */
             printf("Write error.\n");
         }
     }
-    printf("Random write time: %lums (%.2f B/ms)\n", (clock() - start) / (CLOCKS_PER_SEC / 1000), (float)numWrites / ((clock() - start) / (CLOCKS_PER_SEC / 1000)));
+    printf("Random write time: %lums (%.2f MB/s)\n", (clock() - start) / (CLOCKS_PER_SEC / 1000), (double)numWrites * 512 / 1000000 / ((clock() - start) / (CLOCKS_PER_SEC / 1000)) * 1000);
     fflush(fp);
 
     // Time to read 1000 blocks
@@ -54,7 +54,7 @@ void testRawPerformance() { /* Tests storage raw read and write performance */
             printf("Read error.\n");
         }
     }
-    printf("Read time: %lums (%.2f B/ms)\n", (clock() - start) / (CLOCKS_PER_SEC / 1000), (float)numWrites / ((clock() - start) / (CLOCKS_PER_SEC / 1000)));
+    printf("Read time: %lums (%.2f MB/s)\n", (clock() - start) / (CLOCKS_PER_SEC / 1000), (double)numWrites * 512 / 1000000 / ((clock() - start) / (CLOCKS_PER_SEC / 1000)) * 1000);
 
     fseek(fp, 0, SEEK_SET);
     // Time to read 1000 blocks randomly
@@ -67,28 +67,27 @@ void testRawPerformance() { /* Tests storage raw read and write performance */
             printf("Read error.\n");
         }
     }
-    printf("Random Read time: %lums (%.2f B/ms)\n", (clock() - start) / (CLOCKS_PER_SEC / 1000), (float)numWrites / ((clock() - start) / (CLOCKS_PER_SEC / 1000)));
+    printf("Random Read time: %lums (%.2f MB/s)\n", (clock() - start) / (CLOCKS_PER_SEC / 1000), (double)numWrites * 512 / 1000000 / ((clock() - start) / (CLOCKS_PER_SEC / 1000)) * 1000);
 }
 
 int main() {
+    printf("\n");
     testRawPerformance();
-    return 0;
+    printf("\n");
 
     int numRuns = 50;
     clock_t timeInsert[numRuns],
         timeSelectAll[numRuns],
         timeSelectKeySmallResult[numRuns],
         timeSelectKeyLargeResult[numRuns],
-        timeSelectKeyRange[numRuns],
         timeSelectDataSmallResult[numRuns],
         timeSelectDataLargeResult[numRuns],
-        timeSelectDataRange[numRuns],
         timeSelectKeyData[numRuns],
         timeSeqKV[numRuns],
         timeRandKV[numRuns];
-    uint32_t numRecords, numRecordsSelectAll, numRecordsSelectKeySmallResult, numRecordsSelectKeyLargeResult, numRecordsSelectKeyRange, numRecordsSelectDataSmallResult, numRecordsSelectDataLargeResult, numRecordsSelectDataRange, numRecordsSelectKeyData, numRecordsSeqKV, numRecordsRandKV;
-    uint32_t numWrites, numReadsSelectAll, numReadsSelectKeySmallResult, numReadsSelectKeyLargeResult, numReadsSelectKeyRange, numReadsSelectDataSmallResult, numReadsSelectDataLargeResult, numReadsSelectDataRange, numReadsSelectKeyData, numReadsSeqKV, numReadsRandKV;
-    uint32_t numIdxWrites, numIdxReadsSelectDataSmallResult, numIdxReadsSelectDataLargeResult, numIdxReadsSelectDataRange, numIdxReadsSelectKeyData;
+    uint32_t numRecords, numRecordsSelectAll, numRecordsSelectKeySmallResult, numRecordsSelectKeyLargeResult, numRecordsSelectDataSmallResult, numRecordsSelectDataLargeResult, numRecordsSelectKeyData, numRecordsSeqKV, numRecordsRandKV;
+    uint32_t numWrites, numReadsSelectAll, numReadsSelectKeySmallResult, numReadsSelectKeyLargeResult, numReadsSelectDataSmallResult, numReadsSelectDataLargeResult, numReadsSelectKeyData, numReadsSeqKV, numReadsRandKV;
+    uint32_t numIdxWrites, numIdxReadsSelectDataSmallResult, numIdxReadsSelectDataLargeResult, numIdxReadsSelectKeyData;
 
     for (int run = 0; run < numRuns; run++) {
         ///////////
@@ -213,31 +212,6 @@ int main() {
 
         numReadsSelectKeyLargeResult = state->numReads - numReadsSelectKeyLargeResult;
 
-        //////////////////////////
-        // SELECT range of keys //
-        //////////////////////////
-        start = clock();
-
-        sbitsIterator itSelectKeyRange;
-        uint32_t minKeySelectKeyRange = minKey + (maxKey - minKey) * 0.15;
-        uint32_t maxKeySelectKeyRange = minKey + (maxKey - minKey) * 0.85;
-        itSelectKeyRange.minKey = &minKeySelectKeyRange;
-        itSelectKeyRange.maxKey = &maxKeySelectKeyRange;
-        itSelectKeyRange.minData = NULL;
-        itSelectKeyRange.maxData = NULL;
-        sbitsInitIterator(state, &itSelectKeyRange);
-
-        numRecordsSelectKeyRange = 0;
-        numReadsSelectKeyRange = state->numReads;
-
-        while (sbitsNext(state, &itSelectKeyRange, recordBuffer, recordBuffer + state->keySize)) {
-            numRecordsSelectKeyRange++;
-        }
-
-        timeSelectKeyRange[run] = (clock() - start) / (CLOCKS_PER_SEC / 1000);
-
-        numReadsSelectKeyRange = state->numReads - numReadsSelectKeyRange;
-
         //////////////////////////////////
         // SELECT by data, small result //
         //////////////////////////////////
@@ -289,32 +263,6 @@ int main() {
 
         numReadsSelectDataLargeResult = state->numReads - numReadsSelectDataLargeResult;
         numIdxReadsSelectDataLargeResult = state->numIdxReads - numIdxReadsSelectDataLargeResult;
-
-        ///////////////////////
-        // SELECT data range //
-        ///////////////////////
-        start = clock();
-
-        sbitsIterator itSelectDataRange;
-        int32_t minDataSelectDataRange = 420, maxDataSelectDataRange = 620;
-        itSelectDataRange.minKey = NULL;
-        itSelectDataRange.maxKey = NULL;
-        itSelectDataRange.minData = &minDataSelectDataRange;
-        itSelectDataRange.maxData = &maxDataSelectDataRange;
-        sbitsInitIterator(state, &itSelectDataRange);
-
-        numRecordsSelectDataRange = 0;
-        numReadsSelectDataRange = state->numReads;
-        numIdxReadsSelectDataRange = state->numIdxReads;
-
-        while (sbitsNext(state, &itSelectDataRange, recordBuffer, recordBuffer + state->keySize)) {
-            numRecordsSelectDataRange++;
-        }
-
-        timeSelectDataRange[run] = (clock() - start) / (CLOCKS_PER_SEC / 1000);
-
-        numReadsSelectDataRange = state->numReads - numReadsSelectDataRange;
-        numIdxReadsSelectDataRange = state->numIdxReads - numIdxReadsSelectDataRange;
 
         /////////////////////////////////
         // SELECT on both key and data //
@@ -468,18 +416,6 @@ int main() {
     printf("Result size: %d\n", numRecordsSelectDataLargeResult);
     printf("Num reads: %d\n", numReadsSelectDataLargeResult);
     printf("Num idx reads: %d\n", numIdxReadsSelectDataLargeResult);
-
-    sum = 0;
-    printf("\nSELECT by data range\n");
-    printf("Time: ");
-    for (int i = 0; i < numRuns; i++) {
-        printf("%d ", timeSelectDataRange[i]);
-        sum += timeSelectDataRange[i];
-    }
-    printf("~ %dms\n", sum / numRuns);
-    printf("Result size: %d\n", numRecordsSelectDataRange);
-    printf("Num reads: %d\n", numReadsSelectDataRange);
-    printf("Num idx reads: %d\n", numIdxReadsSelectDataRange);
 
     sum = 0;
     printf("\nSELECT by key and data\n");
