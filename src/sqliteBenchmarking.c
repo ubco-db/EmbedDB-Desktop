@@ -19,7 +19,7 @@ sqlite3 *db = NULL;
  * 1: WAL
  * 2: MEOMRY
  */
-#define LOG_TYPE 0
+#define LOG_TYPE 1
 
 /*
  * 0: Default
