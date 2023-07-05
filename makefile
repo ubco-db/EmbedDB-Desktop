@@ -20,6 +20,7 @@ PATHU = Unity/src/
 PATHS = src/
 PATHSBITS = src/sbits/
 PATHSPLINE = src/spline/
+PATHSQLITE = sqlite/
 PATHT = test/
 PATHB = build/
 PATHD = build/depends/
@@ -35,6 +36,7 @@ SRCT = $(wildcard $(PATHT)*.c)
 
 VARTEST = $(PATHO)varTest.o
 TEST_SBITS = $(PATHO)test_sbits.o
+SQLITE_BENCHMARK = $(PATHO)sqliteBenchmarking.o
 
 COMPILE=gcc -c
 LINK=gcc
@@ -59,6 +61,14 @@ test_sbits: $(BUILD_PATHS) $(PATHB)test_sbits.$(TARGET_EXTENSION)
 $(PATHB)test_sbits.$(TARGET_EXTENSION): $(OBJECTS) $(TEST_SBITS)
 	$(LINK) -o $@ $^ -lm
 
+sqlite_benchmark: $(BUILD_PATHS) $(PATHB)sqliteBenchmarking.$(TARGET_EXTENSION)
+	@echo "Running sqlite benchmark"
+	-./$(PATHB)sqliteBenchmarking.$(TARGET_EXTENSION)
+	@echo "Finished running sqliteBenchmarking file"
+
+$(PATHB)sqliteBenchmarking.$(TARGET_EXTENSION): $(OBJECTS) $(PATHO)sqlite3.o $(SQLITE_BENCHMARK)
+	$(LINK) -o $@ $^ -lm
+
 test: $(BUILD_PATHS) $(RESULTS)
 	pip install -r requirements.txt -q
 	python ./scripts/stylize_as_junit.py
@@ -80,6 +90,10 @@ $(PATHO)%.o:: $(PATHSPLINE)%.c
 
 $(PATHO)%.o:: $(PATHSBITS)%.c
 	$(COMPILE) $(CFLAGS) $< -o $@ -lm
+
+$(PATHO)%.o:: $(PATHSQLITE)%.c
+	$(COMPILE) $(CFLAGS) $< -o $@ -lm
+
 
 $(PATHO)%.o:: $(PATHU)%.c $(PATHU)%.h
 	$(COMPILE) $(CFLAGS) $< -o $@ -lm
