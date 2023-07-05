@@ -1106,8 +1106,14 @@ int8_t sbitsGet(sbitsState *state, void *key, void *data) {
         splineFind(state->spl, key, state->compareKey, &location, &lowbound, &highbound);
     }
 
-    if (linearSearch(state, &numReads, buf, key, location, lowbound, highbound) == -1) {
-        return -1;
+    // Check if the currently buffered page is the correct one
+    if (!(lowbound <= state->bufferedPageId &&
+          highbound >= state->bufferedPageId &&
+          state->compareKey(sbitsGetMinKey(state, buf), key) <= 0 &&
+          state->compareKey(sbitsGetMaxKey(state, buf), key) >= 0)) {
+        if (linearSearch(state, &numReads, buf, key, location, lowbound, highbound) == -1) {
+            return -1;
+        }
     }
 
 #endif
