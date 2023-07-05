@@ -6,4 +6,3 @@ varFile.bin
 .vscode/
 build/
 result.xml
-sqlite/
