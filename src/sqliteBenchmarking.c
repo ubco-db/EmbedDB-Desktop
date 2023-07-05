@@ -137,7 +137,7 @@ int main() {
     //////////////////////////////////////////////////
     setupDatabase();
     createTableIntText();
-    printf("\nINSERT WITH TRANSACTION\n");
+    printf("\nINSERT WITH TRANSACTION INT TEXT\n");
     numRecords = 0;
     fseek(dataset, 0, SEEK_SET);
 
@@ -167,7 +167,7 @@ int main() {
     ////////////////////////////////////////////////
     // Insert uwa dataset no transaction int blob //
     ////////////////////////////////////////////////
-    printf("\nINSERT WITH NO TRANSACTION INT BLOB\n");
+    printf("\nINSERT WITH TRANSACTION INT BLOB\n");
     setupDatabase();
     createTableIntBlob();
     numRecords = 0;
@@ -199,8 +199,7 @@ int main() {
     ///////////////////////////////////////////////////////
     // Insert uwa dataset no transaction int int int int //
     ///////////////////////////////////////////////////////
-    printf("\nINSERT WITH NO TRANSACTION INT INT INT INT\n");
-    char const insertInts[] = "INSERT INTO keyValue VALUES (?, ?, ?, ?);";
+    printf("\nINSERT WITH TRANSACTION INT INT INT INT\n");
     setupDatabase();
     createTableIntIntIntInt();
     numRecords = 0;
