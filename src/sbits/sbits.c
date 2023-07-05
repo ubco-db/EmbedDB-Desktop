@@ -325,33 +325,34 @@ int8_t sbitsInitDataFromFile(sbitsState *state) {
         }
     }
 
-    if (count > 0) {
-        state->nextDataPageId = maxLogicalPageId + 1;
-        state->minDataPageId = 0;
-        id_t physicalPageIDOfSmallestData = 0;
-        if (haveWrappedInMemory) {
-            physicalPageIDOfSmallestData = logicalPageId % state->numDataPages;
-        }
-        readPage(state, physicalPageIDOfSmallestData);
-        memcpy(&(state->minDataPageId), buffer, sizeof(id_t));
-        state->numAvailDataPages = state->numDataPages + state->minDataPageId - maxLogicalPageId - 1;
-        if (state->keySize <= 4) {
-            uint32_t minKey = 0;
-            memcpy(&minKey, sbitsGetMinKey(state, buffer), state->keySize);
-            state->minKey = minKey;
-        } else {
-            uint64_t minKey = 0;
-            memcpy(&minKey, sbitsGetMinKey(state, buffer), state->keySize);
-            state->minKey = minKey;
-        }
+    if (count == 0)
+        return 0;
 
-        /* Put largest key back into the buffer */
-        readPage(state, state->nextDataPageId - 1);
+    state->nextDataPageId = maxLogicalPageId + 1;
+    state->minDataPageId = 0;
+    id_t physicalPageIDOfSmallestData = 0;
+    if (haveWrappedInMemory) {
+        physicalPageIDOfSmallestData = logicalPageId % state->numDataPages;
+    }
+    readPage(state, physicalPageIDOfSmallestData);
+    memcpy(&(state->minDataPageId), buffer, sizeof(id_t));
+    state->numAvailDataPages = state->numDataPages + state->minDataPageId - maxLogicalPageId - 1;
+    if (state->keySize <= 4) {
+        uint32_t minKey = 0;
+        memcpy(&minKey, sbitsGetMinKey(state, buffer), state->keySize);
+        state->minKey = minKey;
+    } else {
+        uint64_t minKey = 0;
+        memcpy(&minKey, sbitsGetMinKey(state, buffer), state->keySize);
+        state->minKey = minKey;
+    }
 
-        updateAverageKeyDifference(state, buffer);
-        if (SEARCH_METHOD == 2) {
-            sbitsInitSplineFromFile(state);
-        }
+    /* Put largest key back into the buffer */
+    readPage(state, state->nextDataPageId - 1);
+
+    updateAverageKeyDifference(state, buffer);
+    if (SEARCH_METHOD == 2) {
+        sbitsInitSplineFromFile(state);
     }
 
     return 0;
@@ -424,7 +425,7 @@ int8_t sbitsInitIndex(sbitsState *state) {
 }
 
 int8_t sbitsInitIndexFromFile(sbitsState *state) {
-    printf("Attempt to initialize from existing index file\n");
+    printf("Attempting to initialize from existing index file\n");
 
     id_t logicalIndexPageId = 0;
     id_t maxLogicaIndexPageId = 0;
@@ -450,19 +451,17 @@ int8_t sbitsInitIndexFromFile(sbitsState *state) {
         }
     }
 
-    if (count > 0) {
-        state->nextIdxPageId = maxLogicaIndexPageId + 1;
-        state->minIndexPageId = 0;
+    if (count == 0)
+        return 0;
 
-        id_t physicalPageIDOfSmallestData = 0;
-        if (haveWrappedInMemory) {
-            physicalPageIDOfSmallestData = logicalIndexPageId % state->numIndexPages;
-        }
-
-        readIndexPage(state, physicalPageIDOfSmallestData);
-        memcpy(&(state->minIndexPageId), buffer, sizeof(id_t));
-        state->numAvailIndexPages = state->numIndexPages + state->minIndexPageId - maxLogicaIndexPageId - 1;
+    state->nextIdxPageId = maxLogicaIndexPageId + 1;
+    id_t physicalPageIDOfSmallestData = 0;
+    if (haveWrappedInMemory) {
+        physicalPageIDOfSmallestData = logicalIndexPageId % state->numIndexPages;
     }
+    readIndexPage(state, physicalPageIDOfSmallestData);
+    memcpy(&(state->minIndexPageId), buffer, sizeof(id_t));
+    state->numAvailIndexPages = state->numIndexPages + state->minIndexPageId - maxLogicaIndexPageId - 1;
 
     return 0;
 }
@@ -479,7 +478,7 @@ int8_t sbitsInitVarData(sbitsState *state) {
 
     if (!SBITS_RESETING_DATA(state->parameters)) {
         int8_t openResult = state->fileInterface->open(state->varFile, SBITS_FILE_MODE_R_PLUS_B);
-        if (openResult & 0) {
+        if (openResult) {
             return sbitsInitVarDataFromFile(state);
         }
         printf("Unable to open variable data file. Attempting to initialize a new one.\n");
@@ -496,6 +495,43 @@ int8_t sbitsInitVarData(sbitsState *state) {
 }
 
 int8_t sbitsInitVarDataFromFile(sbitsState *state) {
+    printf("Attempting to initialize from existing variable data file.\n");
+    void *buffer = (int8_t *)state->buffer + state->pageSize * SBITS_VAR_READ_BUFFER(state->parameters);
+    id_t logicalVariablePageId = 0;
+    id_t maxLogicalVariablePageId = 0;
+    id_t physicalVariablePageId = 0;
+    int8_t moreToRead = !(readVariablePage(state, physicalVariablePageId));
+    uint32_t count = 0;
+    bool haveWrappedInMemory = false;
+    while (moreToRead && count < state->numVarPages) {
+        memcpy(&logicalVariablePageId, buffer, sizeof(id_t));
+        if (count == 0 || logicalVariablePageId == maxLogicalVariablePageId + 1) {
+            maxLogicalVariablePageId = logicalVariablePageId;
+            physicalVariablePageId++;
+            moreToRead = !(readVariablePage(state, physicalVariablePageId));
+            count++;
+        } else {
+            haveWrappedInMemory = logicalVariablePageId == maxLogicalVariablePageId - state->numVarPages + 1;
+            break;
+        }
+    }
+
+    if (count == 0)
+        return 0;
+
+    state->nextVarPageId = maxLogicalVariablePageId + 1;
+    id_t minVarPageId = 0;
+    if (haveWrappedInMemory) {
+        id_t physicalPageIDOfSmallestData = logicalVariablePageId % state->numVarPages;
+        readVariablePage(state, physicalPageIDOfSmallestData);
+        memcpy(&(state->minVarRecordId), (int8_t *)buffer + sizeof(id_t), state->keySize);
+        memcpy(&minVarPageId, buffer, sizeof(id_t));
+        state->minVarRecordId++;
+    }
+
+    state->numAvailVarPages = state->numVarPages + minVarPageId - maxLogicalVariablePageId - 1;
+    state->currentVarLoc = state->nextVarPageId % state->numVarPages * state->pageSize + state->variableDataHeaderSize;
+
     return 0;
 }
 
@@ -786,69 +822,73 @@ void updateAverageKeyDifference(sbitsState *state, void *buffer) {
  * @return	Return 0 if success. Non-zero value if error.
  */
 int8_t sbitsPutVar(sbitsState *state, void *key, void *data, void *variableData, uint32_t length) {
-    if (SBITS_USING_VDATA(state->parameters)) {
-        // Insert their data
-        if (variableData != NULL) {
-            // Check that there is enough space remaining in this page to start the insert of the variable data here
-            void *buf = (int8_t *)state->buffer + state->pageSize * (SBITS_VAR_WRITE_BUFFER(state->parameters));
-            if (state->currentVarLoc % state->pageSize > state->pageSize - 4) {
-                writeVariablePage(state, buf);
-                initBufferPage(state, SBITS_VAR_WRITE_BUFFER(state->parameters));
-                // Move data writing location to the beginning of the next page, leaving the room for the header
-                state->currentVarLoc += state->pageSize - state->currentVarLoc % state->pageSize + state->variableDataHeaderSize;
-            }
-
-            // Perform the regular insert
-            state->recordHasVarData = 1;
-            int8_t r;
-            if ((r = sbitsPut(state, key, data)) != 0) {
-                return r;
-            }
-
-            // Update the header to include the maximum key value stored on this page
-            memcpy((int8_t *)buf + sizeof(id_t), key, state->keySize);
-
-            // Write the length of the data item into the buffer
-            memcpy((uint8_t *)buf + state->currentVarLoc % state->pageSize, &length, sizeof(uint32_t));
-            state->currentVarLoc += 4;
-
-            // Check if we need to write after doing that
-            if (state->currentVarLoc % state->pageSize == 0) {
-                writeVariablePage(state, buf);
-                initBufferPage(state, SBITS_VAR_WRITE_BUFFER(state->parameters));
-
-                // Update the header to include the maximum key value stored on this page
-                memcpy((int8_t *)buf + sizeof(id_t), key, state->keySize);
-                state->currentVarLoc += state->variableDataHeaderSize;
-            }
-
-            int amtWritten = 0;
-            while (length > 0) {
-                // Copy data into the buffer. Write the min of the space left in this page and the remaining length of the data
-                uint16_t amtToWrite = min(state->pageSize - state->currentVarLoc % state->pageSize, length);
-                memcpy((uint8_t *)buf + (state->currentVarLoc % state->pageSize), (uint8_t *)variableData + amtWritten, amtToWrite);
-                length -= amtToWrite;
-                amtWritten += amtToWrite;
-                state->currentVarLoc += amtToWrite;
-
-                // If we need to write the buffer to file
-                if (state->currentVarLoc % state->pageSize == 0) {
-                    writeVariablePage(state, buf);
-                    initBufferPage(state, SBITS_VAR_WRITE_BUFFER(state->parameters));
-
-                    // Update the header to include the maximum key value stored on this page and account for page number
-                    memcpy((int8_t *)buf + sizeof(id_t), key, state->keySize);
-                    state->currentVarLoc += state->variableDataHeaderSize;
-                }
-            }
-        } else {
-            // Var data enabled, but not provided
-            state->recordHasVarData = 0;
-            return sbitsPut(state, key, data);
-        }
-    } else {
+    if (!SBITS_USING_VDATA(state->parameters)) {
         printf("Error: Can't insert variable data because it is not enabled\n");
         return -1;
+    }
+
+    // Insert their data
+
+    /*
+     * Check that there is enough space remaining in this page to start the insert of the variable
+     * data here and if the data page will be written in sbitsGet
+     */
+    void *buf = (int8_t *)state->buffer + state->pageSize * (SBITS_VAR_WRITE_BUFFER(state->parameters));
+    if (state->currentVarLoc % state->pageSize > state->pageSize - 4 || SBITS_GET_COUNT(state->buffer) >= state->maxRecordsPerPage) {
+        writeVariablePage(state, buf);
+        initBufferPage(state, SBITS_VAR_WRITE_BUFFER(state->parameters));
+        // Move data writing location to the beginning of the next page, leaving the room for the header
+        state->currentVarLoc += state->pageSize - state->currentVarLoc % state->pageSize + state->variableDataHeaderSize;
+    }
+
+    if (variableData == NULL) {
+        // Var data enabled, but not provided
+        state->recordHasVarData = 0;
+        return sbitsPut(state, key, data);
+    }
+
+    // Perform the regular insert
+    state->recordHasVarData = 1;
+    int8_t r;
+    if ((r = sbitsPut(state, key, data)) != 0) {
+        return r;
+    }
+
+    // Update the header to include the maximum key value stored on this page
+    memcpy((int8_t *)buf + sizeof(id_t), key, state->keySize);
+
+    // Write the length of the data item into the buffer
+    memcpy((uint8_t *)buf + state->currentVarLoc % state->pageSize, &length, sizeof(uint32_t));
+    state->currentVarLoc += 4;
+
+    // Check if we need to write after doing that
+    if (state->currentVarLoc % state->pageSize == 0) {
+        writeVariablePage(state, buf);
+        initBufferPage(state, SBITS_VAR_WRITE_BUFFER(state->parameters));
+
+        // Update the header to include the maximum key value stored on this page
+        memcpy((int8_t *)buf + sizeof(id_t), key, state->keySize);
+        state->currentVarLoc += state->variableDataHeaderSize;
+    }
+
+    int amtWritten = 0;
+    while (length > 0) {
+        // Copy data into the buffer. Write the min of the space left in this page and the remaining length of the data
+        uint16_t amtToWrite = min(state->pageSize - state->currentVarLoc % state->pageSize, length);
+        memcpy((uint8_t *)buf + (state->currentVarLoc % state->pageSize), (uint8_t *)variableData + amtWritten, amtToWrite);
+        length -= amtToWrite;
+        amtWritten += amtToWrite;
+        state->currentVarLoc += amtToWrite;
+
+        // If we need to write the buffer to file
+        if (state->currentVarLoc % state->pageSize == 0) {
+            writeVariablePage(state, buf);
+            initBufferPage(state, SBITS_VAR_WRITE_BUFFER(state->parameters));
+
+            // Update the header to include the maximum key value stored on this page and account for page number
+            memcpy((int8_t *)buf + sizeof(id_t), key, state->keySize);
+            state->currentVarLoc += state->variableDataHeaderSize;
+        }
     }
     return 0;
 }
@@ -1066,8 +1106,14 @@ int8_t sbitsGet(sbitsState *state, void *key, void *data) {
         splineFind(state->spl, key, state->compareKey, &location, &lowbound, &highbound);
     }
 
-    if (linearSearch(state, &numReads, buf, key, location, lowbound, highbound) == -1) {
-        return -1;
+    // Check if the currently buffered page is the correct one
+    if (!(lowbound <= state->bufferedPageId &&
+          highbound >= state->bufferedPageId &&
+          state->compareKey(sbitsGetMinKey(state, buf), key) <= 0 &&
+          state->compareKey(sbitsGetMaxKey(state, buf), key) >= 0)) {
+        if (linearSearch(state, &numReads, buf, key, location, lowbound, highbound) == -1) {
+            return -1;
+        }
     }
 
 #endif
@@ -1125,6 +1171,7 @@ int8_t sbitsGetVar(sbitsState *state, void *key, void *data, sbitsVarDataStream 
     void *ptr = (int8_t *)state->buffer + SBITS_VAR_READ_BUFFER(state->parameters) * state->pageSize;
     id_t pageNum = (varDataOffset / state->pageSize) % state->numVarPages;
     if (readVariablePage(state, pageNum) != 0) {
+        printf("Not data to read\n");
         return -1;
     }
 
@@ -1538,13 +1585,13 @@ id_t writeVariablePage(sbitsState *state, void *buffer) {
     }
 
     // Make sure the address being witten to wraps around
-    state->nextVarPageId %= state->numVarPages;
+    id_t physicalPageId = state->nextVarPageId % state->numVarPages;
 
     // Erase data if needed
     if (state->numAvailVarPages <= 0) {
         state->numAvailVarPages += state->eraseSizeInPages;
         // Last page that is deleted
-        id_t pageNum = (state->nextVarPageId + state->eraseSizeInPages - 1) % state->numVarPages;
+        id_t pageNum = (physicalPageId + state->eraseSizeInPages - 1) % state->numVarPages;
 
         // Read in that page so we can update which records we still have the data for
         if (readVariablePage(state, pageNum) != 0) {
@@ -1560,7 +1607,7 @@ id_t writeVariablePage(sbitsState *state, void *buffer) {
     memcpy(buf, &state->nextVarPageId, sizeof(id_t));
 
     // Write to file
-    uint32_t val = state->fileInterface->write(buffer, state->nextVarPageId, state->pageSize, state->varFile);
+    uint32_t val = state->fileInterface->write(buffer, physicalPageId, state->pageSize, state->varFile);
     if (val == 0) {
         printf("Failed to write vardata page: %lu\n", state->nextVarPageId);
         return -1;
@@ -1570,7 +1617,7 @@ id_t writeVariablePage(sbitsState *state, void *buffer) {
     state->numAvailVarPages--;
     state->numWrites++;
 
-    return state->nextIdxPageId - 1;
+    return state->nextVarPageId - 1;
 }
 
 /**

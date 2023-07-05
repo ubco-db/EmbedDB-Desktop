@@ -37,6 +37,7 @@ SRCT = $(wildcard $(PATHT)*.c)
 VARTEST = $(PATHO)varTest.o
 TEST_SBITS = $(PATHO)test_sbits.o
 SQLITE_BENCHMARK = $(PATHO)sqliteBenchmarking.o
+SBITS_BENCHMARK = $(PATHO)benchmarking.o
 
 COMPILE=gcc -c
 LINK=gcc
@@ -67,6 +68,14 @@ sqlite_benchmark: $(BUILD_PATHS) $(PATHB)sqliteBenchmarking.$(TARGET_EXTENSION)
 	@echo "Finished running sqliteBenchmarking file"
 
 $(PATHB)sqliteBenchmarking.$(TARGET_EXTENSION): $(OBJECTS) $(PATHO)sqlite3.o $(SQLITE_BENCHMARK)
+	$(LINK) -o $@ $^ -lm
+
+sbits_benchmark: $(BUILD_PATHS) $(PATHB)benchmarking.$(TARGET_EXTENSION)
+	@echo "Running benchmark"
+	-./$(PATHB)benchmarking.$(TARGET_EXTENSION)
+	@echo "Finished running benchmark file"
+
+$(PATHB)benchmarking.$(TARGET_EXTENSION): $(OBJECTS) $(SBITS_BENCHMARK)
 	$(LINK) -o $@ $^ -lm
 
 test: $(BUILD_PATHS) $(RESULTS)
