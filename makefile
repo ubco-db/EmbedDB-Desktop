@@ -92,7 +92,7 @@ $(PATHO)%.o:: $(PATHSBITS)%.c
 	$(COMPILE) $(CFLAGS) $< -o $@ -lm
 
 $(PATHO)%.o:: $(PATHSQLITE)%.c
-	$(COMPILE) $(CFLAGS) $< -o $@ -lm
+	$(COMPILE) $(CFLAGS) $< -o $@ -lm -ldl
 
 $(PATHO)%.o:: $(PATHU)%.c $(PATHU)%.h
 	$(COMPILE) $(CFLAGS) $< -o $@ -lm
