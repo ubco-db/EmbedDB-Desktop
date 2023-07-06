@@ -1,0 +1,65 @@
+rm -f build/objs/*.o
+rm -f build/*.out
+rm -f build/results/*.testpass
+rm -f build/artifacts/*.png
+rm -f build/artifacts/*.bin
+rm -f build/artifacts/*.db
+rm -f build/results/*.xml
+gcc -c -I. -IUnity/src/ -Isrc/ -DTEST src/sbits/sbits.c -o build/objs/sbits.o -lm
+gcc -c -I. -IUnity/src/ -Isrc/ -DTEST src/spline/spline.c -o build/objs/spline.o -lm
+gcc -c -I. -IUnity/src/ -Isrc/ -DTEST src/spline/radixspline.c -o build/objs/radixspline.o -lm
+gcc -c -I. -IUnity/src/ -Isrc/ -DTEST src/sbits/utilityFunctions.c -o build/objs/utilityFunctions.o -lm
+gcc -c -I. -IUnity/src/ -Isrc/ -DTEST src/sqlite3.c -o build/objs/sqlite3.o -lm
+gcc -c -I. -IUnity/src/ -Isrc/ -DTEST src/sqliteBenchmarking.c -o build/objs/sqliteBenchmarking.o -lm
+gcc -o build/sqliteBenchmarking.out build/objs/sbits.o build/objs/spline.o build/objs/radixspline.o build/objs/utilityFunctions.o build/objs/sqlite3.o build/objs/sqliteBenchmarking.o -lm -ldl -lpthread
+Running sqlite benchmark
+./build/sqliteBenchmarking.out
+
+INSERT WITHOUT TRANSACTION INT TEXT
+Time: 14342 14241 14258 14256 14290 ~ 14277ms
+Num Records inserted: 500000
+
+INSERT WITHOUT TRANSACTION INT BLOB
+Time: 14892 14850 14846 15074 14857 ~ 14903ms
+Num Records inserted: 500000
+
+INSERT WITHOUT TRANSACTION INT INT INT INT
+Time: 13511 13473 13461 13453 13481 ~ 13475ms
+Num Records inserted: 500000
+
+INSERT WITH TRANSACTION INT TEXT
+Time: 82355 82032 82039 82211 82462 ~ 82219ms
+Num Records inserted: 500000
+
+INSERT WITH TRANSACTION INT BLOB
+Time: 82769 82903 82827 82665 82764 ~ 82785ms
+Num Records inserted: 500000
+
+INSERT WITH TRANSACTION INT INT INT INT
+Time: 80040 80282 80357 80161 80263 ~ 80220ms
+Num Records inserted: 500000
+
+SELECT * FROM KEYVALUE INTEGER TEXT
+Time: 767 765 767 767 767 ~ 766ms
+Num Records Queried: 500000
+
+SELECT * FROM KEYVALUE SMALL RESULT INTEGER TEXT
+Time: 75 75 75 75 75 ~ 75ms
+Num Records Queried: 50703
+
+SELECT * FROM KEYVALUE INTEGER BLOB
+Time: 767 766 767 767 767 ~ 766ms
+Num Records Queried: 500000
+
+SELECT * FROM KEYVALUE SMALL RESULT INTEGER BLOB
+Time: 75 75 75 75 75 ~ 75ms
+Num Records Queried: 50703
+
+SELECT * FROM KEYVALUE INT INT INT INT
+Time: 1102 1102 1102 1099 1102 ~ 1101ms
+Num Records Queried: 500000
+
+SELECT * FROM KEYVALUE SMALL RESULT INTEGER TEXT
+Time: 109 109 109 109 109 ~ 109ms
+Num Records Queried: 50703
+Finished running sqliteBenchmarking file
