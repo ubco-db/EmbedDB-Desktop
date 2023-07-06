@@ -1,0 +1,41 @@
+rm -f build/objs/*.o
+rm -f build/*.out
+rm -f build/results/*.testpass
+rm -f build/artifacts/*.png
+rm -f build/artifacts/*.bin
+rm -f build/artifacts/*.db
+rm -f build/results/*.xml
+gcc -c -I. -IUnity/src/ -Isrc/ -DTEST src/sbits/sbits.c -o build/objs/sbits.o -lm
+gcc -c -I. -IUnity/src/ -Isrc/ -DTEST src/spline/spline.c -o build/objs/spline.o -lm
+gcc -c -I. -IUnity/src/ -Isrc/ -DTEST src/spline/radixspline.c -o build/objs/radixspline.o -lm
+gcc -c -I. -IUnity/src/ -Isrc/ -DTEST src/sbits/utilityFunctions.c -o build/objs/utilityFunctions.o -lm
+gcc -c -I. -IUnity/src/ -Isrc/ -DTEST src/sqlite3.c -o build/objs/sqlite3.o -lm
+gcc -c -I. -IUnity/src/ -Isrc/ -DTEST src/sqliteBenchmarking.c -o build/objs/sqliteBenchmarking.o -lm
+gcc -o build/sqliteBenchmarking.out build/objs/sbits.o build/objs/spline.o build/objs/radixspline.o build/objs/utilityFunctions.o build/objs/sqlite3.o build/objs/sqliteBenchmarking.o -lm -ldl -lpthread
+Running sqlite benchmark
+./build/sqliteBenchmarking.out
+
+INSERT WITHOUT TRANSACTION INT TEXT
+Time: 14282 14271 14286 14293 14297 ~ 14285ms
+Num Records inserted: 500000
+
+INSERT WITHOUT TRANSACTION INT BLOB
+Time: 14844 14872 14866 14866 14900 ~ 14869ms
+Num Records inserted: 500000
+
+INSERT WITHOUT TRANSACTION INT INT INT INT
+Time: 13482 13457 13471 13492 13472 ~ 13474ms
+Num Records inserted: 500000
+
+INSERT WITH TRANSACTION INT TEXT
+Time: 81949 82061 82033 81907 82107 ~ 82011ms
+Num Records inserted: 500000
+
+INSERT WITH TRANSACTION INT BLOB
+Time: 82603 82520 82781 82540 82624 ~ 82613ms
+Num Records inserted: 500000
+
+INSERT WITH TRANSACTION INT INT INT INT
+Time: 79748 79985 79903 79979 80136 ~ 79950ms
+Num Records inserted: 500000
+Finished running sqliteBenchmarking file
