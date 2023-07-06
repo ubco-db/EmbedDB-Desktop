@@ -59,6 +59,7 @@ typedef uint16_t count_t;
 #define SBITS_USE_BMAP 8
 #define SBITS_USE_VDATA 16
 #define SBITS_RESET_DATA 32
+#define SBITS_AUTO_COMMIT 64
 
 #define SBITS_USING_INDEX(x) ((x & SBITS_USE_INDEX) > 0 ? 1 : 0)
 #define SBITS_USING_MAX_MIN(x) ((x & SBITS_USE_MAX_MIN) > 0 ? 1 : 0)
@@ -66,6 +67,7 @@ typedef uint16_t count_t;
 #define SBITS_USING_BMAP(x) ((x & SBITS_USE_BMAP) > 0 ? 1 : 0)
 #define SBITS_USING_VDATA(x) ((x & SBITS_USE_VDATA) > 0 ? 1 : 0)
 #define SBITS_RESETING_DATA(x) ((x & SBITS_RESET_DATA) > 0 ? 1 : 0)
+#define SBITS_AUTO_COMMITING(x) ((x & SBITS_AUTO_COMMIT) > 0 ? 1 : 0)
 
 /* Offsets with header */
 #define SBITS_COUNT_OFFSET 4
@@ -254,6 +256,11 @@ typedef struct {
  * @return	Return 0 if success. Non-zero value if error.
  */
 int8_t sbitsInit(sbitsState *state, size_t indexMaxError);
+
+/**
+ * @brief	Prints information about the SBITS structure.
+ */
+void printState(sbitsState *state);
 
 /**
  * @brief	Puts a given key, data pair into structure.
