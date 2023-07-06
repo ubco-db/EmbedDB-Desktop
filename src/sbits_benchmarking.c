@@ -141,9 +141,9 @@ int main() {
         numWrites = state->numWrites;
         numIdxWrites = state->numIdxWrites;
 
-        ////////////////
-        // SELECT All //
-        ////////////////
+        /////////////////////
+        // SELECT * FROM r //
+        /////////////////////
         start = clock();
 
         sbitsIterator itSelectAll;
@@ -164,9 +164,9 @@ int main() {
 
         numReadsSelectAll = state->numReads - numReadsSelectAll;
 
-        /////////////////////////////////
-        // SELECT by key, small result //
-        /////////////////////////////////
+        ////////////////////////////////////////////
+        // SELECT * FROM r WHERE key >= 974100996 //
+        ////////////////////////////////////////////
         start = clock();
 
         sbitsIterator itSelectKeySmallResult;
@@ -188,9 +188,9 @@ int main() {
 
         numReadsSelectKeySmallResult = state->numReads - numReadsSelectKeySmallResult;
 
-        /////////////////////////////////
-        // SELECT by key, large result //
-        /////////////////////////////////
+        ////////////////////////////////////////////
+        // SELECT * FROM r WHERE key >= 949756644 //
+        ////////////////////////////////////////////
         start = clock();
 
         sbitsIterator itSelectKeyLargeResult;
@@ -212,9 +212,9 @@ int main() {
 
         numReadsSelectKeyLargeResult = state->numReads - numReadsSelectKeyLargeResult;
 
-        //////////////////////////////////
-        // SELECT by data, small result //
-        //////////////////////////////////
+        ///////////////////////////////////////
+        // SELECT * FROM r WHERE data >= 700 //
+        ///////////////////////////////////////
         start = clock();
 
         sbitsIterator itSelectDataSmallResult;
@@ -238,9 +238,9 @@ int main() {
         numReadsSelectDataSmallResult = state->numReads - numReadsSelectDataSmallResult;
         numIdxReadsSelectDataSmallResult = state->numIdxReads - numIdxReadsSelectDataSmallResult;
 
-        //////////////////////////////////
-        // SELECT by data, large result //
-        //////////////////////////////////
+        ///////////////////////////////////////
+        // SELECT * FROM r WHERE data >= 420 //
+        ///////////////////////////////////////
         start = clock();
 
         sbitsIterator itSelectDataLargeResult;
@@ -264,9 +264,9 @@ int main() {
         numReadsSelectDataLargeResult = state->numReads - numReadsSelectDataLargeResult;
         numIdxReadsSelectDataLargeResult = state->numIdxReads - numIdxReadsSelectDataLargeResult;
 
-        /////////////////////////////////
-        // SELECT on both key and data //
-        /////////////////////////////////
+        ////////////////////////////////////////////////////////////////////////////
+        // SELECT * FROM r WHERE key >= 958885776 AND data >= 450 AND data <= 650 //
+        ////////////////////////////////////////////////////////////////////////////
         start = clock();
 
         sbitsIterator itSelectKeyData;
@@ -372,7 +372,7 @@ int main() {
     printf("Num reads: %d\n", numReadsSelectAll);
 
     sum = 0;
-    printf("\nSELECT by key, small result\n");
+    printf("\nSELECT * FROM r WHERE key >= 974100996\n");
     printf("Time: ");
     for (int i = 0; i < numRuns; i++) {
         printf("%d ", timeSelectKeySmallResult[i]);
@@ -383,7 +383,7 @@ int main() {
     printf("Num reads: %d\n", numReadsSelectKeySmallResult);
 
     sum = 0;
-    printf("\nSELECT by key, large result\n");
+    printf("\nSELECT * FROM r WHERE key >= 949756644\n");
     printf("Time: ");
     for (int i = 0; i < numRuns; i++) {
         printf("%d ", timeSelectKeyLargeResult[i]);
@@ -394,7 +394,7 @@ int main() {
     printf("Num reads: %d\n", numReadsSelectKeyLargeResult);
 
     sum = 0;
-    printf("\nSELECT by data, small result\n");
+    printf("\nSELECT * FROM r WHERE data >= 700\n");
     printf("Time: ");
     for (int i = 0; i < numRuns; i++) {
         printf("%d ", timeSelectDataSmallResult[i]);
@@ -406,7 +406,7 @@ int main() {
     printf("Num idx reads: %d\n", numIdxReadsSelectDataSmallResult);
 
     sum = 0;
-    printf("\nSELECT by data, large result\n");
+    printf("\nSELECT * FROM r WHERE data >= 420\n");
     printf("Time: ");
     for (int i = 0; i < numRuns; i++) {
         printf("%d ", timeSelectDataLargeResult[i]);
@@ -418,7 +418,7 @@ int main() {
     printf("Num idx reads: %d\n", numIdxReadsSelectDataLargeResult);
 
     sum = 0;
-    printf("\nSELECT by key and data\n");
+    printf("\nSELECT * FROM r WHERE key >= 958885776 AND data >= 450 AND data <= 650\n");
     printf("Time: ");
     for (int i = 0; i < numRuns; i++) {
         printf("%d ", timeSelectKeyData[i]);
