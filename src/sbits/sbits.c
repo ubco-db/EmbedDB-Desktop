@@ -107,9 +107,17 @@ void initBufferPage(sbitsState *state, int pageNum) {
         ((int8_t *)buf)[i] = 0;
     }
 
+    /* Initialize header */
+    if (pageNum == SBITS_DATA_WRITE_BUFFER) {
+        memcpy(buf, &state->nextDataPageId, sizeof(state->nextDataPageId));
+    } else if (SBITS_USING_INDEX(state->parameters) && pageNum == SBITS_INDEX_WRITE_BUFFER) {
+        memcpy(buf, &state->nextIdxPageId, sizeof(state->nextIdxPageId));
+    } else if (SBITS_USING_VDATA(state->parameters) && pageNum == SBITS_VAR_WRITE_BUFFER(state->parameters)) {
+        memcpy(buf, &state->nextVarPageId, sizeof(state->nextVarPageId));
+    }
+
     if (pageNum != SBITS_VAR_WRITE_BUFFER(state->parameters)) {
-        /* Initialize header key min. Max and sum is already set to zero by the
-         * for-loop above */
+        /* Initialize header key min. Max and sum is already set to zero by the for-loop above */
         void *min = SBITS_GET_MIN_KEY(buf);
         /* Initialize min to all 1s */
         for (i = 0; i < state->keySize; i++) {
@@ -163,6 +171,51 @@ void *sbitsGetMaxKey(sbitsState *state, void *buffer) {
 }
 
 /**
+ * @brief   Calculate the number of pages depending on if there is reserved pages for auto commit
+ */
+uint32_t getNumDataPages(sbitsState *state) {
+    if (SBITS_AUTO_COMMITING(state->parameters)) {
+        return state->numDataPages - state->maxRecordsPerPage;
+    } else {
+        return state->numDataPages;
+    }
+}
+
+/**
+ * @brief   Calculate the number of pages depending on if there is reserved pages for auto commit
+ */
+uint32_t getNumIdxPages(sbitsState *state) {
+    if (SBITS_AUTO_COMMITING(state->parameters)) {
+        uint32_t numAutoCommitPages = state->maxRecordsPerPage;
+        if (numAutoCommitPages % state->eraseSizeInPages != 0) {
+            numAutoCommitPages += state->eraseSizeInPages - numAutoCommitPages % state->eraseSizeInPages;
+        }
+        return state->numIndexPages - state->maxRecordsPerPage;
+    } else {
+        return state->numIndexPages;
+    }
+}
+
+uint32_t getNumVarPages(sbitsState *state) {
+    if (SBITS_AUTO_COMMITING(state->parameters)) {
+        return state->numVarPages - state->maxRecordsPerPage;
+    } else {
+        return state->numVarPages;
+    }
+}
+
+/**
+ * @brief	Prints information about the SBITS structure.
+ */
+void printState(sbitsState *state) {
+    printf("Buffer size: %d  Page size: %d\n", state->bufferSizeInBlocks, state->pageSize);
+    printf("Key size: %d Data size: %d %sRecord size: %d\n", state->keySize, state->dataSize, SBITS_USING_VDATA(state->parameters) ? "Variable data pointer size: 4 " : "", state->recordSize);
+    printf("Use index: %d  Max/min: %d Sum: %d Bmap: %d\n", SBITS_USING_INDEX(state->parameters), SBITS_USING_MAX_MIN(state->parameters), SBITS_USING_SUM(state->parameters), SBITS_USING_BMAP(state->parameters));
+    printf("Header size: %d  Records per page: %d\n", state->headerSize, state->maxRecordsPerPage);
+    printf("Variable data pages: %d\n", state->numVarPages);
+}
+
+/**
  * @brief   Initialize SBITS structure.
  * @param   state           SBITS algorithm state structure
  * @param   indexMaxError   max error of indexing structure (spline)
@@ -179,12 +232,10 @@ int8_t sbitsInit(sbitsState *state, size_t indexMaxError) {
         state->recordSize += 4;
     }
 
-    printf("Initializing SBITS.\n");
-    printf("Buffer size: %d  Page size: %d\n", state->bufferSizeInBlocks, state->pageSize);
-    printf("Key size: %d Data size: %d %sRecord size: %d\n", state->keySize, state->dataSize, SBITS_USING_VDATA(state->parameters) ? "Variable data pointer size: 4 " : "", state->recordSize);
-    printf("Use index: %d  Max/min: %d Sum: %d Bmap: %d\n", SBITS_USING_INDEX(state->parameters), SBITS_USING_MAX_MIN(state->parameters), SBITS_USING_SUM(state->parameters), SBITS_USING_BMAP(state->parameters));
-
     state->indexMaxError = indexMaxError;
+    if (!SBITS_USING_BMAP(state->parameters)) {
+        state->bitmapSize = 0;
+    }
 
     /* Calculate block header size */
 
@@ -201,13 +252,12 @@ int8_t sbitsInit(sbitsState *state, size_t indexMaxError) {
 
     /* Calculate number of records per page */
     state->maxRecordsPerPage = (state->pageSize - state->headerSize) / state->recordSize;
-    printf("Header size: %d  Records per page: %d\n", state->headerSize, state->maxRecordsPerPage);
 
     /* Initialize max error to maximum records per page */
     state->maxError = state->maxRecordsPerPage;
 
     /* Allocate first page of buffer as output page */
-    initBufferPage(state, 0);
+    initBufferPage(state, SBITS_DATA_WRITE_BUFFER);
 
     if (state->numDataPages < (SBITS_USING_INDEX(state->parameters) * 2 + 2) * state->eraseSizeInPages) {
         printf("ERROR: Number of pages allocated must be at least twice erase block size for SBITS and four times when using indexing. Memory pages: %d\n", state->numDataPages);
@@ -273,7 +323,7 @@ int8_t sbitsInitData(sbitsState *state) {
     state->nextDataPageId = 0;
     state->avgKeyDiff = 1;
     state->nextDataPageId = 0;
-    state->numAvailDataPages = state->numDataPages;
+    state->numAvailDataPages = getNumDataPages(state);
     state->minDataPageId = 0;
 
     if (state->dataFile == NULL) {
@@ -310,8 +360,9 @@ int8_t sbitsInitDataFromFile(sbitsState *state) {
 
     bool haveWrappedInMemory = false;
     int count = 0;
-    void *buffer = (int8_t *)state->buffer + state->pageSize;
-    while (moreToRead && count < state->numDataPages) {
+    uint32_t numDataPages = getNumDataPages(state);
+    void *buffer = (int8_t *)state->buffer + state->pageSize * SBITS_DATA_READ_BUFFER;
+    while (moreToRead && count < numDataPages) {
         memcpy(&logicalPageId, buffer, sizeof(id_t));
         if (count == 0 || logicalPageId == maxLogicalPageId + 1) {
             maxLogicalPageId = logicalPageId;
@@ -320,35 +371,70 @@ int8_t sbitsInitDataFromFile(sbitsState *state) {
             moreToRead = !(readPage(state, physicalPageId));
             count++;
         } else {
-            haveWrappedInMemory = logicalPageId == (maxLogicalPageId - state->numDataPages + 1);
+            haveWrappedInMemory = logicalPageId == (maxLogicalPageId - numDataPages + 1);
             break;
         }
     }
-
-    if (count == 0)
-        return 0;
 
     state->nextDataPageId = maxLogicalPageId + 1;
     state->minDataPageId = 0;
     id_t physicalPageIDOfSmallestData = 0;
     if (haveWrappedInMemory) {
-        physicalPageIDOfSmallestData = logicalPageId % state->numDataPages;
+        physicalPageIDOfSmallestData = logicalPageId % numDataPages;
     }
     readPage(state, physicalPageIDOfSmallestData);
     memcpy(&(state->minDataPageId), buffer, sizeof(id_t));
     state->numAvailDataPages = state->numDataPages + state->minDataPageId - maxLogicalPageId - 1;
-    if (state->keySize <= 4) {
-        uint32_t minKey = 0;
-        memcpy(&minKey, sbitsGetMinKey(state, buffer), state->keySize);
-        state->minKey = minKey;
-    } else {
-        uint64_t minKey = 0;
-        memcpy(&minKey, sbitsGetMinKey(state, buffer), state->keySize);
-        state->minKey = minKey;
-    }
+    memcpy(&(state->minKey), sbitsGetMinKey(state, buffer), state->keySize);
 
-    /* Put largest key back into the buffer */
-    readPage(state, state->nextDataPageId - 1);
+    if (SBITS_AUTO_COMMITING(state->parameters)) {
+        /* Scan auto commit buffer for partially completed pages */
+        id_t autoCommitPageId = 0;
+        id_t numAutoCommitPages = state->numDataPages - numDataPages;
+        id_t maxPageId = 0;
+        uint32_t maxPageIdOffset = 0;
+        id_t lastPageId = 0;
+        uint16_t lastCount = 0;
+        for (autoCommitPageId = 0; autoCommitPageId < numAutoCommitPages; autoCommitPageId++) {
+            readPage(state, numDataPages + autoCommitPageId);
+            id_t pageId;
+            uint16_t recordCount = SBITS_GET_COUNT(buffer);
+            memcpy(&pageId, buffer, sizeof(id_t));
+            if (pageId < lastPageId || (pageId == lastPageId && recordCount < lastCount)) {
+                // The last page we read was the last written
+                break;
+            }
+            if (pageId >= maxPageId) {
+                maxPageId = pageId;
+                maxPageIdOffset = autoCommitPageId;
+            }
+            lastPageId = pageId;
+            lastCount = recordCount;
+        }
+
+        if (count == 0 && lastPageId != 0) {
+            // No page was ever committed
+            initBufferPage(state, SBITS_DATA_WRITE_BUFFER);
+            return 0;
+        }
+
+        /* Read in page with largest pageId */
+        readPage(state, numDataPages + maxPageIdOffset);
+
+        // Check that the pageId matches
+        id_t pageId;
+        memcpy(&pageId, buffer, sizeof(id_t));
+        if (pageId != state->nextDataPageId) {
+            // Cannot recover from this
+            initBufferPage(state, SBITS_DATA_WRITE_BUFFER);
+        } else {
+            // Accept page as page to continue writing to
+            memcpy((int8_t *)state->buffer + state->pageSize * SBITS_DATA_WRITE_BUFFER, buffer, state->pageSize);
+        }
+    } else {
+        // Start with a clean buffer
+        initBufferPage(state, SBITS_DATA_WRITE_BUFFER);
+    }
 
     updateAverageKeyDifference(state, buffer);
     if (SEARCH_METHOD == 2) {
@@ -364,7 +450,7 @@ void sbitsInitSplineFromFile(sbitsState *state) {
     id_t pagesRead = 0;
     id_t numberOfPagesToRead = state->nextDataPageId - state->minDataPageId;
     while (pagesRead < numberOfPagesToRead) {
-        readPage(state, pageNumberToRead % state->numDataPages);
+        readPage(state, pageNumberToRead % getNumDataPages(state));
         if (RADIX_BITS > 0) {
             radixsplineAddPoint(state->rdix, sbitsGetMinKey(state, buffer), pageNumberToRead++);
         } else {
@@ -383,13 +469,8 @@ int8_t sbitsInitIndex(sbitsState *state) {
     /* Allocate third page of buffer as index output page */
     initBufferPage(state, SBITS_INDEX_WRITE_BUFFER);
 
-    /* Add page id to minimum value spot in page */
-    void *buf = (int8_t *)state->buffer + state->pageSize * (SBITS_INDEX_WRITE_BUFFER);
-    id_t *ptr = ((id_t *)((int8_t *)buf + 8));
-    *ptr = state->nextDataPageId;
-
     state->nextIdxPageId = 0;
-    state->numAvailIndexPages = state->numIndexPages;
+    state->numAvailIndexPages = getNumIdxPages(state);
     state->minIndexPageId = 0;
 
     if (state->numIndexPages < state->eraseSizeInPages * 2) {
@@ -436,9 +517,10 @@ int8_t sbitsInitIndexFromFile(sbitsState *state) {
 
     bool haveWrappedInMemory = false;
     int count = 0;
+    uint32_t numIndexPages = getNumIdxPages(state);
     void *buffer = (int8_t *)state->buffer + state->pageSize * SBITS_INDEX_READ_BUFFER;
 
-    while (moreToRead && count < state->numIndexPages) {
+    while (moreToRead && count < numIndexPages) {
         memcpy(&logicalIndexPageId, buffer, sizeof(id_t));
         if (count == 0 || logicalIndexPageId == maxLogicaIndexPageId + 1) {
             maxLogicaIndexPageId = logicalIndexPageId;
@@ -446,22 +528,68 @@ int8_t sbitsInitIndexFromFile(sbitsState *state) {
             moreToRead = !(readIndexPage(state, physicalIndexPageId));
             count++;
         } else {
-            haveWrappedInMemory = logicalIndexPageId == maxLogicaIndexPageId - state->numIndexPages + 1;
+            haveWrappedInMemory = logicalIndexPageId == maxLogicaIndexPageId - numIndexPages + 1;
             break;
         }
     }
 
-    if (count == 0)
-        return 0;
-
     state->nextIdxPageId = maxLogicaIndexPageId + 1;
     id_t physicalPageIDOfSmallestData = 0;
     if (haveWrappedInMemory) {
-        physicalPageIDOfSmallestData = logicalIndexPageId % state->numIndexPages;
+        physicalPageIDOfSmallestData = logicalIndexPageId % numIndexPages;
     }
     readIndexPage(state, physicalPageIDOfSmallestData);
     memcpy(&(state->minIndexPageId), buffer, sizeof(id_t));
-    state->numAvailIndexPages = state->numIndexPages + state->minIndexPageId - maxLogicaIndexPageId - 1;
+    state->numAvailIndexPages = numIndexPages + state->minIndexPageId - maxLogicaIndexPageId - 1;
+
+    // Scan auto committed area for partially written pages
+    if (SBITS_AUTO_COMMITING(state->parameters)) {
+        id_t autoCommitPageId = 0;
+        id_t numAutoCommitPages = state->numIndexPages - numIndexPages;
+        id_t maxPageId = 0;
+        uint32_t maxPageIdOffset = 0;
+        id_t lastPageId = 0;
+        uint16_t lastCount = 0;
+        for (; autoCommitPageId < numAutoCommitPages; autoCommitPageId++) {
+            readIndexPage(state, numIndexPages + autoCommitPageId);
+            id_t pageId;
+            uint16_t recordCount = SBITS_GET_COUNT(buffer);
+            memcpy(&pageId, buffer, sizeof(id_t));
+            if (pageId < lastPageId || (pageId == lastPageId && recordCount < lastCount)) {
+                // We have already found the last page written before a crash
+                break;
+            }
+            if (pageId >= maxPageId) {
+                maxPageId = pageId;
+                maxPageIdOffset = autoCommitPageId;
+            }
+            lastPageId = pageId;
+            lastCount = recordCount;
+        }
+
+        if (count == 0 && lastPageId != 0) {
+            // No pages were ever committed
+            initBufferPage(state, SBITS_INDEX_WRITE_BUFFER);
+            return 0;
+        }
+
+        // Read the last page written before a crash into buffer
+        readIndexPage(state, numIndexPages + maxPageIdOffset);
+
+        // Check that the pageId matches
+        id_t pageId;
+        memcpy(&pageId, buffer, sizeof(id_t));
+        if (pageId != state->nextIdxPageId) {
+            // Cannot recover from this
+            initBufferPage(state, SBITS_INDEX_WRITE_BUFFER);
+        } else {
+            // Accept page as the next page to write to
+            memcpy((int8_t *)state->buffer + state->pageSize * SBITS_INDEX_WRITE_BUFFER, buffer, state->pageSize);
+        }
+    } else {
+        // Start with clean index buffer
+        initBufferPage(state, SBITS_INDEX_WRITE_BUFFER);
+    }
 
     return 0;
 }
@@ -473,7 +601,7 @@ int8_t sbitsInitVarData(sbitsState *state) {
     state->variableDataHeaderSize = state->keySize + sizeof(id_t);
     state->currentVarLoc = state->variableDataHeaderSize;
     state->minVarRecordId = 0;
-    state->numAvailVarPages = state->numVarPages;
+    state->numAvailVarPages = getNumVarPages(state);
     state->nextVarPageId = 0;
 
     if (!SBITS_RESETING_DATA(state->parameters)) {
@@ -490,7 +618,6 @@ int8_t sbitsInitVarData(sbitsState *state) {
         return -1;
     }
 
-    printf("Variable data pages: %d\n", state->numVarPages);
     return 0;
 }
 
@@ -502,8 +629,9 @@ int8_t sbitsInitVarDataFromFile(sbitsState *state) {
     id_t physicalVariablePageId = 0;
     int8_t moreToRead = !(readVariablePage(state, physicalVariablePageId));
     uint32_t count = 0;
+    uint32_t numVarPages = getNumVarPages(state);
     bool haveWrappedInMemory = false;
-    while (moreToRead && count < state->numVarPages) {
+    while (moreToRead && count < numVarPages) {
         memcpy(&logicalVariablePageId, buffer, sizeof(id_t));
         if (count == 0 || logicalVariablePageId == maxLogicalVariablePageId + 1) {
             maxLogicalVariablePageId = logicalVariablePageId;
@@ -511,26 +639,73 @@ int8_t sbitsInitVarDataFromFile(sbitsState *state) {
             moreToRead = !(readVariablePage(state, physicalVariablePageId));
             count++;
         } else {
-            haveWrappedInMemory = logicalVariablePageId == maxLogicalVariablePageId - state->numVarPages + 1;
+            haveWrappedInMemory = logicalVariablePageId == maxLogicalVariablePageId - numVarPages + 1;
             break;
         }
     }
 
-    if (count == 0)
-        return 0;
-
     state->nextVarPageId = maxLogicalVariablePageId + 1;
     id_t minVarPageId = 0;
     if (haveWrappedInMemory) {
-        id_t physicalPageIDOfSmallestData = logicalVariablePageId % state->numVarPages;
+        id_t physicalPageIDOfSmallestData = logicalVariablePageId % numVarPages;
         readVariablePage(state, physicalPageIDOfSmallestData);
         memcpy(&(state->minVarRecordId), (int8_t *)buffer + sizeof(id_t), state->keySize);
         memcpy(&minVarPageId, buffer, sizeof(id_t));
         state->minVarRecordId++;
     }
 
-    state->numAvailVarPages = state->numVarPages + minVarPageId - maxLogicalVariablePageId - 1;
-    state->currentVarLoc = state->nextVarPageId % state->numVarPages * state->pageSize + state->variableDataHeaderSize;
+    state->numAvailVarPages = numVarPages + minVarPageId - maxLogicalVariablePageId - 1;
+    state->currentVarLoc = state->nextVarPageId % numVarPages * state->pageSize + state->variableDataHeaderSize;
+
+    // Check for any partial pages in autocommit buffer
+    if (SBITS_AUTO_COMMITING(state->parameters)) {
+        id_t autoCommitPageId = 0;
+        id_t numAutoCommitPages = state->numVarPages - numVarPages;
+        id_t maxPageId = 0;
+        uint32_t maxPageIdOffset = 0;
+        id_t lastPageId = 0;
+        uint64_t lastMaxKey = 0;
+        for (; autoCommitPageId < numAutoCommitPages; autoCommitPageId++) {
+            readVariablePage(state, numVarPages + autoCommitPageId);
+            id_t pageId;
+            memcpy(&pageId, buffer, sizeof(id_t));
+            void *maxKey = (int8_t *)buffer + sizeof(id_t);
+            if (pageId < lastPageId || (pageId == lastPageId && state->compareKey(maxKey, lastMaxKey) < 0)) {
+                // We have already found the last page written before a crash
+                break;
+            }
+            if (pageId >= maxPageId) {
+                maxPageId = pageId;
+                maxPageIdOffset = autoCommitPageId;
+            }
+            lastPageId = pageId;
+            lastMaxKey = maxKey;
+        }
+
+        if (count == 0 && lastPageId != 0) {
+            // No commits were ever written
+            initBufferPage(state, SBITS_VAR_WRITE_BUFFER(state->parameters));
+            return 0;
+        }
+
+        /* Read the last page written before a crash into buffer */
+        // Get buffer to read into
+        readVariablePage(state, numVarPages + maxPageIdOffset);
+
+        // Check that the pageId matches
+        id_t pageId;
+        memcpy(&pageId, buffer, sizeof(id_t));
+        if (pageId != state->nextVarPageId) {
+            // Cannot recover from this
+            initBufferPage(state, SBITS_VAR_WRITE_BUFFER(state->parameters));
+        } else {
+            // Accept as the page to write to
+            memcpy((int8_t *)state->buffer + state->pageSize * SBITS_VAR_WRITE_BUFFER(state->parameters), buffer, state->pageSize);
+        }
+    } else {
+        // Start with clean variable data buffer
+        initBufferPage(state, SBITS_VAR_WRITE_BUFFER(state->parameters));
+    }
 
     return 0;
 }
@@ -1507,9 +1682,6 @@ id_t writePage(sbitsState *state, void *buffer) {
     /* Always writes to next page number. Returned to user. */
     id_t pageNum = state->nextDataPageId++;
 
-    /* Setup page number in header */
-    memcpy(buffer, &(pageNum), sizeof(id_t));
-
     if (state->numAvailDataPages <= 0) {
         // Erase pages to make space for new data
         state->numAvailDataPages += state->eraseSizeInPages;
@@ -1544,9 +1716,6 @@ id_t writeIndexPage(sbitsState *state, void *buffer) {
 
     /* Always writes to next page number. Returned to user. */
     id_t pageNum = state->nextIdxPageId++;
-
-    /* Setup page number in header */
-    memcpy(buffer, &(pageNum), sizeof(id_t));
 
     if (state->numAvailIndexPages <= 0) {
         // Erase index pages to make room for new page
@@ -1595,10 +1764,6 @@ id_t writeVariablePage(sbitsState *state, void *buffer) {
         memcpy(&state->minVarRecordId, buf, state->keySize);
         state->minVarRecordId += 1;  // Add one because the result from the last line is a record that is erased
     }
-
-    // Add logical page number to data page
-    void *buf = (int8_t *)state->buffer + state->pageSize * SBITS_VAR_WRITE_BUFFER(state->parameters);
-    memcpy(buf, &state->nextVarPageId, sizeof(id_t));
 
     // Write to file
     uint32_t val = state->fileInterface->write(buffer, physicalPageId, state->pageSize, state->varFile);
