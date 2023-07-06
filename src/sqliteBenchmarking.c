@@ -39,20 +39,23 @@ sqlite3 *db = NULL;
 #define RUN_TRANSACTION 1
 
 int main() {
-    int numRuns = 5;
+    int numRuns = 1;
 
     clock_t timeInsertNTText[numRuns],
         timeSelectStarText[numRuns],
         timeSelectStarSmallResultText[numRuns],
         timeSelectStarLargeResultText[numRuns],
+        timeSelectDataSmallResultText[numRuns],
         timeInsertNTBlob[numRuns],
         timeSelectStarBlob[numRuns],
         timeSelectStarSmallResultBlob[numRuns],
         timeSelectStarLargeResultBlob[numRuns],
+        timeSelectDataSmallResultBlob[numRuns],
         timeInsertNTInt[numRuns],
         timeSelectStarInt[numRuns],
         timeSelectStarSmallResultInt[numRuns],
         timeSelectStarLargeResultInt[numRuns],
+        timeSelectDataSmallResultInt[numRuns],
         timeInsertTText[numRuns],
         timeInsertTBlob[numRuns],
         timeInsertTInt[numRuns];
@@ -60,14 +63,17 @@ int main() {
         numRecordsSelectStarText,
         numRecordsSelectStarSmallResultText,
         numRecordsSelectStarLargeResultText,
+        numRecordsSelectDataSmallResultText,
         numRecordsInsertNTBlob,
         numRecordsSelectStarBlob,
         numRecordsSelectStarSmallResultBlob,
         numRecordsSelectStarLargeResultBlob,
+        numRecordsSelectDataSmallResultBlob,
         numRecordsInsertNTInt,
         numRecordsSelectStarInt,
         numRecordsSelectStarSmallResultInt,
         numRecordsSelectStarLargeResultInt,
+        numRecordsSelectDataSmallResultInt,
         numRecordsInsertTText,
         numRecordsInsertTBlob,
         numRecordsInsertTInt;
@@ -170,6 +176,27 @@ int main() {
 
         query = NULL;
 
+        //////////////////////////////////////////////
+        // SELECT * FROM keyValue WHERE data >= 700 //
+        //////////////////////////////////////////////
+
+        numRecords = 0;
+        char const selectDataSmallResultText[] = "SELECT CAST(substr(value, 1, 4) AS INTEGER) FROM keyValue WHERE CAST(substr(value, 1, 4) AS INTEGER) >= 700;";
+
+        timeSelectDataSmallResultText[run] = clock();
+
+        sqlite3_prepare_v2(db, selectDataSmallResultText, strlen(selectDataSmallResultText), &query, NULL);
+        while (sqlite3_step(query) == SQLITE_ROW) {
+            int x = sqlite3_column_int(query, 0);
+            numRecords++;
+        }
+        sqlite3_finalize(query);
+
+        timeSelectDataSmallResultText[run] = (clock() - timeSelectDataSmallResultText[run]) / (CLOCKS_PER_SEC / 1000);
+        numRecordsSelectDataSmallResultText = numRecords;
+
+        query = NULL;
+
         dropDatabase();
         db = NULL;
 
@@ -201,9 +228,9 @@ int main() {
 
         query = NULL;
 
-        /////////////////////
-        // SELECT * FROM r //
-        /////////////////////
+        ////////////////////////////
+        // SELECT * FROM keyValue //
+        ////////////////////////////
         numRecords = 0;
 
         timeSelectStarBlob[run] = clock();
@@ -219,9 +246,9 @@ int main() {
 
         query = NULL;
 
-        ////////////////////////////////////////////
-        // SELECT * FROM r WHERE key >= 974100996 //
-        ////////////////////////////////////////////
+        ///////////////////////////////////////////////////
+        // SELECT * FROM keyValue WHERE key >= 974100996 //
+        ///////////////////////////////////////////////////
         numRecords = 0;
 
         timeSelectStarSmallResultBlob[run] = clock();
@@ -253,6 +280,26 @@ int main() {
 
         timeSelectStarLargeResultBlob[run] = (clock() - timeSelectStarLargeResultBlob[run]) / (CLOCKS_PER_SEC / 1000);
         numRecordsSelectStarLargeResultBlob = numRecords;
+
+        query = NULL;
+
+        //////////////////////////////////////////////
+        // SELECT * FROM keyValue WHERE data >= 700 //
+        //////////////////////////////////////////////
+
+        numRecords = 0;
+        char const selectDataSmallResultBlob[] = "SELECT * FROM keyValue WHERE CAST(substr(value, 1, 4) AS INTEGER) >= 700;";
+
+        timeSelectDataSmallResultBlob[run] = clock();
+
+        sqlite3_prepare_v2(db, selectDataSmallResultBlob, strlen(selectDataSmallResultBlob), &query, NULL);
+        while (sqlite3_step(query) == SQLITE_ROW) {
+            numRecords++;
+        }
+        sqlite3_finalize(query);
+
+        timeSelectDataSmallResultBlob[run] = (clock() - timeSelectDataSmallResultBlob[run]) / (CLOCKS_PER_SEC / 1000);
+        numRecordsSelectDataSmallResultBlob = numRecords;
 
         query = NULL;
 
@@ -291,9 +338,9 @@ int main() {
 
         query = NULL;
 
-        /////////////////////
-        // SELECT * FROM r //
-        /////////////////////
+        ////////////////////////////
+        // SELECT * FROM keyValue //
+        ////////////////////////////
         numRecords = 0;
 
         timeSelectStarInt[run] = clock();
@@ -309,9 +356,9 @@ int main() {
 
         query = NULL;
 
-        ////////////////////////////////////////////
-        // SELECT * FROM r WHERE key >= 974100996 //
-        ////////////////////////////////////////////
+        ///////////////////////////////////////////////////
+        // SELECT * FROM keyValue WHERE key >= 974100996 //
+        ///////////////////////////////////////////////////
         numRecords = 0;
 
         timeSelectStarSmallResultInt[run] = clock();
@@ -343,6 +390,26 @@ int main() {
 
         timeSelectStarLargeResultInt[run] = (clock() - timeSelectStarLargeResultInt[run]) / (CLOCKS_PER_SEC / 1000);
         numRecordsSelectStarLargeResultInt = numRecords;
+
+        query = NULL;
+
+        /////////////////////////////////////////////////
+        // SELECT * FROM keyValue WHERE airTemp >= 700 //
+        /////////////////////////////////////////////////
+
+        numRecords = 0;
+        char const selectDataSmallResultInt[] = "SELECT * FROM keyValue WHERE airTemp >= 700;";
+
+        timeSelectDataSmallResultInt[run] = clock();
+
+        sqlite3_prepare_v2(db, selectDataSmallResultInt, strlen(selectDataSmallResultInt), &query, NULL);
+        while (sqlite3_step(query) == SQLITE_ROW) {
+            numRecords++;
+        }
+        sqlite3_finalize(query);
+
+        timeSelectDataSmallResultInt[run] = (clock() - timeSelectDataSmallResultInt[run]) / (CLOCKS_PER_SEC / 1000);
+        numRecordsSelectDataSmallResultInt = numRecords;
 
         query = NULL;
 
@@ -443,7 +510,7 @@ int main() {
     // Print out the results //
     ///////////////////////////
     int sum = 0;
-    printf("\nINSERT WITHOUT TRANSACTION INT TEXT\n");
+    printf("\nINSERT WITHOUT TRANSACTION INTEGER TEXT\n");
     printf("Time: ");
     for (int i = 0; i < numRuns; i++) {
         printf("%d ", timeInsertNTText[i]);
@@ -453,7 +520,7 @@ int main() {
     printf("Num Records inserted: %d\n", numRecordsInsertNTText);
 
     sum = 0;
-    printf("\nINSERT WITHOUT TRANSACTION INT BLOB\n");
+    printf("\nINSERT WITHOUT TRANSACTION INTEGER BLOB\n");
     printf("Time: ");
     for (int i = 0; i < numRuns; i++) {
         printf("%d ", timeInsertNTBlob[i]);
@@ -463,7 +530,7 @@ int main() {
     printf("Num Records inserted: %d\n", numRecordsInsertNTBlob);
 
     sum = 0;
-    printf("\nINSERT WITHOUT TRANSACTION INT INT INT INT\n");
+    printf("\nINSERT WITHOUT TRANSACTION INTEGER INTEGER INTEGER INTEGER\n");
     printf("Time: ");
     for (int i = 0; i < numRuns; i++) {
         printf("%d ", timeInsertNTInt[i]);
@@ -473,7 +540,7 @@ int main() {
     printf("Num Records inserted: %d\n", numRecordsInsertNTInt);
 
     sum = 0;
-    printf("\nINSERT WITH TRANSACTION INT TEXT\n");
+    printf("\nINSERT WITH TRANSACTION INTEGER TEXT\n");
     printf("Time: ");
     for (int i = 0; i < numRuns; i++) {
         printf("%d ", timeInsertTText[i]);
@@ -483,7 +550,7 @@ int main() {
     printf("Num Records inserted: %d\n", numRecordsInsertTText);
 
     sum = 0;
-    printf("\nINSERT WITH TRANSACTION INT BLOB\n");
+    printf("\nINSERT WITH TRANSACTION INTEGER BLOB\n");
     printf("Time: ");
     for (int i = 0; i < numRuns; i++) {
         printf("%d ", timeInsertTBlob[i]);
@@ -493,7 +560,7 @@ int main() {
     printf("Num Records inserted: %d\n", numRecordsInsertTBlob);
 
     sum = 0;
-    printf("\nINSERT WITH TRANSACTION INT INT INT INT\n");
+    printf("\nINSERT WITH TRANSACTION INTEGER INTEGER INTEGER INTEGER\n");
     printf("Time: ");
     for (int i = 0; i < numRuns; i++) {
         printf("%d ", timeInsertTInt[i]);
@@ -533,6 +600,16 @@ int main() {
     printf("Num Records Queried: %d\n", numRecordsSelectStarLargeResultText);
 
     sum = 0;
+    printf("\nSELECT * FROM KEYVALUE DATA SMALL RESULT INTEGER TEXT\n");
+    printf("Time: ");
+    for (int i = 0; i < numRuns; i++) {
+        printf("%d ", timeSelectDataSmallResultText[i]);
+        sum += timeSelectDataSmallResultText[i];
+    }
+    printf("~ %dms\n", sum / numRuns);
+    printf("Num Records Queried: %d\n", numRecordsSelectDataSmallResultText);
+
+    sum = 0;
     printf("\nSELECT * FROM KEYVALUE INTEGER BLOB\n");
     printf("Time: ");
     for (int i = 0; i < numRuns; i++) {
@@ -563,7 +640,17 @@ int main() {
     printf("Num Records Queried: %d\n", numRecordsSelectStarLargeResultBlob);
 
     sum = 0;
-    printf("\nSELECT * FROM KEYVALUE INT INT INT INT\n");
+    printf("\nSELECT * FROM KEYVALUE DATA SMALL RESULT INTEGER BLOB\n");
+    printf("Time: ");
+    for (int i = 0; i < numRuns; i++) {
+        printf("%d ", timeSelectDataSmallResultBlob[i]);
+        sum += timeSelectDataSmallResultBlob[i];
+    }
+    printf("~ %dms\n", sum / numRuns);
+    printf("Num Records Queried: %d\n", numRecordsSelectDataSmallResultBlob);
+
+    sum = 0;
+    printf("\nSELECT * FROM KEYVALUE INTEGER INTEGER INTEGER INTEGER\n");
     printf("Time: ");
     for (int i = 0; i < numRuns; i++) {
         printf("%d ", timeSelectStarInt[i]);
@@ -573,7 +660,7 @@ int main() {
     printf("Num Records Queried: %d\n", numRecordsSelectStarInt);
 
     sum = 0;
-    printf("\nSELECT * FROM KEYVALUE SMALL RESULT INTEGER TEXT\n");
+    printf("\nSELECT * FROM KEYVALUE SMALL RESULT INTEGER INTEGER INTEGER INTEGER\n");
     printf("Time: ");
     for (int i = 0; i < numRuns; i++) {
         printf("%d ", timeSelectStarSmallResultInt[i]);
@@ -583,7 +670,7 @@ int main() {
     printf("Num Records Queried: %d\n", numRecordsSelectStarSmallResultInt);
 
     sum = 0;
-    printf("\nSELECT * FROM KEYVALUE LARGE RESULT INTEGER TEXT\n");
+    printf("\nSELECT * FROM KEYVALUE LARGE RESULT INTEGER INTEGER INTEGER INTEGER\n");
     printf("Time: ");
     for (int i = 0; i < numRuns; i++) {
         printf("%d ", timeSelectStarLargeResultInt[i]);
@@ -591,6 +678,16 @@ int main() {
     }
     printf("~ %dms\n", sum / numRuns);
     printf("Num Records Queried: %d\n", numRecordsSelectStarLargeResultInt);
+
+    sum = 0;
+    printf("\nSELECT * FROM KEYVALUE DATA SMALL RESULT INTEGER INTEGER INTEGER INTEGER\n");
+    printf("Time: ");
+    for (int i = 0; i < numRuns; i++) {
+        printf("%d ", timeSelectDataSmallResultInt[i]);
+        sum += timeSelectDataSmallResultInt[i];
+    }
+    printf("~ %dms\n", sum / numRuns);
+    printf("Num Records Queried: %d\n", numRecordsSelectDataSmallResultInt);
 
     return 0;
 }
