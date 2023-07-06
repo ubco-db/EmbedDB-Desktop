@@ -11,6 +11,8 @@ int createTableIntIntIntInt();
 int setupDatabase();
 void dropDatabase();
 int getNumRecords();
+int createIndexValue();
+int createIndexAirTemp();
 
 sqlite3 *db = NULL;
 
@@ -27,6 +29,12 @@ sqlite3 *db = NULL;
  * 2: off
  */
 #define SYNC 2
+
+/*
+ * 0: No Index
+ * 1: With Index
+ */
+#define DATA_INDEX 1
 
 #define RUN_TRANSACTION 1
 
@@ -322,8 +330,11 @@ int createTableIntText() {
         printf("There was a problem creating the table!");
         return 1;
     }
-
     sqlite3_finalize(ps);
+
+    if (DATA_INDEX == 1) {
+        createIndexValue();
+    }
 }
 
 int createTableIntBlob() {
@@ -343,6 +354,10 @@ int createTableIntBlob() {
     }
 
     sqlite3_finalize(ps);
+
+    if (DATA_INDEX == 1) {
+        createIndexValue();
+    }
 }
 
 int createTableIntIntIntInt() {
@@ -362,6 +377,10 @@ int createTableIntIntIntInt() {
     }
 
     sqlite3_finalize(ps);
+
+    if (DATA_INDEX == 1) {
+        createIndexAirTemp();
+    }
 }
 
 void dropDatabase() {
@@ -400,4 +419,40 @@ int getNumRecords() {
     sqlite3_step(numRecords);
     sqlite3_finalize(numRecords);
     return num;
+}
+
+int createIndexValue() {
+    sqlite3_stmt *index = NULL;
+    char const createIndex[] = "CREATE INDEX data ON keyValue (value);";
+    int prepareResult = sqlite3_prepare_v2(db, createIndex, strlen(createIndex), &index, NULL);
+    if (prepareResult != 0) {
+        printf("Error preparing the statement!\n");
+        return -1;
+    }
+
+    int createResult = sqlite3_step(index);
+    if (createResult != SQLITE_DONE) {
+        printf("There was a problem creating the index!");
+        return 1;
+    }
+
+    sqlite3_finalize(index);
+}
+
+int createIndexAirTemp() {
+    sqlite3_stmt *index = NULL;
+    char const createIndex[] = "CREATE INDEX data ON keyValue (airTemp);";
+    int prepareResult = sqlite3_prepare_v2(db, createIndex, strlen(createIndex), &index, NULL);
+    if (prepareResult != 0) {
+        printf("Error preparing the statement!\n");
+        return -1;
+    }
+
+    int createResult = sqlite3_step(index);
+    if (createResult != SQLITE_DONE) {
+        printf("There was a problem creating the index!");
+        return 1;
+    }
+
+    sqlite3_finalize(index);
 }
