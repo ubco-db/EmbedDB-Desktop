@@ -37,7 +37,7 @@ SRCT = $(wildcard $(PATHT)*.c)
 VARTEST = $(PATHO)varTest.o
 TEST_SBITS = $(PATHO)test_sbits.o
 SQLITE_BENCHMARK = $(PATHO)sqliteBenchmarking.o
-SBITS_BENCHMARK = $(PATHO)benchmarking.o
+SBITS_BENCHMARK = $(PATHO)sbits_benchmarking.o
 
 COMPILE=gcc -c
 LINK=gcc
