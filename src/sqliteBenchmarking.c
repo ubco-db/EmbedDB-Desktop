@@ -228,7 +228,7 @@ int main() {
         timeRandomKeyValueText[run] = clock();
 
         sqlite3_prepare_v2(db, randomKeyValue, strlen(randomKeyValue), &query, NULL);
-        while (fread(randomDataset, 512, 1, dataset)) {
+        while (fread(dataPage, 512, 1, randomDataset)) {
             uint16_t count = *(uint16_t *)(dataPage + 4);
             for (int record = 1; record <= count; record++) {
                 sqlite3_bind_int(query, 1, *(uint32_t *)(dataPage + record * recordSize));
@@ -385,7 +385,7 @@ int main() {
         timeRandomKeyValueBlob[run] = clock();
 
         sqlite3_prepare_v2(db, randomKeyValue, strlen(randomKeyValue), &query, NULL);
-        while (fread(randomDataset, 512, 1, dataset)) {
+        while (fread(dataPage, 512, 1, randomDataset)) {
             uint16_t count = *(uint16_t *)(dataPage + 4);
             for (int record = 1; record <= count; record++) {
                 sqlite3_bind_int(query, 1, *(uint32_t *)(dataPage + record * recordSize));
@@ -568,7 +568,7 @@ int main() {
         numRecords = 0;
         char const selectKeyDataResultInt[] = "SELECT * FROM keyValue WHERE key >= 958885776 AND airTemp >= 450 AND airTemp <= 650;";
 
-        timeSelectDataLargeResultInt[run] = clock();
+        timeSelectKeyDataInt[run] = clock();
 
         sqlite3_prepare_v2(db, selectKeyDataResultInt, strlen(selectKeyDataResultInt), &query, NULL);
         while (sqlite3_step(query) == SQLITE_ROW) {
@@ -576,8 +576,8 @@ int main() {
         }
         sqlite3_finalize(query);
 
-        timeSelectDataLargeResultInt[run] = (clock() - timeSelectDataLargeResultInt[run]) / (CLOCKS_PER_SEC / 1000);
-        numRecordsSelectDataLargeResultInt = numRecords;
+        timeSelectKeyDataInt[run] = (clock() - timeSelectKeyDataInt[run]) / (CLOCKS_PER_SEC / 1000);
+        numRecordsSelectKeyDataInt = numRecords;
 
         query = NULL;
 
@@ -615,7 +615,7 @@ int main() {
         timeRandomKeyValueInt[run] = clock();
 
         sqlite3_prepare_v2(db, randomKeyValue, strlen(randomKeyValue), &query, NULL);
-        while (fread(randomDataset, 512, 1, dataset)) {
+        while (fread(dataPage, 512, 1, randomDataset)) {
             uint16_t count = *(uint16_t *)(dataPage + 4);
             for (int record = 1; record <= count; record++) {
                 sqlite3_bind_int(query, 1, *(uint32_t *)(dataPage + record * recordSize));
