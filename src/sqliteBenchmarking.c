@@ -46,16 +46,24 @@ int main() {
         timeSelectStarSmallResultText[numRuns],
         timeSelectStarLargeResultText[numRuns],
         timeSelectDataSmallResultText[numRuns],
+        timeSequentialKeyValueText[numRuns],
+        timeRandomKeyValueText[numRuns],
         timeInsertNTBlob[numRuns],
         timeSelectStarBlob[numRuns],
         timeSelectStarSmallResultBlob[numRuns],
         timeSelectStarLargeResultBlob[numRuns],
         timeSelectDataSmallResultBlob[numRuns],
+        timeSequentialKeyValueBlob[numRuns],
+        timeRandomKeyValueBlob[numRuns],
         timeInsertNTInt[numRuns],
         timeSelectStarInt[numRuns],
         timeSelectStarSmallResultInt[numRuns],
         timeSelectStarLargeResultInt[numRuns],
         timeSelectDataSmallResultInt[numRuns],
+        timeSelectDataLargeResultInt[numRuns],
+        timeSelectKeyDataInt[numRuns],
+        timeSequentialKeyValueInt[numRuns],
+        timeRandomKeyValueInt[numRuns],
         timeInsertTText[numRuns],
         timeInsertTBlob[numRuns],
         timeInsertTInt[numRuns];
@@ -64,16 +72,24 @@ int main() {
         numRecordsSelectStarSmallResultText,
         numRecordsSelectStarLargeResultText,
         numRecordsSelectDataSmallResultText,
+        numRecordsSequentialKeyValueText,
+        numRecordsRandomKeyValueText,
         numRecordsInsertNTBlob,
         numRecordsSelectStarBlob,
         numRecordsSelectStarSmallResultBlob,
         numRecordsSelectStarLargeResultBlob,
         numRecordsSelectDataSmallResultBlob,
+        numRecordsSequentialKeyValueBlob,
+        numRecordsRandomKeyValueBlob,
         numRecordsInsertNTInt,
         numRecordsSelectStarInt,
         numRecordsSelectStarSmallResultInt,
         numRecordsSelectStarLargeResultInt,
         numRecordsSelectDataSmallResultInt,
+        numRecordsSelectDataLargeResultInt,
+        numRecordsSelectKeyDataInt,
+        numRecordsSequentialKeyValueInt,
+        numRecordsRandomKeyValueInt,
         numRecordsInsertTText,
         numRecordsInsertTBlob,
         numRecordsInsertTInt;
@@ -176,24 +192,76 @@ int main() {
 
         query = NULL;
 
+        //////////////////////////////////////
+        // Sequential Key-Value Lookup Text //
+        //////////////////////////////////////
+
+        numRecords = 0;
+        char const sequentialKeyValue[] = "SELECT * FROM keyValue WHERE key = ?";
+        fseek(dataset, 0, SEEK_SET);
+        timeSequentialKeyValueText[run] = clock();
+
+        sqlite3_prepare_v2(db, sequentialKeyValue, strlen(sequentialKeyValue), &query, NULL);
+        while (fread(dataPage, 512, 1, dataset)) {
+            uint16_t count = *(uint16_t *)(dataPage + 4);
+            for (int record = 1; record <= count; record++) {
+                sqlite3_bind_int(query, 1, *(uint32_t *)(dataPage + record * recordSize));
+                sqlite3_step(query);
+                sqlite3_reset(query);
+                numRecords++;
+            }
+        }
+        sqlite3_finalize(query);
+
+        timeSequentialKeyValueText[run] = (clock() - timeSequentialKeyValueText[run]) / (CLOCKS_PER_SEC / 1000);
+        numRecordsSequentialKeyValueText = numRecords;
+
+        query = NULL;
+
+        //////////////////////////////////
+        // Random Key-Value Lookup Text //
+        //////////////////////////////////
+
+        numRecords = 0;
+        char const randomKeyValue[] = "SELECT * FROM keyValue WHERE key = ?";
+        FILE *randomDataset = fopen("data/uwa500K_randomized.bin", "rb");
+        timeRandomKeyValueText[run] = clock();
+
+        sqlite3_prepare_v2(db, randomKeyValue, strlen(randomKeyValue), &query, NULL);
+        while (fread(randomDataset, 512, 1, dataset)) {
+            uint16_t count = *(uint16_t *)(dataPage + 4);
+            for (int record = 1; record <= count; record++) {
+                sqlite3_bind_int(query, 1, *(uint32_t *)(dataPage + record * recordSize));
+                sqlite3_step(query);
+                sqlite3_reset(query);
+                numRecords++;
+            }
+        }
+        sqlite3_finalize(query);
+
+        timeRandomKeyValueText[run] = (clock() - timeRandomKeyValueText[run]) / (CLOCKS_PER_SEC / 1000);
+        numRecordsRandomKeyValueText = numRecords;
+
+        query = NULL;
+
         //////////////////////////////////////////////
         // SELECT * FROM keyValue WHERE data >= 700 //
         //////////////////////////////////////////////
 
-        numRecords = 0;
-        char const selectDataSmallResultText[] = "SELECT CAST(substr(value, 1, 4) AS INTEGER) FROM keyValue WHERE CAST(substr(value, 1, 4) AS INTEGER) >= 700;";
+        /* This is not currently working */
 
-        timeSelectDataSmallResultText[run] = clock();
+        // numRecords = 0;
+        // char const selectDataSmallResultText[] = "SELECT * FROM keyValue;";
+        // timeSelectDataSmallResultText[run] = clock();
 
-        sqlite3_prepare_v2(db, selectDataSmallResultText, strlen(selectDataSmallResultText), &query, NULL);
-        while (sqlite3_step(query) == SQLITE_ROW) {
-            int x = sqlite3_column_int(query, 0);
-            numRecords++;
-        }
-        sqlite3_finalize(query);
+        // sqlite3_prepare_v2(db, selectDataSmallResultText, strlen(selectDataSmallResultText), &query, NULL);
+        // while (sqlite3_step(query) == SQLITE_ROW) {
+        //     numRecords++;
+        // }
+        // sqlite3_finalize(query);
 
-        timeSelectDataSmallResultText[run] = (clock() - timeSelectDataSmallResultText[run]) / (CLOCKS_PER_SEC / 1000);
-        numRecordsSelectDataSmallResultText = numRecords;
+        // timeSelectDataSmallResultText[run] = (clock() - timeSelectDataSmallResultText[run]) / (CLOCKS_PER_SEC / 1000);
+        // numRecordsSelectDataSmallResultText = numRecords;
 
         query = NULL;
 
@@ -283,25 +351,85 @@ int main() {
 
         query = NULL;
 
+        //////////////////////////////////////
+        // Sequential Key-Value Lookup Text //
+        //////////////////////////////////////
+
+        numRecords = 0;
+        fseek(dataset, 0, SEEK_SET);
+        timeSequentialKeyValueBlob[run] = clock();
+
+        sqlite3_prepare_v2(db, sequentialKeyValue, strlen(sequentialKeyValue), &query, NULL);
+        while (fread(dataPage, 512, 1, dataset)) {
+            uint16_t count = *(uint16_t *)(dataPage + 4);
+            for (int record = 1; record <= count; record++) {
+                sqlite3_bind_int(query, 1, *(uint32_t *)(dataPage + record * recordSize));
+                sqlite3_step(query);
+                sqlite3_reset(query);
+                numRecords++;
+            }
+        }
+        sqlite3_finalize(query);
+
+        timeSequentialKeyValueBlob[run] = (clock() - timeSequentialKeyValueBlob[run]) / (CLOCKS_PER_SEC / 1000);
+        numRecordsSequentialKeyValueBlob = numRecords;
+
+        query = NULL;
+
+        //////////////////////////////////
+        // Random Key-Value Lookup Text //
+        //////////////////////////////////
+
+        numRecords = 0;
+        fseek(randomDataset, 0, SEEK_SET);
+        timeRandomKeyValueBlob[run] = clock();
+
+        sqlite3_prepare_v2(db, randomKeyValue, strlen(randomKeyValue), &query, NULL);
+        while (fread(randomDataset, 512, 1, dataset)) {
+            uint16_t count = *(uint16_t *)(dataPage + 4);
+            for (int record = 1; record <= count; record++) {
+                sqlite3_bind_int(query, 1, *(uint32_t *)(dataPage + record * recordSize));
+                sqlite3_step(query);
+                sqlite3_reset(query);
+                numRecords++;
+            }
+        }
+        sqlite3_finalize(query);
+
+        timeRandomKeyValueBlob[run] = (clock() - timeRandomKeyValueBlob[run]) / (CLOCKS_PER_SEC / 1000);
+        numRecordsRandomKeyValueBlob = numRecords;
+
+        query = NULL;
+
         //////////////////////////////////////////////
         // SELECT * FROM keyValue WHERE data >= 700 //
         //////////////////////////////////////////////
 
-        numRecords = 0;
-        char const selectDataSmallResultBlob[] = "SELECT * FROM keyValue WHERE CAST(substr(value, 1, 4) AS INTEGER) >= 700;";
+        /* This is not currently working */
 
-        timeSelectDataSmallResultBlob[run] = clock();
+        // numRecords = 0;
+        // // char const selectDataSmallResultBlob[] = "SELECT * FROM keyValue WHERE CAST(substr(value, 1, 4) AS INTEGER) = CAST(CAST(450 AS TEXT) AS INTEGER);";
+        // char const selectDataSmallResultBlob[] = "SELECT * FROM keyValue WHERE CAST(substr(value, 1, 5) AS BLOB) >= ?;";
+        // timeSelectDataSmallResultBlob[run] = clock();
+        // int32_t value = 700;
 
-        sqlite3_prepare_v2(db, selectDataSmallResultBlob, strlen(selectDataSmallResultBlob), &query, NULL);
-        while (sqlite3_step(query) == SQLITE_ROW) {
-            numRecords++;
-        }
-        sqlite3_finalize(query);
+        // sqlite3_prepare_v2(db, selectDataSmallResultBlob, strlen(selectDataSmallResultBlob), &query, NULL);
+        // sqlite3_bind_blob(query, 1, &value, 4, SQLITE_STATIC);
+        // while (sqlite3_step(query) == SQLITE_ROW) {
+        //     // void *blobResult = sqlite3_column_blob(query, 1);
+        //     // int32_t test = 0;
+        //     // memcpy(&test, blobResult, 4);
+        //     // if (test < 700) {
+        //     //     printf("Hello\n");
+        //     // }
+        //     numRecords++;
+        // }
+        // sqlite3_finalize(query);
 
-        timeSelectDataSmallResultBlob[run] = (clock() - timeSelectDataSmallResultBlob[run]) / (CLOCKS_PER_SEC / 1000);
-        numRecordsSelectDataSmallResultBlob = numRecords;
+        // timeSelectDataSmallResultBlob[run] = (clock() - timeSelectDataSmallResultBlob[run]) / (CLOCKS_PER_SEC / 1000);
+        // numRecordsSelectDataSmallResultBlob = numRecords;
 
-        query = NULL;
+        // query = NULL;
 
         dropDatabase();
         db = NULL;
@@ -410,6 +538,96 @@ int main() {
 
         timeSelectDataSmallResultInt[run] = (clock() - timeSelectDataSmallResultInt[run]) / (CLOCKS_PER_SEC / 1000);
         numRecordsSelectDataSmallResultInt = numRecords;
+
+        query = NULL;
+
+        ///////////////////////////////////////
+        // SELECT * FROM r WHERE data >= 420 //
+        ///////////////////////////////////////
+
+        numRecords = 0;
+        char const selectDataLargeResultInt[] = "SELECT * FROM keyValue WHERE airTemp >= 420;";
+
+        timeSelectDataLargeResultInt[run] = clock();
+
+        sqlite3_prepare_v2(db, selectDataLargeResultInt, strlen(selectDataLargeResultInt), &query, NULL);
+        while (sqlite3_step(query) == SQLITE_ROW) {
+            numRecords++;
+        }
+        sqlite3_finalize(query);
+
+        timeSelectDataLargeResultInt[run] = (clock() - timeSelectDataLargeResultInt[run]) / (CLOCKS_PER_SEC / 1000);
+        numRecordsSelectDataLargeResultInt = numRecords;
+
+        query = NULL;
+
+        ////////////////////////////////////////////////////////////////////////////
+        // SELECT * FROM r WHERE key >= 958885776 AND data >= 450 AND data <= 650 //
+        ////////////////////////////////////////////////////////////////////////////
+
+        numRecords = 0;
+        char const selectKeyDataResultInt[] = "SELECT * FROM keyValue WHERE key >= 958885776 AND airTemp >= 450 AND airTemp <= 650;";
+
+        timeSelectDataLargeResultInt[run] = clock();
+
+        sqlite3_prepare_v2(db, selectKeyDataResultInt, strlen(selectKeyDataResultInt), &query, NULL);
+        while (sqlite3_step(query) == SQLITE_ROW) {
+            numRecords++;
+        }
+        sqlite3_finalize(query);
+
+        timeSelectDataLargeResultInt[run] = (clock() - timeSelectDataLargeResultInt[run]) / (CLOCKS_PER_SEC / 1000);
+        numRecordsSelectDataLargeResultInt = numRecords;
+
+        query = NULL;
+
+        //////////////////////////////////////
+        // Sequential Key-Value Lookup Text //
+        //////////////////////////////////////
+
+        numRecords = 0;
+        fseek(dataset, 0, SEEK_SET);
+        timeSequentialKeyValueInt[run] = clock();
+
+        sqlite3_prepare_v2(db, sequentialKeyValue, strlen(sequentialKeyValue), &query, NULL);
+        while (fread(dataPage, 512, 1, dataset)) {
+            uint16_t count = *(uint16_t *)(dataPage + 4);
+            for (int record = 1; record <= count; record++) {
+                sqlite3_bind_int(query, 1, *(uint32_t *)(dataPage + record * recordSize));
+                sqlite3_step(query);
+                sqlite3_reset(query);
+                numRecords++;
+            }
+        }
+        sqlite3_finalize(query);
+
+        timeSequentialKeyValueInt[run] = (clock() - timeSequentialKeyValueInt[run]) / (CLOCKS_PER_SEC / 1000);
+        numRecordsSequentialKeyValueInt = numRecords;
+
+        query = NULL;
+
+        //////////////////////////////////
+        // Random Key-Value Lookup Text //
+        //////////////////////////////////
+
+        numRecords = 0;
+        fseek(randomDataset, 0, SEEK_SET);
+        timeRandomKeyValueInt[run] = clock();
+
+        sqlite3_prepare_v2(db, randomKeyValue, strlen(randomKeyValue), &query, NULL);
+        while (fread(randomDataset, 512, 1, dataset)) {
+            uint16_t count = *(uint16_t *)(dataPage + 4);
+            for (int record = 1; record <= count; record++) {
+                sqlite3_bind_int(query, 1, *(uint32_t *)(dataPage + record * recordSize));
+                sqlite3_step(query);
+                sqlite3_reset(query);
+                numRecords++;
+            }
+        }
+        sqlite3_finalize(query);
+
+        timeRandomKeyValueInt[run] = (clock() - timeRandomKeyValueInt[run]) / (CLOCKS_PER_SEC / 1000);
+        numRecordsRandomKeyValueInt = numRecords;
 
         query = NULL;
 
@@ -600,14 +818,34 @@ int main() {
     printf("Num Records Queried: %d\n", numRecordsSelectStarLargeResultText);
 
     sum = 0;
-    printf("\nSELECT * FROM KEYVALUE DATA SMALL RESULT INTEGER TEXT\n");
+    printf("\nSEQUENTIAL KEY VALUE LOOKUP INTEGER TEXT\n");
     printf("Time: ");
     for (int i = 0; i < numRuns; i++) {
-        printf("%d ", timeSelectDataSmallResultText[i]);
-        sum += timeSelectDataSmallResultText[i];
+        printf("%d ", timeSequentialKeyValueText[i]);
+        sum += timeSequentialKeyValueText[i];
     }
     printf("~ %dms\n", sum / numRuns);
-    printf("Num Records Queried: %d\n", numRecordsSelectDataSmallResultText);
+    printf("Num Records Queried: %d\n", numRecordsSequentialKeyValueText);
+
+    sum = 0;
+    printf("\nRANDOM KEY VALUE LOOKUP INTEGER TEXT\n");
+    printf("Time: ");
+    for (int i = 0; i < numRuns; i++) {
+        printf("%d ", timeRandomKeyValueText[i]);
+        sum += timeRandomKeyValueText[i];
+    }
+    printf("~ %dms\n", sum / numRuns);
+    printf("Num Records Queried: %d\n", numRecordsRandomKeyValueText);
+
+    // sum = 0;
+    // printf("\nSELECT * FROM KEYVALUE DATA SMALL RESULT INTEGER TEXT\n");
+    // printf("Time: ");
+    // for (int i = 0; i < numRuns; i++) {
+    //     printf("%d ", timeSelectDataSmallResultText[i]);
+    //     sum += timeSelectDataSmallResultText[i];
+    // }
+    // printf("~ %dms\n", sum / numRuns);
+    // printf("Num Records Queried: %d\n", numRecordsSelectDataSmallResultText);
 
     sum = 0;
     printf("\nSELECT * FROM KEYVALUE INTEGER BLOB\n");
@@ -640,14 +878,34 @@ int main() {
     printf("Num Records Queried: %d\n", numRecordsSelectStarLargeResultBlob);
 
     sum = 0;
-    printf("\nSELECT * FROM KEYVALUE DATA SMALL RESULT INTEGER BLOB\n");
+    printf("\nSEQUENTIAL KEY VALUE LOOKUP INTEGER BLOB\n");
     printf("Time: ");
     for (int i = 0; i < numRuns; i++) {
-        printf("%d ", timeSelectDataSmallResultBlob[i]);
-        sum += timeSelectDataSmallResultBlob[i];
+        printf("%d ", timeSequentialKeyValueBlob[i]);
+        sum += timeSequentialKeyValueBlob[i];
     }
     printf("~ %dms\n", sum / numRuns);
-    printf("Num Records Queried: %d\n", numRecordsSelectDataSmallResultBlob);
+    printf("Num Records Queried: %d\n", numRecordsSequentialKeyValueBlob);
+
+    sum = 0;
+    printf("\nRANDOM KEY VALUE LOOKUP INTEGER BLOB\n");
+    printf("Time: ");
+    for (int i = 0; i < numRuns; i++) {
+        printf("%d ", timeRandomKeyValueBlob[i]);
+        sum += timeRandomKeyValueBlob[i];
+    }
+    printf("~ %dms\n", sum / numRuns);
+    printf("Num Records Queried: %d\n", numRecordsRandomKeyValueBlob);
+
+    // sum = 0;
+    // printf("\nSELECT * FROM KEYVALUE DATA SMALL RESULT INTEGER BLOB\n");
+    // printf("Time: ");
+    // for (int i = 0; i < numRuns; i++) {
+    //     printf("%d ", timeSelectDataSmallResultBlob[i]);
+    //     sum += timeSelectDataSmallResultBlob[i];
+    // }
+    // printf("~ %dms\n", sum / numRuns);
+    // printf("Num Records Queried: %d\n", numRecordsSelectDataSmallResultBlob);
 
     sum = 0;
     printf("\nSELECT * FROM KEYVALUE INTEGER INTEGER INTEGER INTEGER\n");
@@ -688,6 +946,46 @@ int main() {
     }
     printf("~ %dms\n", sum / numRuns);
     printf("Num Records Queried: %d\n", numRecordsSelectDataSmallResultInt);
+
+    sum = 0;
+    printf("\nSELECT * FROM KEYVALUE DATA LARGE RESULT INTEGER INTEGER INTEGER INTEGER\n");
+    printf("Time: ");
+    for (int i = 0; i < numRuns; i++) {
+        printf("%d ", timeSelectDataLargeResultInt[i]);
+        sum += timeSelectDataLargeResultInt[i];
+    }
+    printf("~ %dms\n", sum / numRuns);
+    printf("Num Records Queried: %d\n", numRecordsSelectDataLargeResultInt);
+
+    sum = 0;
+    printf("\nSELECT * FROM KEYVALUE KEY DATA RESULT INTEGER INTEGER INTEGER INTEGER\n");
+    printf("Time: ");
+    for (int i = 0; i < numRuns; i++) {
+        printf("%d ", timeSelectKeyDataInt[i]);
+        sum += timeSelectKeyDataInt[i];
+    }
+    printf("~ %dms\n", sum / numRuns);
+    printf("Num Records Queried: %d\n", numRecordsSelectKeyDataInt);
+
+    sum = 0;
+    printf("\nSEQUENTIAL KEY VALUE LOOKUP INTEGER INTEGER INTEGER INTEGER\n");
+    printf("Time: ");
+    for (int i = 0; i < numRuns; i++) {
+        printf("%d ", timeSequentialKeyValueInt[i]);
+        sum += timeSequentialKeyValueInt[i];
+    }
+    printf("~ %dms\n", sum / numRuns);
+    printf("Num Records Queried: %d\n", numRecordsSequentialKeyValueInt);
+
+    sum = 0;
+    printf("\nRANDOM KEY VALUE LOOKUP INTEGER INTEGER INTEGER INTEGER\n");
+    printf("Time: ");
+    for (int i = 0; i < numRuns; i++) {
+        printf("%d ", timeRandomKeyValueInt[i]);
+        sum += timeRandomKeyValueInt[i];
+    }
+    printf("~ %dms\n", sum / numRuns);
+    printf("Num Records Queried: %d\n", numRecordsRandomKeyValueInt);
 
     return 0;
 }
