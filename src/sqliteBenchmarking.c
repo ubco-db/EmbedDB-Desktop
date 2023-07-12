@@ -39,7 +39,7 @@ sqlite3 *db = NULL;
 #define RUN_TRANSACTION 1
 
 int main() {
-    int numRuns = 1;
+    int numRuns = 50;
 
     clock_t timeInsertNTText[numRuns],
         timeSelectStarText[numRuns],
