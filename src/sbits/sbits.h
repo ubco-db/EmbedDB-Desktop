@@ -196,6 +196,7 @@ typedef struct {
     id_t nextIdxPageId;                                                   /* Next logical page id for index. Page id is an incrementing value and may not always be same as physical page id. */
     id_t nextVarPageId;                                                   /* Page number of next var page to be written */
     id_t currentVarLoc;                                                   /* Current variable address offset to write at (bytes from beginning of file) */
+    uint32_t nextAutoCommitPageId;                                        /* Next page id to auto-commit at */
     void *buffer;                                                         /* Pre-allocated memory buffer for use by algorithm */
     spline *spl;                                                          /* Spline model */
     radixspline *rdix;                                                    /* Radix Spline search model */
