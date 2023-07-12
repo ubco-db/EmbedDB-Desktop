@@ -248,6 +248,13 @@ int main() {
         // SELECT * FROM keyValue WHERE data >= 700 //
         //////////////////////////////////////////////
 
+        /* 
+        * This was an attempt to extract the first four bytes of the text value field, which represents a
+        * number in the test data set. Due to how casting works, we were unable to find a quick way to 
+        * extract this value. A recursive query or custom function would have to be developed to extract
+        * the data this way.
+        */
+
         /* This is not currently working */
 
         // numRecords = 0;
@@ -405,23 +412,28 @@ int main() {
         // SELECT * FROM keyValue WHERE data >= 700 //
         //////////////////////////////////////////////
 
-        /* This is not currently working */
+        /* 
+        * This was an attempt to extract the first four bytes of the blob value field, which represents a
+        * number in the test data set. Due to how casting works, we were unable to find a quick way to 
+        * extract this value. A recursive query or custom function would have to be developed to extract
+        * the data this way.
+        */
 
         // numRecords = 0;
-        // // char const selectDataSmallResultBlob[] = "SELECT * FROM keyValue WHERE CAST(substr(value, 1, 4) AS INTEGER) = CAST(CAST(450 AS TEXT) AS INTEGER);";
-        // char const selectDataSmallResultBlob[] = "SELECT * FROM keyValue WHERE CAST(substr(value, 1, 5) AS BLOB) >= ?;";
+        // char const selectDataSmallResultBlob[] = "SELECT * FROM keyValue WHERE CAST(substr(value, 1, 4) AS INTEGER) = CAST(CAST(450 AS TEXT) AS INTEGER);";
+        // char const selectDataSmallResultBlob[] = "SELECT * FROM keyValue WHERE CAST(hex(substr(value, 1, 4)) AS INTEGER) >= X'BC020000';";
         // timeSelectDataSmallResultBlob[run] = clock();
         // int32_t value = 700;
 
         // sqlite3_prepare_v2(db, selectDataSmallResultBlob, strlen(selectDataSmallResultBlob), &query, NULL);
         // sqlite3_bind_blob(query, 1, &value, 4, SQLITE_STATIC);
         // while (sqlite3_step(query) == SQLITE_ROW) {
-        //     // void *blobResult = sqlite3_column_blob(query, 1);
-        //     // int32_t test = 0;
-        //     // memcpy(&test, blobResult, 4);
-        //     // if (test < 700) {
-        //     //     printf("Hello\n");
-        //     // }
+            // void *blobResult = sqlite3_column_blob(query, 1);
+            // int32_t test = 0;
+            // memcpy(&test, blobResult, 4);
+            // if (test < 700) {
+            //     printf("Hello\n");
+            // }
         //     numRecords++;
         // }
         // sqlite3_finalize(query);
@@ -896,6 +908,8 @@ int main() {
     }
     printf("~ %dms\n", sum / numRuns);
     printf("Num Records Queried: %d\n", numRecordsRandomKeyValueBlob);
+
+    /* This would print the data querying results from the blob format data, but the query did not return the correct number of records. */
 
     // sum = 0;
     // printf("\nSELECT * FROM KEYVALUE DATA SMALL RESULT INTEGER BLOB\n");
