@@ -20,7 +20,6 @@ PATHU = Unity/src/
 PATHS = src/
 PATHSBITS = src/sbits/
 PATHSPLINE = src/spline/
-PATHSQLITE = sqlite/
 PATHT = test/
 PATHB = build/
 PATHD = build/depends/
@@ -36,8 +35,6 @@ SRCT = $(wildcard $(PATHT)*.c)
 
 VARTEST = $(PATHO)varTest.o
 TEST_SBITS = $(PATHO)test_sbits.o
-SQLITE_BENCHMARK = $(PATHO)sqliteBenchmarking.o
-SBITS_BENCHMARK = $(PATHO)sbits_benchmarking.o
 
 COMPILE=gcc -c
 LINK=gcc
@@ -60,22 +57,6 @@ test_sbits: $(BUILD_PATHS) $(PATHB)test_sbits.$(TARGET_EXTENSION)
 	@echo "Finished running test_sbits file"
 
 $(PATHB)test_sbits.$(TARGET_EXTENSION): $(OBJECTS) $(TEST_SBITS)
-	$(LINK) -o $@ $^ -lm
-
-sqlite_benchmark: $(BUILD_PATHS) $(PATHB)sqliteBenchmarking.$(TARGET_EXTENSION)
-	@echo "Running sqlite benchmark"
-	-./$(PATHB)sqliteBenchmarking.$(TARGET_EXTENSION)
-	@echo "Finished running sqliteBenchmarking file"
-
-$(PATHB)sqliteBenchmarking.$(TARGET_EXTENSION): $(OBJECTS) $(PATHO)sqlite3.o $(SQLITE_BENCHMARK)
-	$(LINK) -o $@ $^ -lm -ldl -lpthread
-
-sbits_benchmark: $(BUILD_PATHS) $(PATHB)sbits_benchmarking.$(TARGET_EXTENSION)
-	@echo "Running benchmark"
-	-./$(PATHB)sbits_benchmarking.$(TARGET_EXTENSION)
-	@echo "Finished running benchmark file"
-
-$(PATHB)sbits_benchmarking.$(TARGET_EXTENSION): $(OBJECTS) $(SBITS_BENCHMARK)
 	$(LINK) -o $@ $^ -lm
 
 test: $(BUILD_PATHS) $(RESULTS)
