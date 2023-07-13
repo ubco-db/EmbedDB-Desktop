@@ -81,9 +81,6 @@ $(PATHO)%.o:: $(PATHSPLINE)%.c
 $(PATHO)%.o:: $(PATHSBITS)%.c
 	$(COMPILE) $(CFLAGS) $< -o $@ -lm
 
-$(PATHO)%.o:: $(PATHSQLITE)%.c
-	$(COMPILE) $(CFLAGS) $< -o $@ -lm
-
 $(PATHO)%.o:: $(PATHU)%.c $(PATHU)%.h
 	$(COMPILE) $(CFLAGS) $< -o $@ -lm
 
@@ -111,7 +108,6 @@ clean:
 	$(CLEANUP) $(PATHR)*.testpass
 	$(CLEANUP) $(PATHA)*.png
 	$(CLEANUP) $(PATHA)*.bin
-	$(CLEANUP) $(PATHA)*.db
 	$(CLEANUP) $(PATHR)*.xml
 
 .PRECIOUS: $(PATHB)Test%.$(TARGET_EXTENSION)
