@@ -19,8 +19,8 @@ PATHSBITS = ../../../src/sbits/
 PATHSPLINE = ../../../src/spline/
 
 sqliteBenchmarking:
-	gcc -c sqlite3.c sqliteBenchmarking.c
-	gcc -o sqliteBenchmarking.exe sqlite3.o sqliteBenchmarking.o
+	gcc -c sqlite3.c sqliteBenchmarking.c -ldl -lpthread
+	gcc -o sqliteBenchmarking.exe sqlite3.o sqliteBenchmarking.o -ldl -lpthread
 	sqliteBenchmarking.exe
 
 sbitsBenchmarking:

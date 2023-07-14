@@ -1,10 +1,11 @@
 #include <errno.h>
-#include <sqlite3.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+
+#include "sqlite3.h"
 
 int createTableIntText();
 int createTableIntBlob();
@@ -1059,7 +1060,7 @@ void printQueryExplain() {
     char dataQuerySingleSelect[] = "EXPLAIN QUERY PLAN SELECT * FROM keyValue WHERE airTemp = 800;";
     sqlite3_prepare_v2(db, dataQuerySingleSelect, strlen(dataQuerySingleSelect), &query, NULL);
     sqlite3_step(query);
-    printf("Single Data Value Query Plan: %s\n",  sqlite3_column_text(query, 3));
+    printf("Single Data Value Query Plan: %s\n", sqlite3_column_text(query, 3));
     sqlite3_finalize(query);
 }
 
