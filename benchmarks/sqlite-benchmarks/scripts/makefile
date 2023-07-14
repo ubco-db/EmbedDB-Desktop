@@ -21,7 +21,7 @@ PATHSPLINE = ../../../src/spline/
 sqliteBenchmarking:
 	gcc -c sqlite3.c sqliteBenchmarking.c -ldl -lpthread
 	gcc -o sqliteBenchmarking.$(TARGET_EXTENSION) sqlite3.o sqliteBenchmarking.o -ldl -lpthread
-	sqliteBenchmarking.$(TARGET_EXTENSION)
+	./sqliteBenchmarking.$(TARGET_EXTENSION)
 
 sbitsBenchmarking:
 	gcc -c $(PATHSBITS)sbits.c -o sbits.o 
