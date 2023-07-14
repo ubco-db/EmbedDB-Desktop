@@ -44,7 +44,7 @@ char const databaseName[] = "sqliteData.db";
 char const databaseJournalName[] = "sqliteData.db-journal";
 char const dataFileName[] = "../../../data/uwa500K.bin";
 char const randomizedDataFileName[] = "../../../data/uwa500K_randomized.bin";
-int const numRuns = 1;
+int const numRuns = 5;
 
 int main() {
     clock_t timeInsertNTText[numRuns],
