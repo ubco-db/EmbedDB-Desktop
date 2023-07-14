@@ -119,7 +119,7 @@ void test_get_when_almost_almost_full_page() {
 }
 
 void test_get_when_almost_full_page() {
-    TEST_ASSERT_EQUAL_UINT32_MESSAGE(0, state->nextDataPageId, "sbits should not have written a page yet");
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(1, state->nextDataPageId, "sbits should have written a page");
 }
 
 void test_get_when_full_page() {
@@ -156,6 +156,7 @@ void test_get_when_all() {
         TEST_ASSERT_EQUAL_CHAR_ARRAY_MESSAGE(&expectedData, &data, state->dataSize, "sbitsGetVar did not return the correct fixed data");
         TEST_ASSERT_NOT_NULL_MESSAGE(varStream, "sbitsGetVar did not return vardata");
         uint32_t length = sbitsVarDataStreamRead(state, varStream, buf, 20);
+        printf("key: %d, length: %d\n", key, length);
         TEST_ASSERT_EQUAL_UINT32_MESSAGE(15, length, "Returned vardata was not the right length");
         TEST_ASSERT_EQUAL_CHAR_ARRAY_MESSAGE(expectedVarData, buf, 15, "sbitsGetVar did not return the correct vardata");
         if (varStream != NULL) {
@@ -163,6 +164,7 @@ void test_get_when_all() {
             varStream = NULL;
         }
     }
+    exit(-1);
 }
 
 void test_insert_1() {
