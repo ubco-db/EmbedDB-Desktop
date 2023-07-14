@@ -24,13 +24,13 @@ sqliteBenchmarking:
 	./sqliteBenchmarking.$(TARGET_EXTENSION)
 
 sbitsBenchmarking:
-	gcc -c $(PATHSBITS)sbits.c -o sbits.o 
-	gcc -c $(PATHSBITS)utilityFunctions.c -o utilityFunctions.o 
-	gcc -c $(PATHSPLINE)spline.c -o spline.o
-	gcc -c $(PATHSPLINE)radixspline.c -o radixspline.o
-	gcc -c sbitsBenchmarking.c -o sbitsBenchmarking.o
-	gcc -o sbitsBenchmarking.exe sbitsBenchmarking.o sbits.o utilityFunctions.o spline.o radixspline.o
-	sbitsBenchmarking.exe
+	gcc -c $(PATHSBITS)sbits.c -o sbits.o -lm
+	gcc -c $(PATHSBITS)utilityFunctions.c -o utilityFunctions.o  -lm
+	gcc -c $(PATHSPLINE)spline.c -o spline.o -lm
+	gcc -c $(PATHSPLINE)radixspline.c -o radixspline.o -lm
+	gcc -c sbitsBenchmarking.c -o sbitsBenchmarking.o -lm
+	gcc -o sbitsBenchmarking.$(TARGET_EXTENSION) sbitsBenchmarking.o sbits.o utilityFunctions.o spline.o radixspline.o -lm
+	./sbitsBenchmarking.$(TARGET_EXTENSION)
 
 clean:
 	$(CLEANUP) *.o	
