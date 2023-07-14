@@ -83,14 +83,15 @@ int main() {
         timeSelectAll[numRuns],
         timeSelectKeySmallResult[numRuns],
         timeSelectKeyLargeResult[numRuns],
+        timeSelectSingleDataResult[numRuns],
         timeSelectDataSmallResult[numRuns],
         timeSelectDataLargeResult[numRuns],
         timeSelectKeyData[numRuns],
         timeSeqKV[numRuns],
         timeRandKV[numRuns];
-    uint32_t numRecords, numRecordsSelectAll, numRecordsSelectKeySmallResult, numRecordsSelectKeyLargeResult, numRecordsSelectDataSmallResult, numRecordsSelectDataLargeResult, numRecordsSelectKeyData, numRecordsSeqKV, numRecordsRandKV;
-    uint32_t numWrites, numReadsSelectAll, numReadsSelectKeySmallResult, numReadsSelectKeyLargeResult, numReadsSelectDataSmallResult, numReadsSelectDataLargeResult, numReadsSelectKeyData, numReadsSeqKV, numReadsRandKV;
-    uint32_t numIdxWrites, numIdxReadsSelectDataSmallResult, numIdxReadsSelectDataLargeResult, numIdxReadsSelectKeyData;
+    uint32_t numRecords, numRecordsSelectAll, numRecordsSelectKeySmallResult, numRecordsSelectKeyLargeResult, numRecordsSelectSingleDataResult, numRecordsSelectDataSmallResult, numRecordsSelectDataLargeResult, numRecordsSelectKeyData, numRecordsSeqKV, numRecordsRandKV;
+    uint32_t numWrites, numReadsSelectAll, numReadsSelectKeySmallResult, numReadsSelectKeyLargeResult, numReadsSelectSingleDataResult, numReadsSelectDataSmallResult, numReadsSelectDataLargeResult, numReadsSelectKeyData, numReadsSeqKV, numReadsRandKV;
+    uint32_t numIdxWrites, numIdxReadsSelectSingleDataResult, numIdxReadsSelectDataSmallResult, numIdxReadsSelectDataLargeResult, numIdxReadsSelectKeyData;
 
     for (int run = 0; run < numRuns; run++) {
         ///////////
@@ -214,6 +215,34 @@ int main() {
         timeSelectKeyLargeResult[run] = (clock() - start) / (CLOCKS_PER_SEC / 1000);
 
         numReadsSelectKeyLargeResult = state->numReads - numReadsSelectKeyLargeResult;
+
+        //////////////////////////////////////
+        // SELECT * FROM r WHERE data = 800 //
+        //////////////////////////////////////
+
+        start = clock();
+
+        sbitsIterator itSelectSingleDataResult;
+        int32_t minDataSelectSingleResult = 800;
+        int32_t maxDataSelectSingleResult = 800;
+        itSelectSingleDataResult.minKey = NULL;
+        itSelectSingleDataResult.maxKey = NULL;
+        itSelectSingleDataResult.minData = &minDataSelectSingleResult;
+        itSelectSingleDataResult.maxData = &maxDataSelectSingleResult;
+        sbitsInitIterator(state, &itSelectSingleDataResult);
+
+        numRecordsSelectSingleDataResult = 0;
+        numReadsSelectSingleDataResult = state->numReads;
+        numIdxReadsSelectSingleDataResult = state->numIdxReads;
+
+        while (sbitsNext(state, &itSelectSingleDataResult, recordBuffer, recordBuffer + state->keySize)) {
+            numRecordsSelectSingleDataResult++;
+        }
+
+        timeSelectSingleDataResult[run] = (clock() - start) / (CLOCKS_PER_SEC / 1000);
+
+        numReadsSelectSingleDataResult = state->numReads - numReadsSelectSingleDataResult;
+        numIdxReadsSelectSingleDataResult = state->numIdxReads - numIdxReadsSelectSingleDataResult;
 
         ///////////////////////////////////////
         // SELECT * FROM r WHERE data >= 700 //
@@ -395,6 +424,18 @@ int main() {
     printf("~ %dms\n", sum / numRuns);
     printf("Result size: %d\n", numRecordsSelectKeyLargeResult);
     printf("Num reads: %d\n", numReadsSelectKeyLargeResult);
+
+    sum = 0;
+    printf("\nSELECT * FROM r WHERE data = 800\n");
+    printf("Time: ");
+    for (int i = 0; i < numRuns; i++) {
+        printf("%d ", timeSelectSingleDataResult[i]);
+        sum += timeSelectSingleDataResult[i];
+    }
+    printf("~ %dms\n", sum / numRuns);
+    printf("Result size: %d\n", numRecordsSelectSingleDataResult);
+    printf("Num reads: %d\n", numReadsSelectSingleDataResult);
+    printf("Num idx reads: %d\n", numIdxReadsSelectSingleDataResult);
 
     sum = 0;
     printf("\nSELECT * FROM r WHERE data >= 700\n");

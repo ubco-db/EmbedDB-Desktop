@@ -64,6 +64,7 @@ int main() {
         timeSelectStarInt[numRuns],
         timeSelectStarSmallResultInt[numRuns],
         timeSelectStarLargeResultInt[numRuns],
+        timeSelectDataSingleResultInt[numRuns],
         timeSelectDataSmallResultInt[numRuns],
         timeSelectDataLargeResultInt[numRuns],
         timeSelectKeyDataInt[numRuns],
@@ -90,6 +91,7 @@ int main() {
         numRecordsSelectStarInt,
         numRecordsSelectStarSmallResultInt,
         numRecordsSelectStarLargeResultInt,
+        numRecordsSelectDataSingleResult,
         numRecordsSelectDataSmallResultInt,
         numRecordsSelectDataLargeResultInt,
         numRecordsSelectKeyDataInt,
@@ -539,6 +541,26 @@ int main() {
         query = NULL;
 
         /////////////////////////////////////////////////
+        // SELECT * FROM keyValue WHERE airTemp = 800 //
+        /////////////////////////////////////////////////
+
+        numRecords = 0;
+        char const selectDataSingleResult[] = "SELECT * FROM keyValue WHERE airTemp = 800;";
+
+        timeSelectDataSingleResultInt[run] = clock();
+
+        sqlite3_prepare_v2(db, selectDataSingleResult, strlen(selectDataSingleResult), &query, NULL);
+        while (sqlite3_step(query) == SQLITE_ROW) {
+            numRecords++;
+        }
+        sqlite3_finalize(query);
+
+        timeSelectDataSingleResultInt[run] = (clock() - timeSelectDataSingleResultInt[run]) / (CLOCKS_PER_SEC / 1000);
+        numRecordsSelectDataSingleResult = numRecords;
+
+        query = NULL;
+
+        /////////////////////////////////////////////////
         // SELECT * FROM keyValue WHERE airTemp >= 700 //
         /////////////////////////////////////////////////
 
@@ -955,6 +977,16 @@ int main() {
     }
     printf("~ %dms\n", sum / numRuns);
     printf("Num Records Queried: %d\n", numRecordsSelectStarLargeResultInt);
+
+    sum = 0;
+    printf("\nSELECT * FROM KEYVALUE DATA SINGLE RESULT INTEGER INTEGER INTEGER INTEGER\n");
+    printf("Time: ");
+    for (int i = 0; i < numRuns; i++) {
+        printf("%d ", timeSelectDataSingleResultInt[i]);
+        sum += timeSelectDataSingleResultInt[i];
+    }
+    printf("~ %dms\n", sum / numRuns);
+    printf("Num Records Queried: %d\n", numRecordsSelectDataSingleResult);
 
     sum = 0;
     printf("\nSELECT * FROM KEYVALUE DATA SMALL RESULT INTEGER INTEGER INTEGER INTEGER\n");
