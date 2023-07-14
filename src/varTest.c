@@ -818,8 +818,17 @@ int main() {
 }
 
 uint32_t randomData(void **data, uint32_t sizeLowerBound, uint32_t sizeUpperBound) {
-    uint32_t size = rand() % (sizeUpperBound - sizeLowerBound) + sizeLowerBound;
+    uint32_t size;
+    if (sizeLowerBound == sizeUpperBound) {
+        size = sizeLowerBound;
+    } else {
+        size = rand() % (sizeUpperBound - sizeLowerBound) + sizeLowerBound;
+    }
     *data = malloc(size);
+    if (*data == NULL) {
+        printf("ERROR: Failed to allocate memory for random data\n");
+        exit(-1);
+    }
     for (uint32_t i = 0; i < size; i++) {
         *((uint8_t *)(*data) + i) = rand() % UINT8_MAX;
     }
@@ -890,7 +899,7 @@ void imageVarData(float chance, char *filename, uint8_t *usingVarData, uint32_t 
     *usingVarData = (rand() % 100) / 100.0 < chance;
     if (usingVarData) {
         *length = readImageFromFile(varData, filename);
-        if (*length == -1) {
+        if (*length == 0) {
             printf("ERROR: Failed to read image '%s'\n", filename);
             exit(-1);
         }
@@ -905,7 +914,7 @@ void imageVarData(float chance, char *filename, uint8_t *usingVarData, uint32_t 
  */
 void randomVarData(uint32_t chance, uint32_t sizeLowerBound, uint32_t sizeUpperBound, uint8_t *usingVarData, uint32_t *length, void **varData) {
     *usingVarData = (rand() % chance) == 0;
-    if (usingVarData) {
+    if (*usingVarData) {
         *length = randomData(varData, sizeLowerBound, sizeUpperBound);
     } else {
         *length = 0;

@@ -59,6 +59,7 @@ typedef uint16_t count_t;
 #define SBITS_USE_BMAP 8
 #define SBITS_USE_VDATA 16
 #define SBITS_RESET_DATA 32
+#define SBITS_AUTO_COMMIT 64
 
 #define SBITS_USING_INDEX(x) ((x & SBITS_USE_INDEX) > 0 ? 1 : 0)
 #define SBITS_USING_MAX_MIN(x) ((x & SBITS_USE_MAX_MIN) > 0 ? 1 : 0)
@@ -66,12 +67,13 @@ typedef uint16_t count_t;
 #define SBITS_USING_BMAP(x) ((x & SBITS_USE_BMAP) > 0 ? 1 : 0)
 #define SBITS_USING_VDATA(x) ((x & SBITS_USE_VDATA) > 0 ? 1 : 0)
 #define SBITS_RESETING_DATA(x) ((x & SBITS_RESET_DATA) > 0 ? 1 : 0)
+#define SBITS_AUTO_COMMITING(x) ((x & SBITS_AUTO_COMMIT) > 0 ? 1 : 0)
 
 /* Offsets with header */
-#define SBITS_COUNT_OFFSET 4
-#define SBITS_BITMAP_OFFSET 6
-// #define SBITS_MIN_OFFSET		8
-#define SBITS_MIN_OFFSET 14
+#define SBITS_COUNT_OFFSET(state) 4
+#define SBITS_BITMAP_OFFSET(state) (SBITS_COUNT_OFFSET(state) + 2)
+#define SBITS_MIN_OFFSET(state) (SBITS_BITMAP_OFFSET(state) + (SBITS_USING_BMAP(state->parameters) ? state->bitmapSize : 0))
+#define SBITS_FILETYPE_OFFSET(state) (SBITS_MIN_OFFSET(state) + (SBITS_USING_MAX_MIN(state->parameters) ? state->keySize * 2 + state->dataSize * 2 : 0))
 #define SBITS_IDX_HEADER_SIZE 16
 
 #define SBITS_NO_VAR_DATA UINT32_MAX
@@ -79,16 +81,17 @@ typedef uint16_t count_t;
 #define max(a, b) ((a) > (b) ? (a) : (b))
 #define min(a, b) ((a) < (b) ? (a) : (b))
 
-#define SBITS_GET_COUNT(x) *((count_t *)((int8_t *)x + SBITS_COUNT_OFFSET))
-#define SBITS_INC_COUNT(x) *((count_t *)((int8_t *)x + SBITS_COUNT_OFFSET)) = *((count_t *)((int8_t *)x + SBITS_COUNT_OFFSET)) + 1
+#define SBITS_GET_COUNT(state, buffer) *((count_t *)((int8_t *)buffer + SBITS_COUNT_OFFSET(state)))
+#define SBITS_INC_COUNT(state, buffer) *((count_t *)((int8_t *)buffer + SBITS_COUNT_OFFSET(state))) = *((count_t *)((int8_t *)buffer + SBITS_COUNT_OFFSET(state))) + 1
 
-#define SBITS_GET_BITMAP(x) ((void *)((int8_t *)x + SBITS_BITMAP_OFFSET))
+#define SBITS_GET_BITMAP(state, buffer) ((void *)((int8_t *)buffer + SBITS_BITMAP_OFFSET(state)))
 
-#define SBITS_GET_MIN_KEY(x) ((void *)((int8_t *)x + SBITS_MIN_OFFSET))
-#define SBITS_GET_MAX_KEY(x, y) ((void *)((int8_t *)x + SBITS_MIN_OFFSET + y->keySize))
+#define SBITS_GET_MIN_KEY(state, buffer) ((void *)((int8_t *)buffer + SBITS_MIN_OFFSET(state)))
+#define SBITS_GET_MAX_KEY(state, buffer) ((void *)((int8_t *)buffer + SBITS_MIN_OFFSET(state) + state->keySize))
 
-#define SBITS_GET_MIN_DATA(x, y) ((void *)((int8_t *)x + SBITS_MIN_OFFSET + y->keySize * 2))
-#define SBITS_GET_MAX_DATA(x, y) ((void *)((int8_t *)x + SBITS_MIN_OFFSET + y->keySize * 2 + y->dataSize))
+#define SBITS_GET_MIN_DATA(state, buffer) ((void *)((int8_t *)buffer + SBITS_MIN_OFFSET(state) + state->keySize * 2))
+#define SBITS_GET_MAX_DATA(state, buffer) ((void *)((int8_t *)buffer + SBITS_MIN_OFFSET(state) + state->keySize * 2 + state->dataSize))
+#define SBITS_GET_FILETYPE(state, buffer) ((uint8_t *)((int8_t *)buffer + SBITS_FILETYPE_OFFSET(state)))
 
 #define SBITS_DATA_WRITE_BUFFER 0
 #define SBITS_DATA_READ_BUFFER 1
@@ -194,6 +197,7 @@ typedef struct {
     id_t nextIdxPageId;                                                   /* Next logical page id for index. Page id is an incrementing value and may not always be same as physical page id. */
     id_t nextVarPageId;                                                   /* Page number of next var page to be written */
     id_t currentVarLoc;                                                   /* Current variable address offset to write at (bytes from beginning of file) */
+    uint32_t nextAutoCommitPageId;                                        /* Next page id to auto-commit at */
     void *buffer;                                                         /* Pre-allocated memory buffer for use by algorithm */
     spline *spl;                                                          /* Spline model */
     radixspline *rdix;                                                    /* Radix Spline search model */
@@ -254,6 +258,11 @@ typedef struct {
  * @return	Return 0 if success. Non-zero value if error.
  */
 int8_t sbitsInit(sbitsState *state, size_t indexMaxError);
+
+/**
+ * @brief	Prints information about the SBITS structure.
+ */
+void printState(sbitsState *state);
 
 /**
  * @brief	Puts a given key, data pair into structure.

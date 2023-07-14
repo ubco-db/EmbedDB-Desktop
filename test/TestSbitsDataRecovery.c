@@ -154,7 +154,7 @@ void sbits_parameters_initializes_correctly_from_data_file_with_four_hundred_sev
 void sbits_parameters_initializes_correctly_from_data_file_with_no_data() {
     tearDown();
     initalizeSbitsFromFile();
-    TEST_ASSERT_EQUAL_UINT64_MESSAGE(UINT32_MAX, state->minKey, "SBITS minkey is not correctly identified after reload from data file.");
+    TEST_ASSERT_EQUAL_UINT64_MESSAGE(UINT64_MAX, state->minKey, "SBITS minkey is not correctly identified after reload from data file.");
     TEST_ASSERT_EQUAL_UINT32_MESSAGE(0, state->nextDataPageId, "SBITS nextDataPageId is not correctly identified after reload from data file.");
     TEST_ASSERT_EQUAL_UINT32_MESSAGE(0, state->minDataPageId, "SBITS minDataPageId was not correctly identified.");
     TEST_ASSERT_EQUAL_UINT32_MESSAGE(93, state->numAvailDataPages, "SBITS numAvailDataPages is not ");
