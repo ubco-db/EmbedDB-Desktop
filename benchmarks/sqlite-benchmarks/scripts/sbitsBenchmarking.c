@@ -78,7 +78,7 @@ int main() {
     testRawPerformance();
     printf("\n");
 
-    int numRuns = 1;
+    int numRuns = 10;
     clock_t timeInsert[numRuns],
         timeSelectAll[numRuns],
         timeSelectKeySmallResult[numRuns],
