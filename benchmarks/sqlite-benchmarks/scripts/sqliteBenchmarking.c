@@ -14,6 +14,7 @@ void dropDatabase();
 int getNumRecords();
 int createIndexValue();
 int createIndexAirTemp();
+void printQueryExplain();
 
 sqlite3 *db = NULL;
 
@@ -35,7 +36,7 @@ sqlite3 *db = NULL;
  * 0: No Index
  * 1: With Index
  */
-#define DATA_INDEX 1
+#define DATA_INDEX 0
 
 #define RUN_TRANSACTION 1
 
@@ -485,6 +486,8 @@ int main() {
 
         query = NULL;
 
+        printQueryExplain();
+
         ////////////////////////////
         // SELECT * FROM keyValue //
         ////////////////////////////
@@ -620,9 +623,9 @@ int main() {
 
         query = NULL;
 
-        //////////////////////////////////////
-        // Sequential Key-Value Lookup Text //
-        //////////////////////////////////////
+        /////////////////////////////////////////
+        // Sequential Key-Value Lookup Integer //
+        /////////////////////////////////////////
 
         numRecords = 0;
         fseek(dataset, 0, SEEK_SET);
@@ -645,9 +648,9 @@ int main() {
 
         query = NULL;
 
-        //////////////////////////////////
-        // Random Key-Value Lookup Text //
-        //////////////////////////////////
+        /////////////////////////////////////
+        // Random Key-Value Lookup Integer //
+        /////////////////////////////////////
 
         numRecords = 0;
         fseek(randomDataset, 0, SEEK_SET);
@@ -1039,6 +1042,25 @@ int main() {
     printf("Num Records Queried: %d\n", numRecordsRandomKeyValueInt);
 
     return 0;
+}
+
+void printQueryExplain() {
+    sqlite3_stmt *query = NULL;
+    char dataQueryLarge[] = "EXPLAIN QUERY PLAN SELECT * FROM keyValue WHERE airTemp >= 420;";
+    sqlite3_prepare_v2(db, dataQueryLarge, strlen(dataQueryLarge), &query, NULL);
+    sqlite3_step(query);
+    printf("Large Data Query Plan: %s\n", sqlite3_column_text(query, 3));
+    sqlite3_finalize(query);
+    char dataQuerySmall[] = "EXPLAIN QUERY PLAN SELECT * FROM keyValue WHERE airTemp >= 700;";
+    sqlite3_prepare_v2(db, dataQuerySmall, strlen(dataQuerySmall), &query, NULL);
+    sqlite3_step(query);
+    printf("Small Data Query Plan: %s\n", sqlite3_column_text(query, 3));
+    sqlite3_finalize(query);
+    char dataQuerySingleSelect[] = "EXPLAIN QUERY PLAN SELECT * FROM keyValue WHERE airTemp = 800;";
+    sqlite3_prepare_v2(db, dataQuerySingleSelect, strlen(dataQuerySingleSelect), &query, NULL);
+    sqlite3_step(query);
+    printf("Single Data Value Query Plan: %s\n",  sqlite3_column_text(query, 3));
+    sqlite3_finalize(query);
 }
 
 int createTableIntText() {
