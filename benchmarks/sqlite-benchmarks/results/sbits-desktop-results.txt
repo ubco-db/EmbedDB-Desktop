@@ -1,71 +1,8 @@
-rm -f *.o	
-rm -f *.exe
-rm -f *.db
-rm -f *.bin
-gcc -c ../../../src/sbits/sbits.c -o sbits.o -lm
-gcc -c ../../../src/sbits/utilityFunctions.c -o utilityFunctions.o  -lm
-gcc -c ../../../src/spline/spline.c -o spline.o -lm
-gcc -c ../../../src/spline/radixspline.c -o radixspline.o -lm
-gcc -c sbitsBenchmarking.c -o sbitsBenchmarking.o -lm
-gcc -o sbitsBenchmarking.exe sbitsBenchmarking.o sbits.o utilityFunctions.o spline.o radixspline.o -lm
-./sbitsBenchmarking.exe
-
 Starting RAW performance test.
 Write time: 186ms (275.27 MB/s)
 Random write time: 607ms (84.35 MB/s)
 Read time: 48ms (1066.67 MB/s)
 Random Read time: 648ms (79.01 MB/s)
-
-Initializing SBITS.
-Buffer size: 4  Page size: 512
-Key size: 4 Data size: 12 Record size: 16
-Use index: 1  Max/min: 0 Sum: 0 Bmap: 1
-Header size: 8  Records per page: 31
-Initializing SBITS.
-Buffer size: 4  Page size: 512
-Key size: 4 Data size: 12 Record size: 16
-Use index: 1  Max/min: 0 Sum: 0 Bmap: 1
-Header size: 8  Records per page: 31
-Initializing SBITS.
-Buffer size: 4  Page size: 512
-Key size: 4 Data size: 12 Record size: 16
-Use index: 1  Max/min: 0 Sum: 0 Bmap: 1
-Header size: 8  Records per page: 31
-Initializing SBITS.
-Buffer size: 4  Page size: 512
-Key size: 4 Data size: 12 Record size: 16
-Use index: 1  Max/min: 0 Sum: 0 Bmap: 1
-Header size: 8  Records per page: 31
-Initializing SBITS.
-Buffer size: 4  Page size: 512
-Key size: 4 Data size: 12 Record size: 16
-Use index: 1  Max/min: 0 Sum: 0 Bmap: 1
-Header size: 8  Records per page: 31
-Initializing SBITS.
-Buffer size: 4  Page size: 512
-Key size: 4 Data size: 12 Record size: 16
-Use index: 1  Max/min: 0 Sum: 0 Bmap: 1
-Header size: 8  Records per page: 31
-Initializing SBITS.
-Buffer size: 4  Page size: 512
-Key size: 4 Data size: 12 Record size: 16
-Use index: 1  Max/min: 0 Sum: 0 Bmap: 1
-Header size: 8  Records per page: 31
-Initializing SBITS.
-Buffer size: 4  Page size: 512
-Key size: 4 Data size: 12 Record size: 16
-Use index: 1  Max/min: 0 Sum: 0 Bmap: 1
-Header size: 8  Records per page: 31
-Initializing SBITS.
-Buffer size: 4  Page size: 512
-Key size: 4 Data size: 12 Record size: 16
-Use index: 1  Max/min: 0 Sum: 0 Bmap: 1
-Header size: 8  Records per page: 31
-Initializing SBITS.
-Buffer size: 4  Page size: 512
-Key size: 4 Data size: 12 Record size: 16
-Use index: 1  Max/min: 0 Sum: 0 Bmap: 1
-Header size: 8  Records per page: 31
 
 INSERT
 Time: 146 125 125 128 127 127 125 125 125 125 ~ 127ms
