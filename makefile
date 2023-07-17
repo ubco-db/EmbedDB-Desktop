@@ -6,11 +6,13 @@ ifeq ($(OS),Windows_NT)
 	CLEANUP = rm -f
 	MKDIR = mkdir -p
   endif
+	PYTHON=python
 	TARGET_EXTENSION=exe
 else
 	CLEANUP = rm -f
 	MKDIR = mkdir -p
 	TARGET_EXTENSION=out
+	PYTHON=python3
 endif
 
 .PHONY: clean
@@ -61,7 +63,7 @@ $(PATHB)test_sbits.$(TARGET_EXTENSION): $(OBJECTS) $(TEST_SBITS)
 
 test: $(BUILD_PATHS) $(RESULTS)
 	pip install -r requirements.txt -q
-	python ./scripts/stylize_as_junit.py
+	$(PYTHON) ./scripts/stylize_as_junit.py
 
 $(PATHR)%.testpass: $(PATHB)%.$(TARGET_EXTENSION)
 	-./$< > $@ 2>&1 -lm
