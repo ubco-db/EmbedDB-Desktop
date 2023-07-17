@@ -174,16 +174,14 @@ void sbits_variable_data_reloads_with_one_page_of_data_correctly() {
     free(linkedList);
 }
 
-void sbits_variable_data_reloads_with_fifteen_pages_of_data_correctly() {
-    Node *linkedList;
-    insertRecordsWithRandomData(525, 100, 10, 10, 80, 120, &linkedList);
+void sbits_variable_data_reloads_with_sixteen_pages_of_data_correctly() {
+    insertRecords(337, 1648, 10);
     tearDown();
     initalizeSbitsFromFile();
-    TEST_ASSERT_EQUAL_UINT32_MESSAGE(7688, state->currentVarLoc, "SBITS currentVarLoc did not have the correct value after initializing variable data from a file with one page of records.");
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(8200, state->currentVarLoc, "SBITS currentVarLoc did not have the correct value after initializing variable data from a file with one page of records.");
     TEST_ASSERT_EQUAL_UINT64_MESSAGE(0, state->minVarRecordId, "SBITS minVarRecordId did not have the correct value after initializing variable data from a file with one page of records.");
-    TEST_ASSERT_EQUAL_UINT64_MESSAGE(60, state->numAvailVarPages, "SBITS numAvailVarPages did not have the correct value after initializing variable data from a file with one page of records.");
-    TEST_ASSERT_EQUAL_UINT32_MESSAGE(15, state->nextVarPageId, "SBITS nextVarPageId did not have the correct value after initializing variable data from a file with one page of records.");
-    free(linkedList);
+    TEST_ASSERT_EQUAL_UINT64_MESSAGE(59, state->numAvailVarPages, "SBITS numAvailVarPages did not have the correct value after initializing variable data from a file with one page of records.");
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(16, state->nextVarPageId, "SBITS nextVarPageId did not have the correct value after initializing variable data from a file with one page of records.");
 }
 
 void sbits_variable_data_reloads_with_one_hundred_six_pages_of_data_correctly() {
@@ -282,7 +280,7 @@ int main(void) {
     RUN_TEST(sbits_variable_data_page_numbers_are_correct);
     RUN_TEST(sbits_variable_data_reloads_with_no_data_correctly);
     RUN_TEST(sbits_variable_data_reloads_with_one_page_of_data_correctly);
-    RUN_TEST(sbits_variable_data_reloads_with_fifteen_pages_of_data_correctly);
+    RUN_TEST(sbits_variable_data_reloads_with_sixteen_pages_of_data_correctly);
     RUN_TEST(sbits_variable_data_reloads_with_one_hundred_six_pages_of_data_correctly);
     RUN_TEST(sbits_variable_data_reloads_and_queries_with_thirty_one_pages_of_data_correctly);
     RUN_TEST(sbits_variable_data_reloads_and_queries_with_two_hundred_forty_seven_pages_of_data_correctly);
