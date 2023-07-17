@@ -1,0 +1,54 @@
+INSERT
+Time: 243 232 228 230 228 234 229 232 227 233 ~ 231ms
+Num Records inserted: 500000
+Num data pages written: 16130
+Num index pages written: 66
+
+SELECT * FROM r
+Time: 140 138 137 137 139 139 139 139 137 139 ~ 138ms
+Result size: 500000
+Num reads: 16130
+
+SELECT * FROM r WHERE key >= 974100996
+Time: 14 14 14 13 14 14 14 14 13 14 ~ 13ms
+Result size: 50703
+Num reads: 1638
+
+SELECT * FROM r WHERE key >= 949756644
+Time: 126 125 126 124 127 127 127 125 124 125 ~ 125ms
+Result size: 449449
+Num reads: 14501
+
+SELECT * FROM r WHERE data = 800
+Time: 11 12 11 11 12 11 11 11 11 11 ~ 11ms
+Result size: 141
+Num reads: 1206
+Num idx reads: 66
+
+SELECT * FROM r WHERE data >= 700
+Time: 11 11 12 11 11 12 12 12 11 10 ~ 11ms
+Result size: 23534
+Num reads: 1206
+Num idx reads: 66
+
+SELECT * FROM r WHERE data >= 420
+Time: 132 126 125 127 128 126 125 126 125 127 ~ 126ms
+Result size: 434839
+Num reads: 14454
+Num idx reads: 66
+
+SELECT * FROM r WHERE key >= 958885776 AND data >= 450 AND data <= 650
+Time: 70 71 70 69 71 71 69 70 69 70 ~ 70ms
+Result size: 205973
+Num reads: 7873
+Num idx reads: 40
+
+Sequential Key-Value
+Time: 345 336 340 334 344 345 339 344 341 342 ~ 341ms
+Result size: 500000
+Num reads: 16132
+
+Random Key-Value
+Time: 8924 8989 8979 9059 9039 9041 9069 8982 8996 9067 ~ 9014ms
+Result size: 500000
+Num reads: 578913
