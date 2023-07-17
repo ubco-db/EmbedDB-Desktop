@@ -20,8 +20,8 @@ PATHSPLINE = ../../../src/spline/
 
 sqliteBenchmarking:
 	gcc -c sqlite3.c sqliteBenchmarking.c
-	gcc -o sqliteBenchmarking.exe sqlite3.o sqliteBenchmarking.o
-	sqliteBenchmarking.exe
+	gcc -o sqliteBenchmarking.$(TARGET_EXTENSION) sqlite3.o sqliteBenchmarking.o
+	sqliteBenchmarking.$(TARGET_EXTENSION)
 
 sbitsBenchmarking:
 	gcc -c $(PATHSBITS)sbits.c -o sbits.o 
@@ -29,8 +29,8 @@ sbitsBenchmarking:
 	gcc -c $(PATHSPLINE)spline.c -o spline.o
 	gcc -c $(PATHSPLINE)radixspline.c -o radixspline.o
 	gcc -c sbitsBenchmarking.c -o sbitsBenchmarking.o
-	gcc -o sbitsBenchmarking.exe sbitsBenchmarking.o sbits.o utilityFunctions.o spline.o radixspline.o
-	sbitsBenchmarking.exe
+	gcc -o sbitsBenchmarking.$(TARGET_EXTENSION) sbitsBenchmarking.o sbits.o utilityFunctions.o spline.o radixspline.o
+	sbitsBenchmarking.$(TARGET_EXTENSION)
 
 clean:
 	$(CLEANUP) *.o	
