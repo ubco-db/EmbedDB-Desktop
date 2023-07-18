@@ -487,8 +487,6 @@ int main() {
 
         query = NULL;
 
-        printQueryExplain();
-
         ////////////////////////////
         // SELECT * FROM keyValue //
         ////////////////////////////
