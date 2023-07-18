@@ -13,7 +13,7 @@ else
 	CLEANUP = rm -f
 	MKDIR = mkdir -p
 	TARGET_EXTENSION=out
-	OSFLAGS = -ldl 
+	OSFLAGS = -ldl -lm
 	SQLITEOSFLAG = -lpthread
 endif
 
