@@ -1171,7 +1171,7 @@ int8_t sbitsGetVar(sbitsState *state, void *key, void *data, sbitsVarDataStream 
     void *ptr = (int8_t *)state->buffer + SBITS_VAR_READ_BUFFER(state->parameters) * state->pageSize;
     id_t pageNum = (varDataOffset / state->pageSize) % state->numVarPages;
     if (readVariablePage(state, pageNum) != 0) {
-        printf("Not data to read\n");
+        printf("No data to read\n");
         return -1;
     }
 
@@ -1313,7 +1313,7 @@ int8_t sbitsNext(sbitsState *state, sbitsIterator *it, void *key, void *data) {
                 // If the index page that contains this data page exists, else we must read the data page regardless cause we don't have the index saved for it
 
                 if (readIndexPage(state, indexPage % state->numIndexPages) != 0) {
-                    printf("ERROR: Failed to read index page %lu (%lu)\n", indexPage, indexPage % state->numIndexPages);
+                    printf("ERROR: Failed to read index page %i (%i)\n", indexPage, indexPage % state->numIndexPages);
                     return 0;
                 }
 
@@ -1330,7 +1330,7 @@ int8_t sbitsNext(sbitsState *state, sbitsIterator *it, void *key, void *data) {
         }
 
         if (readPage(state, it->nextDataPage % state->numDataPages) != 0) {
-            printf("ERROR: Failed to read data page %lu (%lu)\n", it->nextDataPage, it->nextDataPage % state->numDataPages);
+            printf("ERROR: Failed to read data page %i (%i)\n", it->nextDataPage, it->nextDataPage % state->numDataPages);
             return 0;
         }
 
@@ -1528,7 +1528,7 @@ id_t writePage(sbitsState *state, void *buffer) {
     /* Seek to page location in file */
     int32_t val = state->fileInterface->write(buffer, pageNum % state->numDataPages, state->pageSize, state->dataFile);
     if (val == 0) {
-        printf("Failed to write data page: %lu (%lu)\n", pageNum, pageNum % state->numDataPages);
+        printf("Failed to write data page: %i (%i)\n", pageNum, pageNum % state->numDataPages);
         return -1;
     }
 
@@ -1563,7 +1563,7 @@ id_t writeIndexPage(sbitsState *state, void *buffer) {
     /* Seek to page location in file */
     int32_t val = state->fileInterface->write(buffer, pageNum % state->numIndexPages, state->pageSize, state->indexFile);
     if (val == 0) {
-        printf("Failed to write index page: %lu (%lu)\n", pageNum, pageNum % state->numIndexPages);
+        printf("Failed to write index page: %i (%i)\n", pageNum, pageNum % state->numIndexPages);
         return -1;
     }
 
@@ -1609,7 +1609,7 @@ id_t writeVariablePage(sbitsState *state, void *buffer) {
     // Write to file
     uint32_t val = state->fileInterface->write(buffer, physicalPageId, state->pageSize, state->varFile);
     if (val == 0) {
-        printf("Failed to write vardata page: %lu\n", state->nextVarPageId);
+        printf("Failed to write vardata page: %i\n", state->nextVarPageId);
         return -1;
     }
 

@@ -28,7 +28,7 @@ jobs:
 
   build:
     name: Build and Run Tests
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     permissions:
       contents: read
       issues: read
