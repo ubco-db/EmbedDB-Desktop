@@ -1,10 +1,11 @@
 #include <errno.h>
-#include <sqlite3.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+
+#include "sqlite3.h"
 
 int createTableIntText();
 int createTableIntBlob();
@@ -14,6 +15,7 @@ void dropDatabase();
 int getNumRecords();
 int createIndexValue();
 int createIndexAirTemp();
+void printQueryExplain();
 
 sqlite3 *db = NULL;
 
@@ -35,7 +37,7 @@ sqlite3 *db = NULL;
  * 0: No Index
  * 1: With Index
  */
-#define DATA_INDEX 1
+#define DATA_INDEX 0
 
 #define RUN_TRANSACTION 1
 
@@ -43,7 +45,7 @@ char const databaseName[] = "sqliteData.db";
 char const databaseJournalName[] = "sqliteData.db-journal";
 char const dataFileName[] = "../../../data/uwa500K.bin";
 char const randomizedDataFileName[] = "../../../data/uwa500K_randomized.bin";
-int const numRuns = 1;
+int const numRuns = 10;
 
 int main() {
     clock_t timeInsertNTText[numRuns],
@@ -64,6 +66,7 @@ int main() {
         timeSelectStarInt[numRuns],
         timeSelectStarSmallResultInt[numRuns],
         timeSelectStarLargeResultInt[numRuns],
+        timeSelectDataSingleResultInt[numRuns],
         timeSelectDataSmallResultInt[numRuns],
         timeSelectDataLargeResultInt[numRuns],
         timeSelectKeyDataInt[numRuns],
@@ -90,6 +93,7 @@ int main() {
         numRecordsSelectStarInt,
         numRecordsSelectStarSmallResultInt,
         numRecordsSelectStarLargeResultInt,
+        numRecordsSelectDataSingleResult,
         numRecordsSelectDataSmallResultInt,
         numRecordsSelectDataLargeResultInt,
         numRecordsSelectKeyDataInt,
@@ -539,6 +543,26 @@ int main() {
         query = NULL;
 
         /////////////////////////////////////////////////
+        // SELECT * FROM keyValue WHERE airTemp = 800 //
+        /////////////////////////////////////////////////
+
+        numRecords = 0;
+        char const selectDataSingleResult[] = "SELECT * FROM keyValue WHERE airTemp = 800;";
+
+        timeSelectDataSingleResultInt[run] = clock();
+
+        sqlite3_prepare_v2(db, selectDataSingleResult, strlen(selectDataSingleResult), &query, NULL);
+        while (sqlite3_step(query) == SQLITE_ROW) {
+            numRecords++;
+        }
+        sqlite3_finalize(query);
+
+        timeSelectDataSingleResultInt[run] = (clock() - timeSelectDataSingleResultInt[run]) / (CLOCKS_PER_SEC / 1000);
+        numRecordsSelectDataSingleResult = numRecords;
+
+        query = NULL;
+
+        /////////////////////////////////////////////////
         // SELECT * FROM keyValue WHERE airTemp >= 700 //
         /////////////////////////////////////////////////
 
@@ -598,9 +622,9 @@ int main() {
 
         query = NULL;
 
-        //////////////////////////////////////
-        // Sequential Key-Value Lookup Text //
-        //////////////////////////////////////
+        /////////////////////////////////////////
+        // Sequential Key-Value Lookup Integer //
+        /////////////////////////////////////////
 
         numRecords = 0;
         fseek(dataset, 0, SEEK_SET);
@@ -623,9 +647,9 @@ int main() {
 
         query = NULL;
 
-        //////////////////////////////////
-        // Random Key-Value Lookup Text //
-        //////////////////////////////////
+        /////////////////////////////////////
+        // Random Key-Value Lookup Integer //
+        /////////////////////////////////////
 
         numRecords = 0;
         fseek(randomDataset, 0, SEEK_SET);
@@ -957,6 +981,16 @@ int main() {
     printf("Num Records Queried: %d\n", numRecordsSelectStarLargeResultInt);
 
     sum = 0;
+    printf("\nSELECT * FROM KEYVALUE DATA SINGLE RESULT INTEGER INTEGER INTEGER INTEGER\n");
+    printf("Time: ");
+    for (int i = 0; i < numRuns; i++) {
+        printf("%d ", timeSelectDataSingleResultInt[i]);
+        sum += timeSelectDataSingleResultInt[i];
+    }
+    printf("~ %dms\n", sum / numRuns);
+    printf("Num Records Queried: %d\n", numRecordsSelectDataSingleResult);
+
+    sum = 0;
     printf("\nSELECT * FROM KEYVALUE DATA SMALL RESULT INTEGER INTEGER INTEGER INTEGER\n");
     printf("Time: ");
     for (int i = 0; i < numRuns; i++) {
@@ -1007,6 +1041,25 @@ int main() {
     printf("Num Records Queried: %d\n", numRecordsRandomKeyValueInt);
 
     return 0;
+}
+
+void printQueryExplain() {
+    sqlite3_stmt *query = NULL;
+    char dataQueryLarge[] = "EXPLAIN QUERY PLAN SELECT * FROM keyValue WHERE airTemp >= 420;";
+    sqlite3_prepare_v2(db, dataQueryLarge, strlen(dataQueryLarge), &query, NULL);
+    sqlite3_step(query);
+    printf("Large Data Query Plan: %s\n", sqlite3_column_text(query, 3));
+    sqlite3_finalize(query);
+    char dataQuerySmall[] = "EXPLAIN QUERY PLAN SELECT * FROM keyValue WHERE airTemp >= 700;";
+    sqlite3_prepare_v2(db, dataQuerySmall, strlen(dataQuerySmall), &query, NULL);
+    sqlite3_step(query);
+    printf("Small Data Query Plan: %s\n", sqlite3_column_text(query, 3));
+    sqlite3_finalize(query);
+    char dataQuerySingleSelect[] = "EXPLAIN QUERY PLAN SELECT * FROM keyValue WHERE airTemp = 800;";
+    sqlite3_prepare_v2(db, dataQuerySingleSelect, strlen(dataQuerySingleSelect), &query, NULL);
+    sqlite3_step(query);
+    printf("Single Data Value Query Plan: %s\n", sqlite3_column_text(query, 3));
+    sqlite3_finalize(query);
 }
 
 int createTableIntText() {

@@ -7,10 +7,14 @@ ifeq ($(OS),Windows_NT)
 	MKDIR = mkdir -p
   endif
 	TARGET_EXTENSION=exe
+	OSFLAGS =
+	SQLITEOSFLAG = 
 else
 	CLEANUP = rm -f
 	MKDIR = mkdir -p
 	TARGET_EXTENSION=out
+	OSFLAGS = -ldl -lm
+	SQLITEOSFLAG = -lpthread
 endif
 
 .PHONY: clean
@@ -19,18 +23,18 @@ PATHSBITS = ../../../src/sbits/
 PATHSPLINE = ../../../src/spline/
 
 sqliteBenchmarking:
-	gcc -c sqlite3.c sqliteBenchmarking.c
-	gcc -o sqliteBenchmarking.$(TARGET_EXTENSION) sqlite3.o sqliteBenchmarking.o
-	sqliteBenchmarking.$(TARGET_EXTENSION)
+	gcc -c sqlite3.c sqliteBenchmarking.c $(OSFLAGS) $(SQLITEOSFLAG)
+	gcc -o sqliteBenchmarking.$(TARGET_EXTENSION) sqlite3.o sqliteBenchmarking.o $(OSFLAGS) $(SQLITEOSFLAG)
+	./sqliteBenchmarking.$(TARGET_EXTENSION)
 
 sbitsBenchmarking:
-	gcc -c $(PATHSBITS)sbits.c -o sbits.o 
-	gcc -c $(PATHSBITS)utilityFunctions.c -o utilityFunctions.o 
-	gcc -c $(PATHSPLINE)spline.c -o spline.o
-	gcc -c $(PATHSPLINE)radixspline.c -o radixspline.o
-	gcc -c sbitsBenchmarking.c -o sbitsBenchmarking.o
-	gcc -o sbitsBenchmarking.$(TARGET_EXTENSION) sbitsBenchmarking.o sbits.o utilityFunctions.o spline.o radixspline.o
-	sbitsBenchmarking.$(TARGET_EXTENSION)
+	gcc -c $(PATHSBITS)sbits.c -o sbits.o $(OSFLAGS)
+	gcc -c $(PATHSBITS)utilityFunctions.c -o utilityFunctions.o  $(OSFLAGS)
+	gcc -c $(PATHSPLINE)spline.c -o spline.o $(OSFLAGS)
+	gcc -c $(PATHSPLINE)radixspline.c -o radixspline.o $(OSFLAGS)
+	gcc -c sbitsBenchmarking.c -o sbitsBenchmarking.o $(OSFLAGS)
+	gcc -o sbitsBenchmarking.$(TARGET_EXTENSION) sbitsBenchmarking.o sbits.o utilityFunctions.o spline.o radixspline.o $(OSFLAGS)
+	./sbitsBenchmarking.$(TARGET_EXTENSION)
 
 clean:
 	$(CLEANUP) *.o	
