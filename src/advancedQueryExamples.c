@@ -23,6 +23,23 @@ int8_t combinedFunc(void* key, void* data) {
     return projectionFunc(key, data);
 }
 
+int8_t dayGroup(void* lastkey, void* key) {
+    // Convert timestamp to correct timezone, then find the epoch day and compare them
+    return (*(uint32_t*)lastkey) / 86400 == (*(uint32_t*)key) / 86400;
+}
+
+void countReset(void* state) {
+    *(uint32_t*)state = 0;
+}
+
+void countAdd(void* state, void* key, void* data) {
+    if (*(int32_t*)((int8_t*)data + 8) >= 150) {
+        (*(uint32_t*)state)++;
+    }
+}
+
+void countCompute(void* state) {}
+
 void main() {
     sbitsState* state = calloc(1, sizeof(sbitsState));
     state->keySize = 4;
@@ -98,6 +115,9 @@ void main() {
      *	Say we want to answer the question "Return records where the temperature is less than 40 degrees and the wind speed is greater than 20". The iterator is only indexing the data on temperature, so we need to apply an extra layer of selection to its return. We can take this even farther and combine the two functions into one: combinedFunc()
      */
     int32_t maxTemp = 400;
+    it.minKey = NULL;
+    it.maxKey = NULL;
+    it.minData = NULL;
     it.maxData = &maxTemp;
     sbitsInitIterator(state, &it);
 
@@ -113,6 +133,35 @@ void main() {
     if (recordsReturned > printLimit) {
         printf("...\n");
         printf("[Total records returned: %d]\n", recordsReturned);
+    }
+
+    /**	Aggregate Count:
+     * 	Count the number of records with wind speeds over 15 each day
+     */
+    it.minKey = NULL;
+    it.maxKey = NULL;
+    it.minData = NULL;
+    it.maxData = NULL;
+    sbitsInitIterator(state, &it);
+
+    sbitsAggrOp op1 = {countReset, countAdd, countCompute, malloc(sizeof(uint32_t))};
+    sbitsAggrOp operators[] = {op1};
+
+    recordsReturned = 0;
+    printLimit = 365;
+    printf("\nCount:\n");
+    while (aggroup(state, &it, dayGroup, operators, 1, &keyBuffer, dataBuffer)) {
+        if (++recordsReturned < printLimit) {
+            printf("%d %d\n", keyBuffer / 86400 - 1, *(uint32_t*)op1.state);
+        }
+    }
+    if (recordsReturned > printLimit) {
+        printf("...\n");
+        printf("[Total records returned: %d]\n", recordsReturned);
+    }
+
+    for (int i = 0; i < sizeof(operators) / sizeof(operators[0]); i++) {
+        free(operators[i].state);
     }
 
     // Close sbits
