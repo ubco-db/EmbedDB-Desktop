@@ -5,22 +5,52 @@
 #include "sbits/sbits.h"
 #include "sbits/utilityFunctions.h"
 
-int8_t projectionFunc(void* key, void* data) {
-    memcpy((int8_t*)data + 4, (int8_t*)data + 8, 4);
-    // Optional:
-    // memset((int8_t*)data + 8, 0, 4);
+int8_t projectionFunc(sbitsState* state, void* info, void* key, void* data) {
+    uint8_t numCols = *(uint8_t*)info;
+    uint8_t* cols = (uint8_t*)info + 1;
+    for (uint8_t i = 0; i < numCols; i++) {
+        memcpy((int8_t*)data + i * 4, (int8_t*)data + cols[i] * 4, 4);
+    }
+    memset((int8_t*)data + numCols * 4, 0, state->dataSize - numCols * 4);
     return 1;
 }
-
-int8_t selectionFunc(void* key, void* data) {
-    return *(int32_t*)((int8_t*)data + 8) >= 200;
+void* createProjectionInfo(uint8_t numCols, uint8_t* cols) {
+    uint8_t* info = malloc(numCols + 1);
+    info[0] = numCols;
+    memcpy(info + 1, cols, numCols);
+    return info;
 }
 
-int8_t combinedFunc(void* key, void* data) {
-    if (!selectionFunc(key, data)) {
-        return 0;
+#define SELECT_GT 0
+#define SELECT_LT 1
+#define SELECT_GTE 2
+#define SELECT_LTE 3
+int8_t selectionFunc(sbitsState* state, void* info, void* key, void* data) {
+    int8_t colNum = *(int8_t*)info;
+    int8_t operation = *((int8_t*)info + 1);
+    int32_t compVal = *(int32_t*)((int8_t*)info + 2);
+    switch (operation) {
+        case SELECT_GT:
+            return *(int32_t*)((int8_t*)data + colNum * 4) > compVal;
+        case SELECT_LT:
+            return *(int32_t*)((int8_t*)data + colNum * 4) < compVal;
+        case SELECT_GTE:
+            return *(int32_t*)((int8_t*)data + colNum * 4) >= compVal;
+        case SELECT_LTE:
+            return *(int32_t*)((int8_t*)data + colNum * 4) <= compVal;
+        default:
+            return 0;
     }
-    return projectionFunc(key, data);
+}
+int8_t mySelectionFunc(sbitsState* state, void* info, void* key, void* data) {
+    return *(int32_t*)((int8_t*)data + 8) >= 200;
+}
+void* createSelectinfo(int8_t colNum, int8_t operation, int32_t compVal) {
+    int8_t* data = malloc(6);
+    data[0] = colNum;
+    data[1] = operation;
+    memcpy(data + 2, &compVal, 4);
+    return data;
 }
 
 int8_t dayGroup(void* lastkey, void* key) {
@@ -86,6 +116,9 @@ void main() {
      *		- int32_t wind speed
      *	Say we only want the air temp and wind speed columns to save memory in further processing. Right now the air pressure field is inbetween the two values we want, so we can simplify the process of extracting the desired colums using exec()
      */
+    uint32_t keyBuffer;
+    int32_t dataBuffer[3];
+
     sbitsIterator it;
     it.minKey = NULL;
     it.maxKey = NULL;
@@ -93,15 +126,16 @@ void main() {
     it.maxData = NULL;
     sbitsInitIterator(state, &it);
 
-    uint32_t keyBuffer = 0;
-    int32_t dataBuffer[] = {0, 0, 0};
+    sbitsOperator scanOp1 = {NULL, sbitsNext, &it};
+    uint8_t projCols[] = {0, 2};
+    sbitsOperator projOp1 = {&scanOp1, projectionFunc, createProjectionInfo(2, projCols)};
 
     int printLimit = 20;
     int recordsReturned = 0;
     printf("\nProjection Result:\n");
     printf("Time       | Temp | Wind Speed\n");
     printf("-----------+------+------------\n");
-    while (exec(state, &it, projectionFunc, &keyBuffer, dataBuffer)) {
+    while (exec(state, &projOp1, &keyBuffer, dataBuffer)) {
         if (++recordsReturned <= printLimit) {
             printf("%-10lu | %-4.1f | %-4.1f\n", keyBuffer, dataBuffer[0] / 10.0, dataBuffer[1] / 10.0);
         }
@@ -121,11 +155,15 @@ void main() {
     it.maxData = &maxTemp;
     sbitsInitIterator(state, &it);
 
+    sbitsOperator scanOp2 = {NULL, sbitsNext, &it};
+    sbitsOperator selectOp2 = {&scanOp2, mySelectionFunc, NULL};
+    sbitsOperator projOp2 = {&selectOp2, projectionFunc, createProjectionInfo(2, projCols)};
+
     recordsReturned = 0;
     printf("\nSelection Result:\n");
     printf("Time       | Temp | Wind Speed\n");
     printf("-----------+------+------------\n");
-    while (exec(state, &it, combinedFunc, &keyBuffer, dataBuffer)) {
+    while (exec(state, &projOp2, &keyBuffer, dataBuffer)) {
         if (++recordsReturned <= printLimit) {
             printf("%-10lu | %-4.1f | %-4.1f\n", keyBuffer, dataBuffer[0] / 10.0, dataBuffer[1] / 10.0);
         }
@@ -138,31 +176,32 @@ void main() {
     /**	Aggregate Count:
      * 	Count the number of records with wind speeds over 15 each day
      */
-    it.minKey = NULL;
-    it.maxKey = NULL;
-    it.minData = NULL;
-    it.maxData = NULL;
-    sbitsInitIterator(state, &it);
+    // it.minKey = NULL;
+    // it.maxKey = NULL;
+    // it.minData = NULL;
+    // it.maxData = NULL;
+    // sbitsInitIterator(state, &it);
 
-    sbitsAggrOp op1 = {countReset, countAdd, countCompute, malloc(sizeof(uint32_t))};
-    sbitsAggrOp operators[] = {op1};
+    // sbitsAggrOp op1 = {countReset, countAdd, countCompute, malloc(sizeof(uint32_t))};
+    // sbitsAggrOp operators[] = {op1};
 
-    recordsReturned = 0;
-    printLimit = 365;
-    printf("\nCount:\n");
-    while (aggroup(state, &it, dayGroup, operators, 1, &keyBuffer, dataBuffer)) {
-        if (++recordsReturned < printLimit) {
-            printf("%d %d\n", keyBuffer / 86400 - 1, *(uint32_t*)op1.state);
-        }
-    }
-    if (recordsReturned > printLimit) {
-        printf("...\n");
-        printf("[Total records returned: %d]\n", recordsReturned);
-    }
+    // recordsReturned = 0;
+    // printLimit = 365;
+    // printf("\nCount:\n");
+    // while (aggroup(state, &it, dayGroup, operators, 1, &keyBuffer, dataBuffer)) {
+    //     if (++recordsReturned < printLimit) {
+    //         printf("%d %d\n", keyBuffer / 86400 - 1, *(uint32_t*)op1.state);
+    //     }
+    // }
+    // if (recordsReturned > printLimit) {
+    //     printf("...\n");
+    //     printf("[Total records returned: %d]\n", recordsReturned);
+    // }
 
-    for (int i = 0; i < sizeof(operators) / sizeof(operators[0]); i++) {
-        free(operators[i].state);
-    }
+    // // Free states
+    // for (int i = 0; i < sizeof(operators) / sizeof(operators[0]); i++) {
+    //     free(operators[i].state);
+    // }
 
     // Close sbits
     sbitsClose(state);

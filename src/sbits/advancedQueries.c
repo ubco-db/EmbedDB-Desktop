@@ -11,13 +11,27 @@
  * @param	data	Pre-allocated space for the data
  * @return	1 if another (key, data) pair was returned, 0 if there are no more pairs to return
  */
-int8_t exec(sbitsState* state, sbitsIterator* it, int8_t (*func)(void* key, void* data), void* key, void* data) {
-    while (sbitsNext(state, it, key, data)) {
-        if (func(key, data)) {
-            return 1;
+// int8_t exec(sbitsState* state, sbitsIterator* it, int8_t (*func)(void* key, void* data), void* key, void* data) {
+//     while (sbitsNext(state, it, key, data)) {
+//         if (func(key, data)) {
+//             return 1;
+//         }
+//     }
+//     return 0;
+// }
+int8_t exec(sbitsState* state, sbitsOperator* operator, void * key, void* data) {
+    if (operator->input == NULL) {
+        // Bottom level operator such as a table scan i.e. sbitsIterator
+        return operator->func(state, operator->info, key, data);
+    } else {
+        // Execute `func` on top of the output of `input`
+        while (exec(state, operator->input, key, data)) {
+            if (operator->func(state, operator->info, key, data)) {
+                return 1;
+            }
         }
+        return 0;
     }
-    return 0;
 }
 
 /**
