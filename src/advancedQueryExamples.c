@@ -21,6 +21,9 @@ void* createProjectionInfo(uint8_t numCols, uint8_t* cols) {
     return info;
 }
 
+int8_t mySelectionFunc(sbitsState* state, void* info, void* key, void* data) {
+    return *(int32_t*)((int8_t*)data + 8) >= 200;
+}
 #define SELECT_GT 0
 #define SELECT_LT 1
 #define SELECT_GTE 2
@@ -42,9 +45,6 @@ int8_t selectionFunc(sbitsState* state, void* info, void* key, void* data) {
             return 0;
     }
 }
-int8_t mySelectionFunc(sbitsState* state, void* info, void* key, void* data) {
-    return *(int32_t*)((int8_t*)data + 8) >= 200;
-}
 void* createSelectinfo(int8_t colNum, int8_t operation, int32_t compVal) {
     int8_t* data = malloc(6);
     data[0] = colNum;
@@ -63,9 +63,7 @@ void countReset(void* state) {
 }
 
 void countAdd(void* state, void* key, void* data) {
-    if (*(int32_t*)((int8_t*)data + 8) >= 150) {
-        (*(uint32_t*)state)++;
-    }
+    (*(uint32_t*)state)++;
 }
 
 void countCompute(void* state) {}
@@ -145,6 +143,8 @@ void main() {
         printf("[Total records returned: %d]\n", recordsReturned);
     }
 
+    free(projOp1.info);
+
     /**	Selection:
      *	Say we want to answer the question "Return records where the temperature is less than 40 degrees and the wind speed is greater than 20". The iterator is only indexing the data on temperature, so we need to apply an extra layer of selection to its return. We can take this even farther and combine the two functions into one: combinedFunc()
      */
@@ -173,35 +173,41 @@ void main() {
         printf("[Total records returned: %d]\n", recordsReturned);
     }
 
+    free(selectOp2.info);
+    free(projOp2.info);
+
     /**	Aggregate Count:
      * 	Count the number of records with wind speeds over 15 each day
      */
-    // it.minKey = NULL;
-    // it.maxKey = NULL;
-    // it.minData = NULL;
-    // it.maxData = NULL;
-    // sbitsInitIterator(state, &it);
+    it.minKey = NULL;
+    it.maxKey = NULL;
+    it.minData = NULL;
+    it.maxData = NULL;
+    sbitsInitIterator(state, &it);
 
-    // sbitsAggrOp op1 = {countReset, countAdd, countCompute, malloc(sizeof(uint32_t))};
-    // sbitsAggrOp operators[] = {op1};
+    keyBuffer = UINT32_MAX;
+    sbitsOperator scanOp3 = {NULL, sbitsNext, &it};
+    sbitsOperator selectOp3 = {&scanOp3, selectionFunc, createSelectinfo(2, SELECT_GTE, 150)};
+    sbitsAggrOp op1 = {countReset, countAdd, countCompute, malloc(sizeof(uint32_t))};
+    sbitsAggrOp operators[] = {op1};
 
-    // recordsReturned = 0;
-    // printLimit = 365;
-    // printf("\nCount:\n");
-    // while (aggroup(state, &it, dayGroup, operators, 1, &keyBuffer, dataBuffer)) {
-    //     if (++recordsReturned < printLimit) {
-    //         printf("%d %d\n", keyBuffer / 86400 - 1, *(uint32_t*)op1.state);
-    //     }
-    // }
-    // if (recordsReturned > printLimit) {
-    //     printf("...\n");
-    //     printf("[Total records returned: %d]\n", recordsReturned);
-    // }
+    recordsReturned = 0;
+    printf("\nCount:\n");
+    while (aggroup(state, &selectOp3, dayGroup, operators, 1, &keyBuffer, dataBuffer)) {
+        if (++recordsReturned < printLimit) {
+            printf("%d %d\n", keyBuffer / 86400 - 1, *(uint32_t*)op1.state);
+        }
+    }
+    if (recordsReturned > printLimit) {
+        printf("...\n");
+        printf("[Total records returned: %d]\n", recordsReturned);
+    }
 
-    // // Free states
-    // for (int i = 0; i < sizeof(operators) / sizeof(operators[0]); i++) {
-    //     free(operators[i].state);
-    // }
+    // Free states
+    for (int i = 0; i < sizeof(operators) / sizeof(operators[0]); i++) {
+        free(operators[i].state);
+    }
+    free(selectOp3.info);
 
     // Close sbits
     sbitsClose(state);
