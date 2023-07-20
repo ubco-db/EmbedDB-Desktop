@@ -7,6 +7,7 @@
 
 sbitsState *state;
 
+
 void setUp(void) {
     state = (sbitsState *)malloc(sizeof(sbitsState));
     state->keySize = 4;
