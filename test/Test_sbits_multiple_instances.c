@@ -102,7 +102,6 @@ void insertRecordsFromFileWithVarData(sbitsState *state, char *fileName, int32_t
         for (int16_t i = 0; i < count; i++) {
             void *buf = (infileBuffer + headerSize + i * state->recordSize);
             snprintf(varData, 30, "Hello world %i", *((uint32_t *)buf));
-            printf("%i \n", strlen(varData));
             int8_t putResult = sbitsPutVar(state, buf, (void *)((int8_t *)buf + 4), varData, strlen(varData));
             snprintf(message, 100, "sbitsPut returned non-zero value for insert of key %i", *((uint32_t *)buf));
             TEST_ASSERT_EQUAL_INT8_MESSAGE(0, putResult, message);
