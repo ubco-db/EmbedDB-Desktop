@@ -6,15 +6,15 @@ ifeq ($(OS),Windows_NT)
 	CLEANUP = rm -f
 	MKDIR = mkdir -p
   endif
-	CFLAGS= -I. -I$(PATHU) -I$(PATHS) -DTEST
+  	MATH
 	PYTHON=python
 	TARGET_EXTENSION=exe
 else
+	MATH = -lm
 	CLEANUP = rm -f
 	MKDIR = mkdir -p
 	TARGET_EXTENSION=out
 	PYTHON=python3
-	CFLAGS= -I. -I$(PATHU) -I$(PATHS) -DTEST
 endif
 
 .PHONY: clean
@@ -32,7 +32,7 @@ PATHR = build/results/
 PATHA = build/artifacts/
 
 BUILD_PATHS = $(PATHB) $(PATHD) $(PATHO) $(PATHR) $(PATHA)
-
+CFLAGS= -I. -I$(PATHU) -I$(PATHS) -DTEST
 OBJECTS = $(PATHO)sbits.o $(PATHO)spline.o $(PATHO)radixspline.o $(PATHO)utilityFunctions.o
 
 SRCT = $(wildcard $(PATHT)*.c)
@@ -52,7 +52,7 @@ varTest: $(BUILD_PATHS) $(PATHB)varTest.$(TARGET_EXTENSION)
 	@echo "Finished running varTest file"
 
 $(PATHB)varTest.$(TARGET_EXTENSION): $(OBJECTS) $(VARTEST)
-	$(LINK) -o $@ $^ -lm
+	$(LINK) -o $@ $^ $(MATH)
 
 test_sbits: $(BUILD_PATHS) $(PATHB)test_sbits.$(TARGET_EXTENSION)
 	@echo "Running test_sbits"
@@ -70,7 +70,7 @@ $(PATHR)%.testpass: $(PATHB)%.$(TARGET_EXTENSION)
 	-./$< > $@ 2>&1
 
 $(PATHB)Test%.$(TARGET_EXTENSION): $(PATHO)Test%.o $(OBJECTS) $(PATHO)unity.o #$(PATHD)Test%.d
-	$(LINK) -o $@ $^
+	$(LINK) -o $@ $^ -lm
 
 $(PATHO)%.o:: $(PATHT)%.c
 	$(COMPILE) $(CFLAGS) $< -o $@

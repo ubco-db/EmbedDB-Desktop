@@ -213,11 +213,11 @@ void splinePrint(spline *spl) {
         return;
     }
     printf("Spline max error (%i):\n", spl->maxError);
-    printf("Spline points (%i):\n", spl->count);
+    printf("Spline points (%li):\n", spl->count);
     uint64_t keyVal = 0;
     for (id_t i = 0; i < spl->count; i++) {
         memcpy(&keyVal, spl->points[i].key, spl->keySize);
-        printf("[%i]: (%i, %i)\n", i, keyVal, spl->points[i].page);
+        printf("[%i]: (%li, %i)\n", i, keyVal, spl->points[i].page);
     }
     printf("\n");
 }

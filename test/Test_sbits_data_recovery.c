@@ -89,12 +89,12 @@ int queryRecordsLinearly(sbitsState *state, uint32_t numberOfRecords, int32_t st
         data += 1;
         int8_t getStatus = sbitsGet(state, &key, (void *)result);
         if (getStatus != 0) {
-            printf("ERROR: Failed to find: %lu\n", key);
+            printf("ERROR: Failed to find: %i\n", key);
             return 1;
         }
         if (*((int64_t *)result) != data) {
-            printf("ERROR: Wrong data for: %lu\n", key);
-            printf("Key: %lu Data: %lu\n", key, *((int64_t *)result));
+            printf("ERROR: Wrong data for: %i\n", key);
+            printf("Key: %i Data: %lu\n", key, *((int64_t *)result));
             free(result);
             return 1;
         }
