@@ -14,7 +14,7 @@ else
 	MKDIR = mkdir -p
 	TARGET_EXTENSION=out
 	PYTHON=python3
-	CFLAGS= -I. -I$(PATHU) -I$(PATHS) -DTEST -lm
+	CFLAGS= -I. -I$(PATHU) -I$(PATHS) -DTEST
 endif
 
 .PHONY: clean
