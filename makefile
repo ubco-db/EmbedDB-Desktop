@@ -6,6 +6,7 @@ ifeq ($(OS),Windows_NT)
 	CLEANUP = rm -f
 	MKDIR = mkdir -p
   endif
+	CFLAGS= -I. -I$(PATHU) -I$(PATHS) -DTEST
 	PYTHON=python
 	TARGET_EXTENSION=exe
 else
@@ -13,6 +14,7 @@ else
 	MKDIR = mkdir -p
 	TARGET_EXTENSION=out
 	PYTHON=python3
+	CFLAGS= -I. -I$(PATHU) -I$(PATHS) -DTEST -lm
 endif
 
 .PHONY: clean
@@ -41,7 +43,6 @@ TEST_SBITS = $(PATHO)test_sbits.o
 COMPILE=gcc -c
 LINK=gcc
 DEPEND=gcc -MM -MG -MF
-CFLAGS=-I. -I$(PATHU) -I$(PATHS) -DTEST -lm
 
 RESULTS = $(patsubst $(PATHT)Test%.c,$(PATHR)Test%.testpass,$(SRCT))
 
@@ -59,32 +60,32 @@ test_sbits: $(BUILD_PATHS) $(PATHB)test_sbits.$(TARGET_EXTENSION)
 	@echo "Finished running test_sbits file"
 
 $(PATHB)test_sbits.$(TARGET_EXTENSION): $(OBJECTS) $(TEST_SBITS)
-	$(LINK) -o $@ $^ -lm
+	$(LINK) -o $@ $^
 
 test: $(BUILD_PATHS) $(RESULTS)
 	pip install -r requirements.txt -q
 	$(PYTHON) ./scripts/stylize_as_junit.py
 
 $(PATHR)%.testpass: $(PATHB)%.$(TARGET_EXTENSION)
-	-./$< > $@ 2>&1 -lm
+	-./$< > $@ 2>&1
 
 $(PATHB)Test%.$(TARGET_EXTENSION): $(PATHO)Test%.o $(OBJECTS) $(PATHO)unity.o #$(PATHD)Test%.d
-	$(LINK) -o $@ $^ -lm
+	$(LINK) -o $@ $^
 
 $(PATHO)%.o:: $(PATHT)%.c
-	$(COMPILE) $(CFLAGS) $< -o $@ -lm
+	$(COMPILE) $(CFLAGS) $< -o $@
 
 $(PATHO)%.o:: $(PATHS)%.c
-	$(COMPILE) $(CFLAGS) $< -o $@ -lm
+	$(COMPILE) $(CFLAGS) $< -o $@
 
 $(PATHO)%.o:: $(PATHSPLINE)%.c
-	$(COMPILE) $(CFLAGS) $< -o $@ -lm
+	$(COMPILE) $(CFLAGS) $< -o $@
 
 $(PATHO)%.o:: $(PATHSBITS)%.c
-	$(COMPILE) $(CFLAGS) $< -o $@ -lm
+	$(COMPILE) $(CFLAGS) $< -o $@
 
 $(PATHO)%.o:: $(PATHU)%.c $(PATHU)%.h
-	$(COMPILE) $(CFLAGS) $< -o $@ -lm
+	$(COMPILE) $(CFLAGS) $< -o $@
 
 $(PATHD)%.d:: $(PATHT)%.c
 	$(DEPEND) $@ $<
