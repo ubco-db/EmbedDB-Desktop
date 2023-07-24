@@ -208,6 +208,7 @@ void sbits_variable_data_reloads_and_queries_with_two_hundred_forty_seven_pages_
             uint32_t streamBytesRead = sbitsVarDataStreamRead(state, stream, variableDataBuffer, 13);
             TEST_ASSERT_EQUAL_UINT32_MESSAGE(13, streamBytesRead, "SBITS var data stream did not read the correct number of bytes.");
             TEST_ASSERT_EQUAL_CHAR_ARRAY_MESSAGE(variableData, variableDataBuffer, 13, varDataMessage);
+            free(stream);
         } else {
             snprintf(keyMessage, 120, "SBITS get encountered an error fetching the data for key %i. The var data was not detected as being overwritten.", key);
             TEST_ASSERT_EQUAL_INT8_MESSAGE(1, getResult, keyMessage);

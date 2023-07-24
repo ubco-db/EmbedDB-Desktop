@@ -90,6 +90,10 @@ void insertRecordsFromFile(sbitsState *state, char *fileName, int32_t numRecords
 void insertRecordsFromFileWithVarData(sbitsState *state, char *fileName, int32_t numRecords) {
     FILE *infile;
     infile = fopen(fileName, "r+b");
+    if (infile == NULL) {
+        printf("Error!!!\n");
+    }
+
     char infileBuffer[512];
     int8_t headerSize = 16;
     int32_t numInserted = 0;
@@ -100,7 +104,7 @@ void insertRecordsFromFileWithVarData(sbitsState *state, char *fileName, int32_t
             break;
         int16_t count = *((int16_t *)(infileBuffer + 4));
         for (int16_t i = 0; i < count; i++) {
-            void *buf = (infileBuffer + headerSize + i * state->recordSize);
+            void *buf = (infileBuffer + headerSize + i * (state->keySize + state->dataSize));
             snprintf(varData, 30, "Hello world %i", *((uint32_t *)buf));
             int8_t putResult = sbitsPutVar(state, buf, (void *)((int8_t *)buf + 4), varData, strlen(varData));
             snprintf(message, 100, "sbitsPut returned non-zero value for insert of key %i", *((uint32_t *)buf));
@@ -111,6 +115,7 @@ void insertRecordsFromFileWithVarData(sbitsState *state, char *fileName, int32_t
             }
         }
     }
+    free(varData);
     sbitsFlush(state);
     fclose(infile);
 }
@@ -141,6 +146,52 @@ void queryRecordsFromFile(sbitsState *state, char *fileName, int32_t numRecords)
     }
     TEST_ASSERT_EQUAL_INT32_MESSAGE(numRecords, numRead, "The number of records read was not equal to the number of records inserted.");
     fclose(infile);
+}
+
+void queryRecordsFromFileWithVarData(sbitsState *state, char *fileName, int32_t numRecords) {
+    FILE *infile;
+    infile = fopen(fileName, "r+b");
+    char infileBuffer[512];
+    int8_t headerSize = 16;
+    int32_t numRead = 0;
+    int8_t *dataBuffer = malloc(state->dataSize * sizeof(int8_t));
+    char *varDataBuffer = calloc(30, sizeof(char));
+    char *varDataExpected = calloc(30, sizeof(char));
+    char message[100];
+    while (numRead < numRecords) {
+        if (0 == fread(infileBuffer, state->pageSize, 1, infile))
+            break;
+        int16_t count = *((int16_t *)(infileBuffer + 4));
+        for (int16_t i = 0; i < count; i++) {
+            void *buf = (infileBuffer + headerSize + i * (state->keySize + state->dataSize));
+            snprintf(varDataExpected, 30, "Hello world %i", *((uint32_t *)buf));
+            sbitsVarDataStream *stream = NULL;
+            int8_t getResult = sbitsGetVar(state, buf, dataBuffer, &stream);
+            snprintf(message, 100, "sbitsGetVar was not able to find the data for key %i", *((uint32_t *)buf));
+            TEST_ASSERT_EQUAL_INT8_MESSAGE(0, getResult, message);
+            snprintf(message, 100, "sbitsGetBar did not return the correct data for key %i", *((uint32_t *)buf));
+            TEST_ASSERT_EQUAL_MEMORY_MESSAGE(buf + 4, dataBuffer, state->dataSize, message);
+            if (946714800 == *((uint32_t *)buf)) {
+                printf("Expected data: %s, actual data: %s \n", varDataExpected, varDataBuffer);
+                printf("Length of data expected: %i \n", strlen(varDataExpected));
+                printf("Length of data actually: %i \n", stream->totalBytes);
+                printf("Data offset: %i \n", stream->dataStart);
+            }
+            uint32_t streamBytesRead = sbitsVarDataStreamRead(state, stream, varDataBuffer, strlen(varDataExpected));
+            snprintf(message, 100, "sbitsGetVar did not return the correct variable data for key %i", *((uint32_t *)buf));
+
+            TEST_ASSERT_EQUAL_MEMORY_MESSAGE(varDataExpected, varDataBuffer, strlen(varDataExpected), message);
+            numRead++;
+            free(stream);
+            if (numRead >= numRecords)
+                break;
+        }
+    }
+    TEST_ASSERT_EQUAL_INT32_MESSAGE(numRecords, numRead, "The number of records read was not equal to the number of records inserted.");
+    fclose(infile);
+    free(dataBuffer);
+    free(varDataBuffer);
+    free(varDataExpected);
 }
 
 void setupSbitsInstanceKeySize4DataSize12(sbitsState **stateArray, int number) {
@@ -178,9 +229,9 @@ void setupSbitsInstanceKeySize4DataSize12WithVarData(sbitsState **stateArray, in
     state->pageSize = 512;
     state->bufferSizeInBlocks = 6;
     state->buffer = calloc(1, state->pageSize * state->bufferSizeInBlocks);
-    state->numDataPages = 20000;
+    state->numDataPages = 22000;
     state->numIndexPages = 1000;
-    state->numVarPages = 20000;
+    state->numVarPages = 44000;
     state->parameters = SBITS_RESET_DATA | SBITS_USE_INDEX | SBITS_USE_VDATA;
     state->eraseSizeInPages = 4;
     state->fileInterface = getFileInterface();
@@ -241,9 +292,9 @@ void test_insert_from_files_with_index_multiple_states() {
     insertRecordsFromFile(*(states), "data/uwa500K.bin", 500000);
     insertRecordsFromFile(*(states + 1), "data/ethylene_CO.bin", 400000);
     queryRecordsFromFile(*(states), "data/uwa500K.bin", 500000);
-    insertRecordsFromFile(*(states + 2), "data/sea100K.bin", 100001);
+    insertRecordsFromFile(*(states + 2), "data/PRSA_Data_Hongxin.bin", 33311);
     queryRecordsFromFile(*(states + 1), "data/ethylene_CO.bin", 400000);
-    queryRecordsFromFile(*(states + 2), "data/sea100K.bin", 100001);
+    queryRecordsFromFile(*(states + 2), "data/PRSA_Data_Hongxin.bin", 33311);
 
     for (int i = 0; i < numStates; i++) {
         sbitsState *state = *(states + i);
@@ -257,12 +308,19 @@ void test_insert_from_files_with_index_multiple_states() {
 }
 
 void test_insert_from_files_with_vardata_multiple_states() {
-    int numStates = 5;
+    int numStates = 4;
     states = malloc(numStates * sizeof(sbitsState *));
     for (int i = 0; i < numStates; i++)
         setupSbitsInstanceKeySize4DataSize12WithVarData(states, i);
 
     insertRecordsFromFileWithVarData(*(states), "data/uwa500K.bin", 500000);
+    insertRecordsFromFileWithVarData(*(states + 1), "data/measure1_smartphone_sens.bin", 18354);
+    queryRecordsFromFileWithVarData(*(states), "data/uwa500K.bin", 500000);
+    insertRecordsFromFileWithVarData(*(states + 2), "data/ethylene_CO.bin", 185589);
+    insertRecordsFromFileWithVarData(*(states + 3), "data/position.bin", 1518);
+    queryRecordsFromFileWithVarData(*(states + 2), "data/ethylene_CO.bin", 185589);
+    queryRecordsFromFileWithVarData(*(states + 3), "data/position.bin", 1518);
+    queryRecordsFromFileWithVarData(*(states + 1), "data/measure1_smartphone_sens.bin", 18354);
 }
 
 int main(void) {
