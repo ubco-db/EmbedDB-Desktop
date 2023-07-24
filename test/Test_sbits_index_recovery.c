@@ -15,7 +15,8 @@ void setUp(void) {
     state->bufferSizeInBlocks = 6;
     state->buffer = calloc(1, state->pageSize * state->bufferSizeInBlocks);
     state->fileInterface = getFileInterface();
-    char dataPath[] = "build/artifacts/dataFile.bin", indexPath[] = "build/artifacts/indexFile.bin", varPath[] = "build/artifacts/varFile.bin";
+    char dataPath[] = "build/artifacts/dataFile.bin";
+    char indexPath[] = "build/artifacts/indexFile.bin";
     state->dataFile = setupFile(dataPath);
     state->indexFile = setupFile(indexPath);
     state->numDataPages = 10000;
@@ -40,7 +41,8 @@ void initalizeSbitsFromFile() {
     state->bufferSizeInBlocks = 6;
     state->buffer = calloc(1, state->pageSize * state->bufferSizeInBlocks);
     state->fileInterface = getFileInterface();
-    char dataPath[] = "build/artifacts/dataFile.bin", indexPath[] = "build/artifacts/indexFile.bin", varPath[] = "build/artifacts/varFile.bin";
+    char dataPath[] = "build/artifacts/dataFile.bin";
+    char indexPath[] = "build/artifacts/indexFile.bin";
     state->dataFile = setupFile(dataPath);
     state->indexFile = setupFile(indexPath);
     state->numDataPages = 10000;

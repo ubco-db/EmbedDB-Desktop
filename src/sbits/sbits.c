@@ -190,7 +190,10 @@ int8_t sbitsInit(sbitsState *state, size_t indexMaxError) {
     /* Calculate block header size */
 
     /* Header size depends on bitmap size: 6 + X bytes: 4 byte id, 2 for record count, X for bitmap. */
-    state->headerSize = 6 + state->bitmapSize;
+    state->headerSize = 6;
+    if (SBITS_USING_INDEX(state->parameters))
+        state->headerSize += state->bitmapSize;
+
     if (SBITS_USING_MAX_MIN(state->parameters))
         state->headerSize += state->keySize * 2 + state->dataSize * 2;
 
@@ -686,7 +689,7 @@ int8_t sbitsPut(sbitsState *state, void *key, void *data) {
             previousKey = (int8_t *)state->buffer + (state->recordSize * (count - 1)) + state->headerSize;
         }
         if (state->compareKey(key, previousKey) != 1) {
-            printf("Keys must be scritcly ascending order. Insert Failed.\n");
+            printf("Keys must be strictly ascending order. Insert Failed.\n");
             return 1;
         }
     }
