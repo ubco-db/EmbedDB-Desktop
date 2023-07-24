@@ -1411,6 +1411,8 @@ int8_t sbitsSetupVarDataStream(sbitsState *state, void *key, sbitsVarDataStream 
 
     // Move var data address to the beginning of the data, past the data length
     varDataAddr = (varDataAddr + sizeof(uint32_t)) % (state->numVarPages * state->pageSize);
+
+    // If we end up on the page boundary, we need to move past the header
     if (varDataAddr % state->pageSize == 0) {
         varDataAddr += state->variableDataHeaderSize;
         varDataAddr %= (state->numVarPages * state->pageSize);
