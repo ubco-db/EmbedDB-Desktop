@@ -30,12 +30,12 @@ typedef struct {
      * @param	state	The state tracking the value of the aggregate function e.g. sum
      * @param	record	The record being added
      */
-    void (*add)(void* state, void* record);
+    void (*add)(void* state, const void* record);
 
     /**
-     * @brief	Finalize aggregate result. Is called once right before aggroup returns.
+     * @brief	Finalize aggregate result into the record buffer and modify the schema accordingly. Is called once right before aggroup returns.
      */
-    void (*compute)(void* state);
+    void (*compute)(void* state, sbitsSchema* schema, void* recordBuffer, const void* lastRecord);
 
     /**
      * @brief	A user-malloced space where the operator saves its state. E.g. a sum operator might have 4 bytes allocated to store the sum of all data
@@ -51,27 +51,31 @@ typedef struct sbitsOperator {
 
     /**
      * @brief	A function to run on each tuple extracted from `input` if input is not NULL. If `input` is NULL, then it should be capable of table scan or similar.
-     * @param	schema			The schema of the data in `recordBuffer`. If this function makes any changes in `recordBuffer` that affect the schema, it should be reflected in this variable.
-     * @param	info			A pre-allocated memory area that can be loaded with any extra parameters that the function needs to operate (e.g. column numbers or selection predicates)
+     * @param	operator		This operator
      * @param	recordBuffer	The key to perform the function on
      * @return	Returns 0 or 1 to indicate whether this tuple should continue to be processed/returned
      */
-    int8_t (*func)(sbitsSchema* schema, void* info, void* recordBuffer);
+    int8_t (*func)(struct sbitsOperator* operator, void * recordBuffer);
+    // int8_t (*func)(sbitsSchema* schema, void* info, void* recordBuffer);
 
     /**
      * @brief	A pre-allocated memory area that can be loaded with any extra parameters that the function needs to operate (e.g. column numbers or selection predicates)
      */
     void* info;
+
+    /**
+     * @brief	The output schema of this operator
+     */
+    sbitsSchema* schema;
 } sbitsOperator;
 
 /**
  * @brief	Execute a function on each return of an iterator
  * @param	operator		An operator struct containing the input operator and function to run on the data
- * @param	schema			Pre-allocated space for the schema
  * @param	recordBuffer	Pre-allocated space for the whole record (key & data)
  * @return	1 if another (key, data) pair was returned, 0 if there are no more pairs to return
  */
-int8_t exec(sbitsOperator* operator, sbitsSchema * schema, void* recordBuffer);
+int8_t exec(sbitsOperator* operator, void * recordBuffer);
 
 /**
  * @brief	Calculate an aggregate function over specified groups
@@ -79,12 +83,12 @@ int8_t exec(sbitsOperator* operator, sbitsSchema * schema, void* recordBuffer);
  * @param	groupfunc		A function that returns whether or not the `key` is part of the same group as the `lastkey`. Assumes that groups are always next to each other when read in.
  * @param	operators		An array of operators, each of which will be updated with each record read from the iterator
  * @param	numOps			The number of sbitsAggrOps in `operators`
- * @param	schema			Pre-allocated space for the schema
  * @param	recordBuffer	Pre-allocated space for the operator to put the key. **NOT A RETURN VALUE**
+ * @param	lastRecordBuffer	A secondary buffer needed to store the last key that was read for the purpose of comparing it to the record that was just read. Needs to be the same size as `recordBuffer`
  * @param	bufferSize		The length (in bytes) of `recordBuffer`
  * @return	1 if another group was calculated, 0 if not.
  */
-int8_t aggroup(sbitsOperator* input, int8_t (*groupfunc)(void* lastRecord, void* record), sbitsAggrOp* operators, uint32_t numOps, sbitsSchema* schema, void* recordBuffer, uint8_t bufferSize);
+int8_t aggroup(sbitsOperator* input, int8_t (*groupfunc)(const void* lastRecord, const void* record), sbitsAggrOp* operators, uint32_t numOps, void* recordBuffer, void* lastRecordBuffer, uint8_t bufferSize);
 
 /**
  * @brief	Create an sbitsSchema from a list of column sizes including both key and data
@@ -99,20 +103,22 @@ sbitsSchema* sbitsCreateSchema(uint8_t numCols, int8_t* colSizes, int8_t* colSig
  */
 void sbitsFreeSchema(sbitsSchema** schema);
 
+/**
+ * @brief	Completely free a chain of operators recursively. Does not recursively free any pointer contained in `sbitsOperator::info`
+ */
+void sbitsDestroyOperatorRecursive(sbitsOperator** operator);
+
 ///////////////////////////////////////////
 // Pre-built functions for basic queries //
 ///////////////////////////////////////////
 
-int8_t tableScan(sbitsSchema* schema, void* info, void* recordBuffer);
-void* createTableScanInfo(sbitsState* state, sbitsIterator* it, sbitsSchema* baseSchema);
+int8_t tableScan(sbitsOperator* operator, void * recordBuffer);
+void* createTableScanInfo(sbitsState* state, sbitsIterator* it);
 
-int8_t projectionFunc(sbitsSchema* schema, void* info, void* recordBuffer);
+int8_t projectionFunc(sbitsOperator* operator, void * recordBuffer);
 void* createProjectionInfo(uint8_t numCols, uint8_t* cols);
 
-/**
- * @brief	A basic selection function that can filter on the data column
- */
-int8_t selectionFunc(sbitsSchema* schema, void* info, void* recordBuffer);
+int8_t selectionFunc(sbitsOperator* operator, void * recordBuffer);
 void* createSelectinfo(int8_t colNum, int8_t operation, void* compVal);
 
 #endif

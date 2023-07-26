@@ -9,20 +9,39 @@ int8_t mySelectionFunc(sbitsState* state, void* info, void* key, void* data) {
     return (*(uint32_t*)key) / 86400 == *(uint32_t*)info && *((int32_t*)data + 2) >= 150;
 }
 
-int8_t dayGroup(void* lastkey, void* key) {
+int8_t dayGroup(const void* lastRecord, const void* record) {
     // Convert timestamp to correct timezone, then find the epoch day and compare them
-    return (*(uint32_t*)lastkey) / 86400 == (*(uint32_t*)key) / 86400;
+    return (*(uint32_t*)lastRecord) / 86400 == (*(uint32_t*)record) / 86400;
 }
 
 void countReset(void* state) {
     *(uint32_t*)state = 0;
 }
 
-void countAdd(void* state, void* recordBuffer) {
+void countAdd(void* state, const void* recordBuffer) {
     (*(uint32_t*)state)++;
 }
 
-void countCompute(void* state) {}
+void countCompute(void* state, sbitsSchema* schema, void* recordBuffer, const void* lastRecord) {
+    // Put group name in record
+    uint32_t day = (*(uint32_t*)lastRecord) / 86400;
+    memcpy(recordBuffer, &day, sizeof(uint32_t));
+    // Put count in record
+    memcpy((int8_t*)recordBuffer + sizeof(uint32_t), state, sizeof(uint32_t));
+    // Edit schema
+    schema->numCols = 2;
+    schema->columnSizes = realloc(schema->columnSizes, 2 * sizeof(uint32_t));
+    schema->columnSizes[0] = 4;
+    schema->columnSizes[1] = 4;
+}
+
+sbitsSchema* copySchema(const sbitsSchema* schema) {
+    sbitsSchema* copy = malloc(sizeof(sbitsSchema));
+    copy->numCols = schema->numCols;
+    copy->columnSizes = malloc(schema->numCols * sizeof(int8_t));
+    memcpy(copy->columnSizes, schema->columnSizes, schema->numCols * sizeof(int8_t));
+    return copy;
+}
 
 void main() {
     sbitsState* state = calloc(1, sizeof(sbitsState));
@@ -85,16 +104,16 @@ void main() {
     it.maxData = NULL;
     sbitsInitIterator(state, &it);
 
-    sbitsOperator scanOp1 = {NULL, tableScan, createTableScanInfo(state, &it, baseSchema)};
+    sbitsOperator scanOp1 = {NULL, tableScan, createTableScanInfo(state, &it), copySchema(baseSchema)};
     uint8_t projCols[] = {0, 1, 3};
-    sbitsOperator projOp1 = {&scanOp1, projectionFunc, createProjectionInfo(3, projCols)};
+    sbitsOperator projOp1 = {&scanOp1, projectionFunc, createProjectionInfo(3, projCols), NULL};
 
     int printLimit = 20;
     int recordsReturned = 0;
     printf("\nProjection Result:\n");
     printf("Time       | Temp | Wind Speed\n");
     printf("-----------+------+------------\n");
-    while (exec(&projOp1, schemaBuffer, recordBuffer)) {
+    while (exec(&projOp1, recordBuffer)) {
         if (++recordsReturned <= printLimit) {
             printf("%-10lu | %-4.1f | %-4.1f\n", recordBuffer[0], recordBuffer[1] / 10.0, recordBuffer[2] / 10.0);
         }
@@ -105,7 +124,9 @@ void main() {
     }
 
     free(scanOp1.info);
+    sbitsFreeSchema(&scanOp1.schema);
     free(projOp1.info);
+    sbitsFreeSchema(&scanOp1.schema);
 
     /**	Selection:
      *	Say we want to answer the question "Return records where the temperature is less than 40 degrees and the wind speed is greater than or equal to 20". The iterator is only indexing the data on temperature, so we need to apply an extra layer of selection to its return. We can then apply the projection on top of that output
@@ -117,16 +138,16 @@ void main() {
     it.maxData = &maxTemp;
     sbitsInitIterator(state, &it);
 
-    sbitsOperator scanOp2 = {NULL, tableScan, createTableScanInfo(state, &it, baseSchema)};
+    sbitsOperator scanOp2 = {NULL, tableScan, createTableScanInfo(state, &it), copySchema(baseSchema)};
     int32_t selVal = 200;
-    sbitsOperator selectOp2 = {&scanOp2, selectionFunc, createSelectinfo(3, SELECT_GTE, &selVal)};
-    sbitsOperator projOp2 = {&selectOp2, projectionFunc, createProjectionInfo(3, projCols)};
+    sbitsOperator selectOp2 = {&scanOp2, selectionFunc, createSelectinfo(3, SELECT_GTE, &selVal), NULL};
+    sbitsOperator projOp2 = {&selectOp2, projectionFunc, createProjectionInfo(3, projCols), NULL};
 
     recordsReturned = 0;
     printf("\nSelection Result:\n");
     printf("Time       | Temp | Wind Speed\n");
     printf("-----------+------+------------\n");
-    while (exec(&projOp2, schemaBuffer, recordBuffer)) {
+    while (exec(&projOp2, recordBuffer)) {
         if (++recordsReturned <= printLimit) {
             printf("%-10lu | %-4.1f | %-4.1f\n", recordBuffer[0], recordBuffer[1] / 10.0, recordBuffer[2] / 10.0);
         }
@@ -137,8 +158,11 @@ void main() {
     }
 
     free(scanOp2.info);
+    sbitsFreeSchema(&scanOp2.schema);
     free(selectOp2.info);
+    sbitsFreeSchema(&selectOp2.schema);
     free(projOp2.info);
+    sbitsFreeSchema(&projOp2.schema);
 
     /**	Aggregate Count:
      * 	Count the number of records with wind speeds over 15 each day
@@ -150,18 +174,22 @@ void main() {
     sbitsInitIterator(state, &it);
 
     memset(recordBuffer, 0xff, 4 * sizeof(int32_t));  // Set flag for first query
-    sbitsOperator scanOp3 = {NULL, tableScan, createTableScanInfo(state, &it, baseSchema)};
+    sbitsOperator scanOp3 = {NULL, tableScan, createTableScanInfo(state, &it), copySchema(baseSchema)};
     selVal = 150;
-    sbitsOperator selectOp3 = {&scanOp3, selectionFunc, createSelectinfo(3, SELECT_GTE, &selVal)};
+    sbitsOperator selectOp3 = {&scanOp3, selectionFunc, createSelectinfo(3, SELECT_GTE, &selVal), NULL};
     sbitsAggrOp op1 = {countReset, countAdd, countCompute, malloc(sizeof(uint32_t))};
     sbitsAggrOp aggrOperators[] = {op1};
     uint32_t numOps = 1;
+    int8_t secondaryRecordBuffer[16];
 
     recordsReturned = 0;
-    printf("\nCount:\n");
-    while (aggroup(&selectOp3, dayGroup, aggrOperators, numOps, schemaBuffer, recordBuffer, 16)) {
+    printLimit = 10000;
+    printf("\nCount Result:\n");
+    printf("Day        | Count \n");
+    printf("-----------+-------\n");
+    while (aggroup(&selectOp3, dayGroup, aggrOperators, numOps, recordBuffer, secondaryRecordBuffer, 16)) {
         if (++recordsReturned < printLimit) {
-            printf("%d\n", *(uint32_t*)op1.state);
+            printf("%-10lu | %-4lu\n", recordBuffer[0], recordBuffer[1]);
         }
     }
     if (recordsReturned > printLimit) {
@@ -174,7 +202,9 @@ void main() {
         free(aggrOperators[i].state);
     }
     free(scanOp3.info);
+    sbitsFreeSchema(&scanOp3.schema);
     free(selectOp3.info);
+    sbitsFreeSchema(&selectOp3.schema);
 
     // Close sbits
     sbitsClose(state);
