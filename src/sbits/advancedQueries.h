@@ -77,18 +77,7 @@ typedef struct sbitsOperator {
  */
 int8_t exec(sbitsOperator* operator, void * recordBuffer);
 
-/**
- * @brief	Calculate an aggregate function over specified groups
- * @param	input			An operator struct to pull input data from
- * @param	groupfunc		A function that returns whether or not the `key` is part of the same group as the `lastkey`. Assumes that groups are always next to each other when read in.
- * @param	operators		An array of operators, each of which will be updated with each record read from the iterator
- * @param	numOps			The number of sbitsAggrOps in `operators`
- * @param	recordBuffer	Pre-allocated space for the operator to put the key. **NOT A RETURN VALUE**
- * @param	lastRecordBuffer	A secondary buffer needed to store the last key that was read for the purpose of comparing it to the record that was just read. Needs to be the same size as `recordBuffer`
- * @param	bufferSize		The length (in bytes) of `recordBuffer`
- * @return	1 if another group was calculated, 0 if not.
- */
-int8_t aggroup(sbitsOperator* input, int8_t (*groupfunc)(const void* lastRecord, const void* record), sbitsAggrOp* operators, uint32_t numOps, void* recordBuffer, void* lastRecordBuffer, uint8_t bufferSize);
+int8_t join(sbitsOperator* op1, void* recordBuffer1, sbitsOperator* op2, void* recordBuffer2);
 
 /**
  * @brief	Create an sbitsSchema from a list of column sizes including both key and data
@@ -120,5 +109,24 @@ void* createProjectionInfo(uint8_t numCols, uint8_t* cols);
 
 int8_t selectionFunc(sbitsOperator* operator, void * recordBuffer);
 void* createSelectinfo(int8_t colNum, int8_t operation, void* compVal);
+
+/**
+ * @brief	Calculate an aggregate function over specified groups
+ * @param	operator		An operator struct to pull input data from
+ * @param	recordBuffer	Pre-allocated space for the operator to put the key. **NOT A RETURN VALUE**
+ * @return	1 if another group was calculated, 0 if not.
+ */
+int8_t aggregateFunc(sbitsOperator* operator, void * recordBuffer);
+
+/**
+ * @brief	Create the info for an aggregate operator
+ * @param	groupfunc		A function that returns whether or not the `key` is part of the same group as the `lastkey`. Assumes that groups are always next to each other when read in.
+ * @param	operators		An array of operators, each of which will be updated with each record read from the iterator
+ * @param	numOps			The number of sbitsAggrOps in `operators`
+ * @param	lastRecordBuffer	A secondary buffer needed to store the last key that was read for the purpose of comparing it to the record that was just read. Needs to be the same size as `recordBuffer`
+ * @param	bufferSize		The length (in bytes) of `recordBuffer`
+ * @return	Returns a pointer to the info object to be put into a sbitsOperator
+ */
+void* createAggregateInfo(int8_t (*groupfunc)(const void* lastRecord, const void* record), sbitsAggrOp* operators, uint32_t numOps, void* lastRecordBuffer, uint8_t bufferSize);
 
 #endif

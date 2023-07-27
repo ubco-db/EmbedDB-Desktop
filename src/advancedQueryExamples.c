@@ -173,7 +173,6 @@ void main() {
     it.maxData = NULL;
     sbitsInitIterator(state, &it);
 
-    memset(recordBuffer, 0xff, 4 * sizeof(int32_t));  // Set flag for first query
     sbitsOperator scanOp3 = {NULL, tableScan, createTableScanInfo(state, &it), copySchema(baseSchema)};
     selVal = 150;
     sbitsOperator selectOp3 = {&scanOp3, selectionFunc, createSelectinfo(3, SELECT_GTE, &selVal), NULL};
@@ -181,13 +180,17 @@ void main() {
     sbitsAggrOp aggrOperators[] = {op1};
     uint32_t numOps = 1;
     int8_t secondaryRecordBuffer[16];
+    memset(secondaryRecordBuffer, 0xff, 4 * sizeof(int32_t));  // Set flag for first query
+    sbitsOperator aggOp3 = {&selectOp3, aggregateFunc, createAggregateInfo(dayGroup, aggrOperators, numOps, secondaryRecordBuffer, 16), NULL};
+    uint32_t minWindCount = 50;
+    sbitsOperator countSelect3 = {&aggOp3, selectionFunc, createSelectinfo(1, SELECT_GT, &minWindCount), NULL};
 
     recordsReturned = 0;
     printLimit = 10000;
     printf("\nCount Result:\n");
     printf("Day        | Count \n");
     printf("-----------+-------\n");
-    while (aggroup(&selectOp3, dayGroup, aggrOperators, numOps, recordBuffer, secondaryRecordBuffer, 16)) {
+    while (exec(&countSelect3, recordBuffer)) {
         if (++recordsReturned < printLimit) {
             printf("%-10lu | %-4lu\n", recordBuffer[0], recordBuffer[1]);
         }

@@ -25,16 +25,28 @@ int8_t exec(sbitsOperator* operator, void * recordBuffer) {
 
 /**
  * @brief	Calculate an aggregate function over specified groups
- * @param	input			An operator struct to pull input data from
- * @param	groupfunc		A function that returns whether or not the `key` is part of the same group as the `lastkey`. Assumes that groups are always next to each other when read in.
- * @param	operators		An array of operators, each of which will be updated with each record read from the iterator
- * @param	numOps			The number of sbitsAggrOps in `operators`
+ * @param	operator		An operator struct to pull input data from
  * @param	recordBuffer	Pre-allocated space for the operator to put the key. **NOT A RETURN VALUE**
- * @param	lastRecordBuffer	A secondary buffer needed to store the last key that was read for the purpose of comparing it to the record that was just read. Needs to be the same size as `recordBuffer`
- * @param	bufferSize		The length (in bytes) of `recordBuffer`
  * @return	1 if another group was calculated, 0 if not.
  */
-int8_t aggroup(sbitsOperator* input, int8_t (*groupfunc)(const void* lastRecord, const void* record), sbitsAggrOp* operators, uint32_t numOps, void* recordBuffer, void* lastRecordBuffer, uint8_t bufferSize) {
+int8_t aggregateFunc(sbitsOperator* operator, void * recordBuffer) {
+    if (operator->schema == NULL) {
+        operator->schema = malloc(sizeof(sbitsSchema));
+        operator->schema->numCols = 2;
+        operator->schema->columnSizes = malloc(2 * sizeof(int8_t));
+        int8_t colSizes[] = {4, 4};
+        memcpy(operator->schema->columnSizes, colSizes, 2);
+    }
+
+    int8_t* info = operator->info;
+    int8_t (*groupfunc)(const void* lastRecord, const void* record) = *(void**)info;
+    sbitsAggrOp* operators = *(void**)(info + sizeof(void*));
+    uint32_t numOps = *(uint32_t*)(info + 2 * sizeof(void*));
+    void* lastRecordBuffer = *(void**)(info + 2 * sizeof(void*) + sizeof(uint32_t));
+    uint8_t bufferSize = *(uint8_t*)(info + 3 * sizeof(void*) + sizeof(uint32_t));
+
+    sbitsOperator* input = operator->input;
+
     // Reset each operator
     for (int i = 0; i < numOps; i++) {
         operators[i].reset(operators[i].state);
@@ -43,7 +55,7 @@ int8_t aggroup(sbitsOperator* input, int8_t (*groupfunc)(const void* lastRecord,
     // Check if this call is the first for this query
     int8_t isFirstCall = 1;
     for (uint8_t i = 0; i < bufferSize; i++) {
-        if (((uint8_t*)recordBuffer)[i] != 0xff) {
+        if (((uint8_t*)lastRecordBuffer)[i] != 0xff) {
             isFirstCall = 0;
             break;
         }
@@ -52,31 +64,31 @@ int8_t aggroup(sbitsOperator* input, int8_t (*groupfunc)(const void* lastRecord,
     // If it is not the first call, need to add() the last key
     if (!isFirstCall) {
         for (int i = 0; i < numOps; i++) {
+            operators[i].add(operators[i].state, lastRecordBuffer);
+        }
+    }
+
+    // We already have a new record read into recordBuffer, so process it
+    if (isFirstCall || groupfunc(lastRecordBuffer, recordBuffer)) {
+        isFirstCall = 0;
+        for (int i = 0; i < numOps; i++) {
             operators[i].add(operators[i].state, recordBuffer);
         }
-    }
-
-    // Get next record
-    int8_t gotRecords = 0;
-    while (exec(input, recordBuffer)) {
-        gotRecords = 1;
-        // Check if record is in the same group as the last record
-        if (isFirstCall || groupfunc(lastRecordBuffer, recordBuffer)) {
-            isFirstCall = 0;
-            for (int i = 0; i < numOps; i++) {
-                operators[i].add(operators[i].state, recordBuffer);
-            }
-        } else {
-            break;
-        }
-
-        // Save this record
         memcpy(lastRecordBuffer, recordBuffer, bufferSize);
-    }
 
-    // If true, then the iterator did not return any records on this call of aggroup()
-    if (!gotRecords) {
-        return 0;
+        while (exec(input, recordBuffer)) {
+            // Check if record is in the same group as the last record
+            if (groupfunc(lastRecordBuffer, recordBuffer)) {
+                for (int i = 0; i < numOps; i++) {
+                    operators[i].add(operators[i].state, recordBuffer);
+                }
+            } else {
+                break;
+            }
+
+            // Save this record
+            memcpy(lastRecordBuffer, recordBuffer, bufferSize);
+        }
     }
 
     // Perform final compute on all operators
@@ -92,6 +104,25 @@ int8_t aggroup(sbitsOperator* input, int8_t (*groupfunc)(const void* lastRecord,
     return 1;
 }
 
+/**
+ * @brief	Create the info for an aggregate operator
+ * @param	groupfunc		A function that returns whether or not the `key` is part of the same group as the `lastkey`. Assumes that groups are always next to each other when read in.
+ * @param	operators		An array of operators, each of which will be updated with each record read from the iterator
+ * @param	numOps			The number of sbitsAggrOps in `operators`
+ * @param	lastRecordBuffer	A secondary buffer needed to store the last key that was read for the purpose of comparing it to the record that was just read. Needs to be the same size as `recordBuffer`
+ * @param	bufferSize		The length (in bytes) of `recordBuffer`
+ * @return	Returns a pointer to the info object to be put into a sbitsOperator
+ */
+void* createAggregateInfo(int8_t (*groupfunc)(const void* lastRecord, const void* record), sbitsAggrOp* operators, uint32_t numOps, void* lastRecordBuffer, uint8_t bufferSize) {
+    int8_t* info = malloc(3 * sizeof(void*) + sizeof(uint32_t) + sizeof(uint8_t));
+    memcpy(info, &groupfunc, sizeof(void*));
+    memcpy(info + sizeof(void*), &operators, sizeof(void*));
+    memcpy(info + 2 * sizeof(void*), &numOps, sizeof(uint32_t));
+    memcpy(info + 2 * sizeof(void*) + sizeof(uint32_t), &lastRecordBuffer, sizeof(void*));
+    memcpy(info + 3 * sizeof(void*) + sizeof(uint32_t), &bufferSize, sizeof(uint8_t));
+    return info;
+}
+
 uint16_t getColPos(sbitsSchema* schema, uint8_t colNum) {
     uint16_t pos = 0;
     for (uint8_t i = 0; i < colNum; i++) {
@@ -100,51 +131,6 @@ uint16_t getColPos(sbitsSchema* schema, uint8_t colNum) {
     return pos;
 }
 
-int compareUnsignedNumbers(const void* num1, const void* num2, int8_t numBytes) {
-    // Cast the pointers to unsigned char pointers for byte-wise comparison
-    const uint8_t* bytes1 = (const uint8_t*)num1;
-    const uint8_t* bytes2 = (const uint8_t*)num2;
-
-    for (int8_t i = numBytes - 1; i >= 0; i--) {
-        if (bytes1[i] < bytes2[i]) {
-            return -1;
-        } else if (bytes1[i] > bytes2[i]) {
-            return 1;
-        }
-    }
-
-    // Both numbers are equal
-    return 0;
-}
-
-int compareSignedNumbers(const void* num1, const void* num2, int8_t numBytes) {
-    // Cast the pointers to unsigned char pointers for byte-wise comparison
-    const uint8_t* bytes1 = (const uint8_t*)num1;
-    const uint8_t* bytes2 = (const uint8_t*)num2;
-
-    // Check the sign bits of the most significant bytes
-    int sign1 = bytes1[numBytes - 1] & 0x80;
-    int sign2 = bytes2[numBytes - 1] & 0x80;
-
-    if (sign1 != sign2) {
-        // Different signs, negative number is smaller
-        return (sign1 ? -1 : 1);
-    }
-
-    // Same sign, perform regular byte-wise comparison
-    for (int8_t i = numBytes - 1; i >= 0; i--) {
-        if (bytes1[i] < bytes2[i]) {
-            return -1;
-        } else if (bytes1[i] > bytes2[i]) {
-            return 1;
-        }
-    }
-
-    // Both numbers are equal
-    return 0;
-}
-
-// int8_t tableScan(sbitsSchema* schema, void* info, void* recordBuffer) {
 int8_t tableScan(sbitsOperator* operator, void * recordBuffer) {
     // Check that a schema was set
     if (operator->schema == NULL) {
@@ -169,7 +155,6 @@ void* createTableScanInfo(sbitsState* state, sbitsIterator* it) {
     return info;
 }
 
-// int8_t projectionFunc(sbitsSchema* schema, void* info, void* recordBuffer) {
 int8_t projectionFunc(sbitsOperator* operator, void * recordBuffer) {
     uint8_t numCols = *(uint8_t*)operator->info;
     uint8_t* cols = (uint8_t*)operator->info + 1;
@@ -218,7 +203,50 @@ void* createProjectionInfo(uint8_t numCols, uint8_t* cols) {
     return info;
 }
 
-// int8_t selectionFunc(sbitsSchema* schema, void* info, void* recordBuffer) {
+int compareUnsignedNumbers(const void* num1, const void* num2, int8_t numBytes) {
+    // Cast the pointers to unsigned char pointers for byte-wise comparison
+    const uint8_t* bytes1 = (const uint8_t*)num1;
+    const uint8_t* bytes2 = (const uint8_t*)num2;
+
+    for (int8_t i = numBytes - 1; i >= 0; i--) {
+        if (bytes1[i] < bytes2[i]) {
+            return -1;
+        } else if (bytes1[i] > bytes2[i]) {
+            return 1;
+        }
+    }
+
+    // Both numbers are equal
+    return 0;
+}
+
+int compareSignedNumbers(const void* num1, const void* num2, int8_t numBytes) {
+    // Cast the pointers to unsigned char pointers for byte-wise comparison
+    const uint8_t* bytes1 = (const uint8_t*)num1;
+    const uint8_t* bytes2 = (const uint8_t*)num2;
+
+    // Check the sign bits of the most significant bytes
+    int sign1 = bytes1[numBytes - 1] & 0x80;
+    int sign2 = bytes2[numBytes - 1] & 0x80;
+
+    if (sign1 != sign2) {
+        // Different signs, negative number is smaller
+        return (sign1 ? -1 : 1);
+    }
+
+    // Same sign, perform regular byte-wise comparison
+    for (int8_t i = numBytes - 1; i >= 0; i--) {
+        if (bytes1[i] < bytes2[i]) {
+            return -1;
+        } else if (bytes1[i] > bytes2[i]) {
+            return 1;
+        }
+    }
+
+    // Both numbers are equal
+    return 0;
+}
+
 int8_t selectionFunc(sbitsOperator* operator, void * recordBuffer) {
     sbitsSchema* inputSchema = operator->input->schema;
 
