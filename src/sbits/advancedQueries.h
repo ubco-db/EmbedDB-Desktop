@@ -2,22 +2,12 @@
 #define _ADVANCEDQUERIES_H
 
 #include "sbits.h"
+#include "schema.h"
 
 #define SELECT_GT 0
 #define SELECT_LT 1
 #define SELECT_GTE 2
 #define SELECT_LTE 3
-#define SBITS_COLUMN_SIGNED 0
-#define SBITS_COLUMN_UNSIGNED 1
-#define SBITS_COL_IS_SIGNED(colSize) (colSize < 0 ? 1 : 0)
-
-/**
- * @brief	A struct to desribe the number and sizes of attributes contained in the data of a sbits table
- */
-typedef struct {
-    uint8_t numCols;      // The number of columns in the table
-    int8_t* columnSizes;  // A list of the sizes, in bytes, of each column
-} sbitsSchema;
 
 typedef struct {
     /**
@@ -78,19 +68,6 @@ typedef struct sbitsOperator {
 int8_t exec(sbitsOperator* operator, void * recordBuffer);
 
 int8_t join(sbitsOperator* op1, void* recordBuffer1, sbitsOperator* op2, void* recordBuffer2);
-
-/**
- * @brief	Create an sbitsSchema from a list of column sizes including both key and data
- * @param	numCols			The total number of key & data columns in table
- * @param	colSizes		An array with the size of each column. Max size is 127
- * @param	colSignedness	An array describing if the data in the column is SBITS_COLUMNN_SIGNED or SBITS_COLUMN_UNSIGNED
- */
-sbitsSchema* sbitsCreateSchema(uint8_t numCols, int8_t* colSizes, int8_t* colSignedness);
-
-/**
- * @brief	Free a schema. Sets the schema pointer to NULL.
- */
-void sbitsFreeSchema(sbitsSchema** schema);
 
 /**
  * @brief	Completely free a chain of operators recursively. Does not recursively free any pointer contained in `sbitsOperator::info`
