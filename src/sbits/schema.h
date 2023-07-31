@@ -28,4 +28,11 @@ sbitsSchema* sbitsCreateSchema(uint8_t numCols, int8_t* colSizes, int8_t* colSig
  */
 void sbitsFreeSchema(sbitsSchema** schema);
 
+void* createBufferFromSchema(sbitsSchema* schema);
+
+sbitsSchema* copySchema(const sbitsSchema* schema);
+
+uint16_t getColPosFromSchema(sbitsSchema* schema, uint8_t colNum);
+uint16_t getRecordSizeFromSchema(sbitsSchema* schema);
+
 #endif

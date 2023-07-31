@@ -2,6 +2,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 /**
  * @brief	Create an sbitsSchema from a list of column sizes including both key and data
@@ -54,4 +55,44 @@ void sbitsFreeSchema(sbitsSchema** schema) {
     free((*schema)->columnSizes);
     free(*schema);
     *schema = NULL;
+}
+
+void* createBufferFromSchema(sbitsSchema* schema) {
+    uint16_t totalSize = 0;
+    for (uint8_t i = 0; i < schema->numCols; i++) {
+        totalSize += abs(schema->columnSizes[i]);
+    }
+    return calloc(1, totalSize);
+}
+
+sbitsSchema* copySchema(const sbitsSchema* schema) {
+    sbitsSchema* copy = malloc(sizeof(sbitsSchema));
+    if (copy == NULL) {
+        printf("ERROR: malloc failed while copying schema\n");
+        return NULL;
+    }
+    copy->numCols = schema->numCols;
+    copy->columnSizes = malloc(schema->numCols * sizeof(int8_t));
+    if (copy->columnSizes == NULL) {
+        printf("ERROR: malloc failed while copying schema\n");
+        return NULL;
+    }
+    memcpy(copy->columnSizes, schema->columnSizes, schema->numCols * sizeof(int8_t));
+    return copy;
+}
+
+uint16_t getColPosFromSchema(sbitsSchema* schema, uint8_t colNum) {
+    uint16_t pos = 0;
+    for (uint8_t i = 0; i < colNum; i++) {
+        pos += abs(schema->columnSizes[i]);
+    }
+    return pos;
+}
+
+uint16_t getRecordSizeFromSchema(sbitsSchema* schema) {
+    uint16_t pos = 0;
+    for (uint8_t i = 0; i < schema->numCols; i++) {
+        pos += abs(schema->columnSizes[i]);
+    }
+    return pos;
 }
