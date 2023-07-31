@@ -28,11 +28,24 @@ sbitsSchema* sbitsCreateSchema(uint8_t numCols, int8_t* colSizes, int8_t* colSig
  */
 void sbitsFreeSchema(sbitsSchema** schema);
 
+/**
+ * @brief	Uses schema to determine the length of buffer to allocate
+ */
 void* createBufferFromSchema(sbitsSchema* schema);
 
+/**
+ * @brief	Deep copy schema and return a pointer to the copy
+ */
 sbitsSchema* copySchema(const sbitsSchema* schema);
 
+/**
+ * @brief	Finds byte offset of the column from the beginning of the record
+ */
 uint16_t getColPosFromSchema(sbitsSchema* schema, uint8_t colNum);
+
+/**
+ * @brief	Calculates record size from schema
+ */
 uint16_t getRecordSizeFromSchema(sbitsSchema* schema);
 
 #endif
