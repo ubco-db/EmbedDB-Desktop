@@ -12,7 +12,7 @@
  */
 typedef struct {
     uint8_t numCols;      // The number of columns in the table
-    int8_t* columnSizes;  // A list of the sizes, in bytes, of each column
+    int8_t* columnSizes;  // A list of the sizes, in bytes, of each column. Negative numbers indicate signed columns while positive indicate an unsigned column
 } sbitsSchema;
 
 /**
