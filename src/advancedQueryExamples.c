@@ -74,8 +74,6 @@ void main() {
     int8_t colSizes[] = {4, 4, 4, 4};
     int8_t colSignedness[] = {SBITS_COLUMN_UNSIGNED, SBITS_COLUMN_SIGNED, SBITS_COLUMN_SIGNED, SBITS_COLUMN_SIGNED};
     sbitsSchema* baseSchema = sbitsCreateSchema(4, colSizes, colSignedness);
-    sbitsSchema* schemaBuffer = malloc(sizeof(sbitsSchema));  // Allocate space for schema
-    schemaBuffer->columnSizes = malloc(1);                    // This just needs to be an allocated space. It will be realloced by operators that modify the schema
 
     // Insert data
     insertData(state, "data/uwa500K.bin");
