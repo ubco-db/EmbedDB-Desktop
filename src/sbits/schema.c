@@ -1,5 +1,6 @@
 #include "schema.h"
 
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -95,4 +96,15 @@ uint16_t getRecordSizeFromSchema(sbitsSchema* schema) {
         pos += abs(schema->columnSizes[i]);
     }
     return pos;
+}
+
+void printSchema(sbitsSchema* schema) {
+    for (uint8_t i = 0; i < schema->numCols; i++) {
+        if (i) {
+            printf(", ");
+        }
+        int8_t col = schema->columnSizes[i];
+        printf("%sint%d", SBITS_IS_COL_SIGNED(col) ? "" : "u", abs(col));
+    }
+    printf("\n");
 }

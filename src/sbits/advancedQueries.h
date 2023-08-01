@@ -95,7 +95,7 @@ int8_t exec(sbitsOperator* operator);
 void sbitsFreeOperatorRecursive(sbitsOperator** operator);
 
 ///////////////////////////////////////////
-// Pre-built functions for basic queries //
+// Pre-built operators for basic queries //
 ///////////////////////////////////////////
 
 /**
@@ -132,6 +132,13 @@ sbitsOperator* createSelectionOperator(sbitsOperator* input, int8_t colNum, int8
  */
 sbitsOperator* createAggregateOperator(sbitsOperator* input, int8_t (*groupfunc)(const void* lastRecord, const void* record), sbitsAggrOp* operators, uint32_t numOps);
 
-int8_t nextJoin(sbitsOperator* operator);
+sbitsOperator* createKeyJoinOperator(sbitsOperator* input1, sbitsOperator* input2);
+
+//////////////////////////////////
+// Prebuilt aggregate operators //
+//////////////////////////////////
+
+sbitsAggrOp* createCountAggregate();
+sbitsAggrOp* createSumAggregate(uint8_t colOffset, int8_t colSize);
 
 #endif

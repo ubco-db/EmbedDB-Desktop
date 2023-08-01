@@ -5,7 +5,7 @@
 
 #define SBITS_COLUMN_SIGNED 0
 #define SBITS_COLUMN_UNSIGNED 1
-#define SBITS_COL_IS_SIGNED(colSize) (colSize < 0 ? 1 : 0)
+#define SBITS_IS_COL_SIGNED(colSize) (colSize < 0 ? 1 : 0)
 
 /**
  * @brief	A struct to desribe the number and sizes of attributes contained in the data of a sbits table
@@ -47,5 +47,7 @@ uint16_t getColPosFromSchema(sbitsSchema* schema, uint8_t colNum);
  * @brief	Calculates record size from schema
  */
 uint16_t getRecordSizeFromSchema(sbitsSchema* schema);
+
+void printSchema(sbitsSchema* schema);
 
 #endif

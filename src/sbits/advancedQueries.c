@@ -444,7 +444,7 @@ int8_t nextAggregate(sbitsOperator* operator) {
             recordsInGroup = 1;
             for (int i = 0; i < info->numOps; i++) {
                 if (info->operators[i].add != NULL) {
-                    info->operators[i].add(info->operators + i, operator->recordBuffer);
+                    info->operators[i].add(info->operators + i, input->recordBuffer);
                 }
             }
         } else {
@@ -528,46 +528,225 @@ sbitsOperator* createAggregateOperator(sbitsOperator* input, int8_t (*groupfunc)
     return operator;
 }
 
-// /**
-//  * @brief	Performs equi-join on input keys
-//  */
-// int8_t nextJoin(sbitsOperator* operator) {
-//     sbitsOperator* input1 = operator->input;
-//     sbitsOperator* input2 = (sbitsOperator*)operator->info;
-//     sbitsSchema* schema1 = input1->schema;
-//     sbitsSchema* schema2 = input2->schema;
+struct keyJoinInfo {
+    sbitsOperator* input2;
+    int8_t firstCall;
+};
 
-//     // Check that join is compatible
-//     if (schema1->columnSizes[0] != schema2->columnSizes[0]) {
-//         printf("ERROR: Cannot join these tables because their keys are not in a matching format\n");
-//         return 0;
-//     }
+void initKeyJoin(sbitsOperator* operator) {
+    struct keyJoinInfo* info = operator->info;
+    sbitsOperator* input1 = operator->input;
+    sbitsOperator* input2 = info->input2;
 
-//     // Setup schema
-//     if (operator->schema == NULL) {
-//         operator->schema = malloc(sizeof(sbitsSchema));
-//         operator->schema->numCols = schema1->numCols + schema2->numCols - 1;
-//         operator->schema->columnSizes = malloc(operator->schema->numCols * sizeof(int8_t));
-//         memcpy(operator->schema->columnSizes, schema1->columnSizes, schema1->numCols);
-//         memcpy(operator->schema->columnSizes + schema1->numCols, schema2->columnSizes + 1, schema2->numCols - 1);
-//     }
+    // Init inputs
+    input1->init(input1);
+    input2->init(input2);
 
-//     // We've already used this match
-//     void* record1 = operator->input->recordBuffer;
-//     void* record2 = input2->recordBuffer;
+    sbitsSchema* schema1 = input1->schema;
+    sbitsSchema* schema2 = input2->schema;
 
-//     while (1) {
-//         // Advance the input with the smaller key
-//         int8_t comp = compareUnsignedNumbers(record1, record2, abs(operator->schema->columnSizes[0]));
+    // Check that join is compatible
+    if (schema1->columnSizes[0] != schema2->columnSizes[0] || schema1->columnSizes[0] < 0 || schema2->columnSizes[0] < 0) {
+        printf("ERROR: The first columns of the two tables must be the key and must have the size. Make sure you haven't projected them out.\n");
+        return;
+    }
 
-//         if (comp <= 0) {
-//             // Move record 1 forward
-//             input1->next(input1);
-//         } else {
-//             // Move record 2 forward
-//         }
-//     }
-// }
+    // Setup schema
+    if (operator->schema == NULL) {
+        operator->schema = malloc(sizeof(sbitsSchema));
+        if (operator->schema == NULL) {
+            printf("ERROR: Failed to malloc while initializing join operator\n");
+            return;
+        }
+        operator->schema->numCols = schema1->numCols + schema2->numCols;
+        operator->schema->columnSizes = malloc(operator->schema->numCols * sizeof(int8_t));
+        if (operator->schema->columnSizes == NULL) {
+            printf("ERROR: Failed to malloc while initializing join operator\n");
+            return;
+        }
+        memcpy(operator->schema->columnSizes, schema1->columnSizes, schema1->numCols);
+        memcpy(operator->schema->columnSizes + schema1->numCols, schema2->columnSizes, schema2->numCols);
+    }
+
+    // Allocate recordBuffer
+    operator->recordBuffer = malloc(getRecordSizeFromSchema(operator->schema));
+    if (operator->recordBuffer == NULL) {
+        printf("ERROR: Failed to malloc while initializing join operator\n");
+        return;
+    }
+
+    info->firstCall = 1;
+}
+
+/**
+ * @brief	Performs equi-join on input keys
+ */
+int8_t nextKeyJoin(sbitsOperator* operator) {
+    struct keyJoinInfo* info = operator->info;
+    sbitsOperator* input1 = operator->input;
+    sbitsOperator* input2 = info->input2;
+    sbitsSchema* schema1 = input1->schema;
+    sbitsSchema* schema2 = input2->schema;
+
+    // We've already used this match
+    void* record1 = input1->recordBuffer;
+    void* record2 = input2->recordBuffer;
+
+    int8_t colSize = abs(schema1->columnSizes[0]);
+
+    while (1) {
+        if (info->firstCall) {
+            info->firstCall = 0;
+
+            if (!input1->next(input1) || !input2->next(input2)) {
+                // If this case happens, you goofed, but I'll handle it anyway
+                return 0;
+            }
+        } else {
+            // Advance the input with the smaller value
+            int8_t comp = compareUnsignedNumbers(record1, record2, colSize);
+            if (comp == 0) {
+                // Move both forward because if they match at this point, they've already been matched
+                if (!input1->next(input1) || !input2->next(input2)) {
+                    return 0;
+                }
+            } else if (comp < 0) {
+                // Move record 1 forward
+                if (!input1->next(input1)) {
+                    // We are out of records on one side. Given the assumption that the inputs are sorted, there are no more possible joins
+                    return 0;
+                }
+            } else {
+                // Move record 2 forward
+                if (!input2->next(input2)) {
+                    // We are out of records on one side. Given the assumption that the inputs are sorted, there are no more possible joins
+                    return 0;
+                }
+            }
+        }
+
+        // See if these records join
+        if (compareUnsignedNumbers(record1, record2, colSize) == 0) {
+            // Copy both records into the output
+            uint16_t record1Size = getRecordSizeFromSchema(schema1);
+            memcpy(operator->recordBuffer, input1->recordBuffer, record1Size);
+            memcpy((int8_t*)operator->recordBuffer + record1Size, input2->recordBuffer, getRecordSizeFromSchema(schema2));
+            return 1;
+        }
+        // Else keep advancing inputs until a match is found
+    }
+
+    return 0;
+}
+
+void closeKeyJoin(sbitsOperator* operator) {
+    struct keyJoinInfo* info = operator->info;
+    sbitsOperator* input1 = operator->input;
+    sbitsOperator* input2 = info->input2;
+    sbitsSchema* schema1 = input1->schema;
+    sbitsSchema* schema2 = input2->schema;
+
+    input1->close(input1);
+    input2->close(input2);
+
+    sbitsFreeSchema(&operator->schema);
+    free(operator->info);
+    operator->info = NULL;
+    free(operator->recordBuffer);
+    operator->recordBuffer = NULL;
+}
+
+sbitsOperator* createKeyJoinOperator(sbitsOperator* input1, sbitsOperator* input2) {
+    sbitsOperator* operator= malloc(sizeof(sbitsOperator));
+    if (operator== NULL) {
+        printf("ERROR: Failed to malloc while creating join operator\n");
+        return NULL;
+    }
+
+    struct keyJoinInfo* info = malloc(sizeof(struct keyJoinInfo));
+    if (info == NULL) {
+        printf("ERROR: Failed to malloc while creating join operator\n");
+        return NULL;
+    }
+    info->input2 = input2;
+
+    operator->input = input1;
+    operator->info = info;
+    operator->recordBuffer = NULL;
+    operator->schema = NULL;
+    operator->init = initKeyJoin;
+    operator->next = nextKeyJoin;
+    operator->close = closeKeyJoin;
+
+    return operator;
+}
+
+void countReset(sbitsAggrOp* aggrOp) {
+    *(uint32_t*)aggrOp->state = 0;
+}
+
+void countAdd(sbitsAggrOp* aggrOp, const void* recordBuffer) {
+    (*(uint32_t*)aggrOp->state)++;
+}
+
+void countCompute(sbitsAggrOp* aggrOp, sbitsSchema* schema, void* recordBuffer, const void* lastRecord) {
+    // Put count in record
+    memcpy((int8_t*)recordBuffer + getColPosFromSchema(schema, aggrOp->colNum), aggrOp->state, sizeof(uint32_t));
+}
+
+sbitsAggrOp* createCountAggregate() {
+    sbitsAggrOp* aggrop = malloc(sizeof(sbitsAggrOp));
+    aggrop->reset = countReset;
+    aggrop->add = countAdd;
+    aggrop->compute = countCompute;
+    aggrop->state = malloc(sizeof(uint32_t));
+    aggrop->colSize = 4;
+    return aggrop;
+}
+
+void sumReset(sbitsAggrOp* aggrOp) {
+    *(int64_t*)aggrOp->state = 0;
+}
+
+void sumAdd(sbitsAggrOp* aggrOp, const void* recordBuffer) {
+    uint8_t colOffset = *((uint8_t*)aggrOp->state + sizeof(int64_t));
+    int8_t colSize = *((int8_t*)aggrOp->state + sizeof(int64_t) + sizeof(uint8_t));
+    int8_t isSigned = colSize < 0;
+    colSize = min(abs(colSize), sizeof(int64_t));
+    void* colPos = (int8_t*)recordBuffer + colOffset;
+    if (isSigned) {
+        // Get val to sum from record
+        int64_t val = 0;
+        memcpy(&val, colPos, colSize);
+        // Extend two's complement sign to fill 64 bit number if val is negative
+        int64_t sign = val & (128 << ((colSize - 1) * 8));
+        if (sign != 0) {
+            memset(((int8_t*)(&val)) + colSize, 0xff, sizeof(int64_t) - colSize);
+        }
+        (*(int64_t*)aggrOp->state) += val;
+    } else {
+        uint64_t val = 0;
+        memcpy(&val, colPos, colSize);
+        (*(uint64_t*)aggrOp->state) += val;
+    }
+}
+
+void sumCompute(sbitsAggrOp* aggrOp, sbitsSchema* schema, void* recordBuffer, const void* lastRecord) {
+    // Put count in record
+    memcpy((int8_t*)recordBuffer + getColPosFromSchema(schema, aggrOp->colNum), aggrOp->state, sizeof(int64_t));
+}
+
+sbitsAggrOp* createSumAggregate(uint8_t colOffset, int8_t colSize) {
+    sbitsAggrOp* aggrop = malloc(sizeof(sbitsAggrOp));
+    aggrop->reset = sumReset;
+    aggrop->add = sumAdd;
+    aggrop->compute = sumCompute;
+    aggrop->state = malloc(sizeof(int8_t) + sizeof(int64_t));
+    *((uint8_t*)aggrop->state + sizeof(int64_t)) = colOffset;
+    *((int8_t*)aggrop->state + sizeof(int64_t) + sizeof(uint8_t)) = colSize;
+    aggrop->colSize = -8;
+    return aggrop;
+}
 
 /**
  * @brief	Completely free a chain of operators recursively. Does not recursively free any pointer contained in `sbitsOperator::info`
