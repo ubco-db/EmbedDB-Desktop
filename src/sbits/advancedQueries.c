@@ -2,6 +2,9 @@
 
 #include <string.h>
 
+/**
+ * @return	Returns -1, 0, 1 as a comparator normally would
+ */
 int8_t compareUnsignedNumbers(const void* num1, const void* num2, int8_t numBytes) {
     // Cast the pointers to unsigned char pointers for byte-wise comparison
     const uint8_t* bytes1 = (const uint8_t*)num1;
@@ -19,6 +22,9 @@ int8_t compareUnsignedNumbers(const void* num1, const void* num2, int8_t numByte
     return 0;
 }
 
+/**
+ * @return	Returns -1, 0, 1 as a comparator normally would
+ */
 int8_t compareSignedNumbers(const void* num1, const void* num2, int8_t numBytes) {
     // Cast the pointers to unsigned char pointers for byte-wise comparison
     const uint8_t* bytes1 = (const uint8_t*)num1;
@@ -46,6 +52,9 @@ int8_t compareSignedNumbers(const void* num1, const void* num2, int8_t numBytes)
     return 0;
 }
 
+/**
+ * @return	0 or 1 to indicate if inequality is true
+ */
 int8_t compare(void* a, uint8_t operation, void* b, int8_t isSigned, int8_t numBytes) {
     int8_t (*compFunc)(const void* num1, const void* num2, int8_t numBytes) = isSigned ? compareSignedNumbers : compareUnsignedNumbers;
     switch (operation) {
@@ -67,10 +76,8 @@ int8_t compare(void* a, uint8_t operation, void* b, int8_t isSigned, int8_t numB
 }
 
 /**
- * @brief	Execute a function on each return of an iterator
- * @param	operator		An operator struct containing the input operator and function to run on the data
- * @param	recordBuffer	Pre-allocated space for the whole record (key & data)
- * @return	1 if another (key, data) pair was returned, 0 if there are no more pairs to return
+ * @brief	Extract a record from an operator
+ * @return	1 if a record was returned, 0 if there are no more pairs to return
  */
 int8_t exec(sbitsOperator* operator) {
     return operator->next(operator);
@@ -120,6 +127,12 @@ void closeTableScan(sbitsOperator* operator) {
     operator->info = NULL;
 }
 
+/**
+ * @brief	Used as the bottom operator that will read records from the database
+ * @param	state		The state associated with the database to read from
+ * @param	it			An initialized iterator setup to read relevent records for this query
+ * @param	baseSchema	The schema of the database being read from
+ */
 sbitsOperator* createTableScanOperator(sbitsState* state, sbitsIterator* it, sbitsSchema* baseSchema) {
     // Ensure all fields are not NULL
     if (state == NULL || it == NULL || baseSchema == NULL) {
@@ -229,6 +242,12 @@ void closeProjection(sbitsOperator* operator) {
     operator->recordBuffer = NULL;
 }
 
+/**
+ * @brief	Creates an operator capable of projecting the specified columns. Cannot re-order columns
+ * @param	input	The operator that this operator can pull records from
+ * @param	numCols	How many columns will be in the final projection
+ * @param	cols	The indexes of the columns to be outputted. *Zero indexed*
+ */
 sbitsOperator* createProjectionOperator(sbitsOperator* input, uint8_t numCols, uint8_t* cols) {
     // Ensure column numbers are strictly increasing
     uint8_t lastCol = cols[0];
@@ -324,6 +343,13 @@ void closeSelection(sbitsOperator* operator) {
     operator->recordBuffer = NULL;
 }
 
+/**
+ * @brief	Creates an operator that selects records based on simple selection rules
+ * @param	input		The operator that this operator can pull records from
+ * @param	colNum		The index (zero-indexed) of the column base the select on
+ * @param	operation	A constant representing which comparison operation to perform. (e.g. SELECT_GT, SELECT_EQ, etc)
+ * @param	compVal		A pointer to the value to compare with. Make sure the size of this is the same number of bytes as is described in the schema
+ */
 sbitsOperator* createSelectionOperator(sbitsOperator* input, int8_t colNum, int8_t operation, void* compVal) {
     int8_t* info = malloc(2 + sizeof(void*));
     if (info == NULL) {
@@ -408,12 +434,6 @@ void initAggregate(sbitsOperator* operator) {
     }
 }
 
-/**
- * @brief	Calculate an aggregate function over specified groups
- * @param	operator		An operator struct to pull input data from
- * @param	recordBuffer	Pre-allocated space for the operator to put the key. **NOT A RETURN VALUE**
- * @return	1 if another group was calculated, 0 if not.
- */
 int8_t nextAggregate(sbitsOperator* operator) {
     struct aggregateInfo* info = operator->info;
     sbitsOperator* input = operator->input;
@@ -491,13 +511,11 @@ void closeAggregate(sbitsOperator* operator) {
 }
 
 /**
- * @brief	Create the info for an aggregate operator
- * @param	groupfunc		A function that returns whether or not the `key` is part of the same group as the `lastkey`. Assumes that groups are always next to each other when read in.
- * @param	operators		An array of operators, each of which will be updated with each record read from the iterator
- * @param	numOps			The number of sbitsAggrOps in `operators`
- * @param	lastRecordBuffer	A secondary buffer needed to store the last key that was read for the purpose of comparing it to the record that was just read. Needs to be the same size as `recordBuffer`
- * @param	bufferSize		The length (in bytes) of `recordBuffer`
- * @return	Returns a pointer to the info object to be put into a sbitsOperator
+ * @brief	Creates an operator that will find groups and preform aggreagte functions over each group.
+ * @param	input			The operator that this operator can pull records from
+ * @param	groupfunc		A function that returns whether or not the @c record is part of the same group as the @c lastRecord. Assumes that groups are always next to each other/sorted when read in (i.e. Groups need to be 1122333, not 13213213)
+ * @param	operators		An array of aggregate operators, each of which will be updated with each record read from the iterator
+ * @param	numOps			The number of sbitsAggrOps in @c operators
  */
 sbitsOperator* createAggregateOperator(sbitsOperator* input, int8_t (*groupfunc)(const void* lastRecord, const void* record), sbitsAggrOp* operators, uint32_t numOps) {
     struct aggregateInfo* info = malloc(sizeof(struct aggregateInfo));
@@ -578,9 +596,6 @@ void initKeyJoin(sbitsOperator* operator) {
     info->firstCall = 1;
 }
 
-/**
- * @brief	Performs equi-join on input keys
- */
 int8_t nextKeyJoin(sbitsOperator* operator) {
     struct keyJoinInfo* info = operator->info;
     sbitsOperator* input1 = operator->input;
@@ -656,6 +671,9 @@ void closeKeyJoin(sbitsOperator* operator) {
     operator->recordBuffer = NULL;
 }
 
+/**
+ * @brief	Creates an operator for perfoming an equijoin on the keys (sorted and distinct) of two tables
+ */
 sbitsOperator* createKeyJoinOperator(sbitsOperator* input1, sbitsOperator* input2) {
     sbitsOperator* operator= malloc(sizeof(sbitsOperator));
     if (operator== NULL) {
@@ -694,6 +712,9 @@ void countCompute(sbitsAggrOp* aggrOp, sbitsSchema* schema, void* recordBuffer, 
     memcpy((int8_t*)recordBuffer + getColPosFromSchema(schema, aggrOp->colNum), aggrOp->state, sizeof(uint32_t));
 }
 
+/**
+ * @brief	Creates an aggregate operator to count the number of records in a group. To be used in combination with an sbitsOperator produced by createAggregateOperator
+ */
 sbitsAggrOp* createCountAggregate() {
     sbitsAggrOp* aggrop = malloc(sizeof(sbitsAggrOp));
     aggrop->reset = countReset;
@@ -736,6 +757,11 @@ void sumCompute(sbitsAggrOp* aggrOp, sbitsSchema* schema, void* recordBuffer, co
     memcpy((int8_t*)recordBuffer + getColPosFromSchema(schema, aggrOp->colNum), aggrOp->state, sizeof(int64_t));
 }
 
+/**
+ * @brief	Creates an aggregate operator to sum a column over a group. To be used in combination with an sbitsOperator produced by createAggregateOperator. Column must be no bigger than 8 bytes.
+ * @param	colOffset	The number of bytes from the start of the record to the start of the column you want to sum
+ * @param	colSize		The size of the column to sum in bytes
+ */
 sbitsAggrOp* createSumAggregate(uint8_t colOffset, int8_t colSize) {
     sbitsAggrOp* aggrop = malloc(sizeof(sbitsAggrOp));
     aggrop->reset = sumReset;
@@ -749,7 +775,7 @@ sbitsAggrOp* createSumAggregate(uint8_t colOffset, int8_t colSize) {
 }
 
 /**
- * @brief	Completely free a chain of operators recursively. Does not recursively free any pointer contained in `sbitsOperator::info`
+ * @brief	Completely free a chain of operators recursively after it's already been closed.
  */
 void sbitsFreeOperatorRecursive(sbitsOperator** operator) {
     if ((*operator)->input != NULL) {

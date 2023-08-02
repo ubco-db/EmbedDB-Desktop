@@ -124,7 +124,7 @@ sbitsOperator* createProjectionOperator(sbitsOperator* input, uint8_t numCols, u
 sbitsOperator* createSelectionOperator(sbitsOperator* input, int8_t colNum, int8_t operation, void* compVal);
 
 /**
- * @brief	Create the info for an aggregate operator
+ * @brief	Creates an operator that will find groups and preform aggreagte functions over each group.
  * @param	input			The operator that this operator can pull records from
  * @param	groupfunc		A function that returns whether or not the @c record is part of the same group as the @c lastRecord. Assumes that groups are always next to each other/sorted when read in (i.e. Groups need to be 1122333, not 13213213)
  * @param	operators		An array of aggregate operators, each of which will be updated with each record read from the iterator
@@ -132,13 +132,25 @@ sbitsOperator* createSelectionOperator(sbitsOperator* input, int8_t colNum, int8
  */
 sbitsOperator* createAggregateOperator(sbitsOperator* input, int8_t (*groupfunc)(const void* lastRecord, const void* record), sbitsAggrOp* operators, uint32_t numOps);
 
+/**
+ * @brief	Creates an operator for perfoming an equijoin on the keys (sorted and distinct) of two tables
+ */
 sbitsOperator* createKeyJoinOperator(sbitsOperator* input1, sbitsOperator* input2);
 
 //////////////////////////////////
 // Prebuilt aggregate operators //
 //////////////////////////////////
 
+/**
+ * @brief	Creates an aggregate operator to count the number of records in a group. To be used in combination with an sbitsOperator produced by createAggregateOperator
+ */
 sbitsAggrOp* createCountAggregate();
+
+/**
+ * @brief	Creates an aggregate operator to sum a column over a group. To be used in combination with an sbitsOperator produced by createAggregateOperator. Column must be no bigger than 8 bytes.
+ * @param	colOffset	The number of bytes from the start of the record to the start of the column you want to sum
+ * @param	colSize		The size of the column to sum in bytes
+ */
 sbitsAggrOp* createSumAggregate(uint8_t colOffset, int8_t colSize);
 
 #endif
