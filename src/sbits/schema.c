@@ -58,6 +58,9 @@ void sbitsFreeSchema(sbitsSchema** schema) {
     *schema = NULL;
 }
 
+/**
+ * @brief	Uses schema to determine the length of buffer to allocate and callocs that space
+ */
 void* createBufferFromSchema(sbitsSchema* schema) {
     uint16_t totalSize = 0;
     for (uint8_t i = 0; i < schema->numCols; i++) {
@@ -66,6 +69,9 @@ void* createBufferFromSchema(sbitsSchema* schema) {
     return calloc(1, totalSize);
 }
 
+/**
+ * @brief	Deep copy schema and return a pointer to the copy
+ */
 sbitsSchema* copySchema(const sbitsSchema* schema) {
     sbitsSchema* copy = malloc(sizeof(sbitsSchema));
     if (copy == NULL) {
@@ -82,7 +88,10 @@ sbitsSchema* copySchema(const sbitsSchema* schema) {
     return copy;
 }
 
-uint16_t getColPosFromSchema(sbitsSchema* schema, uint8_t colNum) {
+/**
+ * @brief	Finds byte offset of the column from the beginning of the record
+ */
+uint16_t getColOffsetFromSchema(sbitsSchema* schema, uint8_t colNum) {
     uint16_t pos = 0;
     for (uint8_t i = 0; i < colNum; i++) {
         pos += abs(schema->columnSizes[i]);
@@ -90,6 +99,9 @@ uint16_t getColPosFromSchema(sbitsSchema* schema, uint8_t colNum) {
     return pos;
 }
 
+/**
+ * @brief	Calculates record size from schema
+ */
 uint16_t getRecordSizeFromSchema(sbitsSchema* schema) {
     uint16_t pos = 0;
     for (uint8_t i = 0; i < schema->numCols; i++) {

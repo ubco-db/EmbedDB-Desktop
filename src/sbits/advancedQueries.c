@@ -312,7 +312,7 @@ int8_t nextSelection(sbitsOperator* operator) {
     sbitsSchema* schema = operator->input->schema;
 
     int8_t colNum = *(int8_t*)operator->info;
-    uint16_t colPos = getColPosFromSchema(schema, colNum);
+    uint16_t colPos = getColOffsetFromSchema(schema, colNum);
     int8_t operation = *((int8_t*)operator->info + 1);
     int8_t colSize = schema->columnSizes[colNum];
     int8_t isSigned = 0;
@@ -709,7 +709,7 @@ void countAdd(sbitsAggrOp* aggrOp, const void* recordBuffer) {
 
 void countCompute(sbitsAggrOp* aggrOp, sbitsSchema* schema, void* recordBuffer, const void* lastRecord) {
     // Put count in record
-    memcpy((int8_t*)recordBuffer + getColPosFromSchema(schema, aggrOp->colNum), aggrOp->state, sizeof(uint32_t));
+    memcpy((int8_t*)recordBuffer + getColOffsetFromSchema(schema, aggrOp->colNum), aggrOp->state, sizeof(uint32_t));
 }
 
 /**
@@ -754,7 +754,7 @@ void sumAdd(sbitsAggrOp* aggrOp, const void* recordBuffer) {
 
 void sumCompute(sbitsAggrOp* aggrOp, sbitsSchema* schema, void* recordBuffer, const void* lastRecord) {
     // Put count in record
-    memcpy((int8_t*)recordBuffer + getColPosFromSchema(schema, aggrOp->colNum), aggrOp->state, sizeof(int64_t));
+    memcpy((int8_t*)recordBuffer + getColOffsetFromSchema(schema, aggrOp->colNum), aggrOp->state, sizeof(int64_t));
 }
 
 /**

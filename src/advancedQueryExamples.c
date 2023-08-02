@@ -17,7 +17,7 @@ int8_t sameDayGroup(const void* lastRecord, const void* record) {
 void writeDayGroup(sbitsAggrOp* aggrOp, sbitsSchema* schema, void* recordBuffer, const void* lastRecord) {
     // Put day in record
     uint32_t day = dayGroup(lastRecord);
-    memcpy((int8_t*)recordBuffer + getColPosFromSchema(schema, aggrOp->colNum), &day, sizeof(uint32_t));
+    memcpy((int8_t*)recordBuffer + getColOffsetFromSchema(schema, aggrOp->colNum), &day, sizeof(uint32_t));
 }
 
 void customShiftInit(sbitsOperator* operator) {
