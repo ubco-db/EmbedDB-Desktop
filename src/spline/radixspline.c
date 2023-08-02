@@ -355,7 +355,7 @@ void radixsplinePrint(radixspline *rsidx) {
         return;
     }
 
-    printf("Radix table (%lu):\n", rsidx->size);
+    printf("Radix table (%u):\n", rsidx->size);
     // for (id_t i=0; i < 20; i++)
     uint64_t minKeyVal = 0;
     id_t tableVal;
@@ -363,7 +363,7 @@ void radixsplinePrint(radixspline *rsidx) {
     for (id_t i = 0; i < rsidx->size; i++) {
         printf("[" TO_BINARY_PATTERN "] ", TO_BINARY((uint8_t)(i)));
         memcpy(&tableVal, rsidx->table + i, sizeof(id_t));
-        printf("(%lu): --> %lu\n", (i << rsidx->shiftSize) + minKeyVal, tableVal);
+        printf("(%lu): --> %u\n", (i << rsidx->shiftSize) + minKeyVal, tableVal);
     }
     printf("\n");
 }

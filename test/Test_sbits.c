@@ -20,12 +20,6 @@ void setUp(void) {
     state->fileInterface = getFileInterface();
     char dataPath[] = "build/artifacts/dataFile.bin", indexPath[] = "build/artifacts/indexFile.bin", varPath[] = "build/artifacts/varFile.bin";
     state->dataFile = setupFile(dataPath);
-    state->indexFile = setupFile(indexPath);
-    state->varFile = setupFile(varPath);
-    state->bitmapSize = 0;
-    state->inBitmap = inBitmapInt8;
-    state->updateBitmap = updateBitmapInt8;
-    state->buildBitmapFromRange = buildBitmapInt8FromRange;
     state->compareKey = int32Comparator;
     state->compareData = int32Comparator;
     int result = sbitsInit(state, 1);
