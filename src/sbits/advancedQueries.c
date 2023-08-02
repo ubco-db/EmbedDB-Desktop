@@ -741,7 +741,7 @@ sbitsAggrOp* createSumAggregate(uint8_t colOffset, int8_t colSize) {
     aggrop->reset = sumReset;
     aggrop->add = sumAdd;
     aggrop->compute = sumCompute;
-    aggrop->state = malloc(sizeof(int8_t) + sizeof(int64_t));
+    aggrop->state = malloc(2 * sizeof(int8_t) + sizeof(int64_t));
     *((uint8_t*)aggrop->state + sizeof(int64_t)) = colOffset;
     *((int8_t*)aggrop->state + sizeof(int64_t) + sizeof(uint8_t)) = colSize;
     aggrop->colSize = -8;

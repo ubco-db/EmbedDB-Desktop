@@ -5,10 +5,6 @@
 #include "sbits/sbits.h"
 #include "sbits/utilityFunctions.h"
 
-int8_t mySelectionFunc(sbitsState* state, void* info, void* key, void* data) {
-    return (*(uint32_t*)key) / 86400 == *(uint32_t*)info && *((int32_t*)data + 2) >= 150;
-}
-
 uint32_t dayGroup(const void* record) {
     // find the epoch day
     return (*(uint32_t*)record) / 86400;
@@ -49,34 +45,34 @@ void customShiftClose(sbitsOperator* operator) {
 void insertData(sbitsState* state, char* filename);
 
 void main() {
-    sbitsState* state = calloc(1, sizeof(sbitsState));
-    state->keySize = 4;
-    state->dataSize = 12;
-    state->compareKey = int32Comparator;
-    state->compareData = int32Comparator;
-    state->pageSize = 512;
-    state->eraseSizeInPages = 4;
-    state->numDataPages = 20000;
-    state->numIndexPages = 1000;
+    sbitsState* stateUWA = calloc(1, sizeof(sbitsState));
+    stateUWA->keySize = 4;
+    stateUWA->dataSize = 12;
+    stateUWA->compareKey = int32Comparator;
+    stateUWA->compareData = int32Comparator;
+    stateUWA->pageSize = 512;
+    stateUWA->eraseSizeInPages = 4;
+    stateUWA->numDataPages = 20000;
+    stateUWA->numIndexPages = 1000;
     char dataPath[] = "build/artifacts/dataFile.bin", indexPath[] = "build/artifacts/indexFile.bin";
-    state->fileInterface = getFileInterface();
-    state->dataFile = setupFile(dataPath);
-    state->indexFile = setupFile(indexPath);
-    state->bufferSizeInBlocks = 4;
-    state->buffer = malloc(state->bufferSizeInBlocks * state->pageSize);
-    state->parameters = SBITS_USE_BMAP | SBITS_USE_INDEX | SBITS_RESET_DATA;
-    state->bitmapSize = 2;
-    state->inBitmap = inBitmapInt16;
-    state->updateBitmap = updateBitmapInt16;
-    state->buildBitmapFromRange = buildBitmapInt16FromRange;
-    sbitsInit(state, 1);
+    stateUWA->fileInterface = getFileInterface();
+    stateUWA->dataFile = setupFile(dataPath);
+    stateUWA->indexFile = setupFile(indexPath);
+    stateUWA->bufferSizeInBlocks = 4;
+    stateUWA->buffer = malloc(stateUWA->bufferSizeInBlocks * stateUWA->pageSize);
+    stateUWA->parameters = SBITS_USE_BMAP | SBITS_USE_INDEX | SBITS_RESET_DATA;
+    stateUWA->bitmapSize = 2;
+    stateUWA->inBitmap = inBitmapInt16;
+    stateUWA->updateBitmap = updateBitmapInt16;
+    stateUWA->buildBitmapFromRange = buildBitmapInt16FromRange;
+    sbitsInit(stateUWA, 1);
 
     int8_t colSizes[] = {4, 4, 4, 4};
     int8_t colSignedness[] = {SBITS_COLUMN_UNSIGNED, SBITS_COLUMN_SIGNED, SBITS_COLUMN_SIGNED, SBITS_COLUMN_SIGNED};
     sbitsSchema* baseSchema = sbitsCreateSchema(4, colSizes, colSignedness);
 
     // Insert data
-    insertData(state, "data/uwa500K.bin");
+    insertData(stateUWA, "data/uwa500K.bin");
 
     /**	Projection
      *	Dataset has three, 4 byte, data fields:
@@ -91,9 +87,9 @@ void main() {
     it.maxKey = NULL;
     it.minData = NULL;
     it.maxData = NULL;
-    sbitsInitIterator(state, &it);
+    sbitsInitIterator(stateUWA, &it);
 
-    sbitsOperator* scanOp1 = createTableScanOperator(state, &it, baseSchema);
+    sbitsOperator* scanOp1 = createTableScanOperator(stateUWA, &it, baseSchema);
     uint8_t projCols[] = {0, 1, 3};
     sbitsOperator* projOp1 = createProjectionOperator(scanOp1, 3, projCols);
     projOp1->init(projOp1);
@@ -125,9 +121,9 @@ void main() {
     it.maxKey = NULL;
     it.minData = NULL;
     it.maxData = &maxTemp;
-    sbitsInitIterator(state, &it);
+    sbitsInitIterator(stateUWA, &it);
 
-    sbitsOperator* scanOp2 = createTableScanOperator(state, &it, baseSchema);
+    sbitsOperator* scanOp2 = createTableScanOperator(stateUWA, &it, baseSchema);
     int32_t selVal = 200;
     sbitsOperator* selectOp2 = createSelectionOperator(scanOp2, 3, SELECT_GTE, &selVal);
     sbitsOperator* projOp2 = createProjectionOperator(selectOp2, 3, projCols);
@@ -158,9 +154,9 @@ void main() {
     it.maxKey = NULL;
     it.minData = NULL;
     it.maxData = NULL;
-    sbitsInitIterator(state, &it);
+    sbitsInitIterator(stateUWA, &it);
 
-    sbitsOperator* scanOp3 = createTableScanOperator(state, &it, baseSchema);
+    sbitsOperator* scanOp3 = createTableScanOperator(stateUWA, &it, baseSchema);
     selVal = 150;
     sbitsOperator* selectOp3 = createSelectionOperator(scanOp3, 3, SELECT_GTE, &selVal);
     sbitsAggrOp groupName = {NULL, NULL, writeDayGroup, NULL, 4};
@@ -191,7 +187,9 @@ void main() {
 
     // Free states
     for (int i = 0; i < numOps; i++) {
-        // free(aggrOperators[i].state);
+        if (aggrOperators[i].state != NULL) {
+            free(aggrOperators[i].state);
+        }
     }
 
     countSelect3->close(countSelect3);
@@ -204,35 +202,35 @@ void main() {
      *		- airPres	int32
      *		- windSpeed	int32
      */
-    sbitsState* state2 = malloc(sizeof(sbitsState));
-    state2->keySize = 4;
-    state2->dataSize = 12;
-    state2->compareKey = int32Comparator;
-    state2->compareData = int32Comparator;
-    state2->pageSize = 512;
-    state2->eraseSizeInPages = 4;
-    state2->numDataPages = 20000;
-    state2->numIndexPages = 1000;
+    sbitsState* stateSEA = malloc(sizeof(sbitsState));
+    stateSEA->keySize = 4;
+    stateSEA->dataSize = 12;
+    stateSEA->compareKey = int32Comparator;
+    stateSEA->compareData = int32Comparator;
+    stateSEA->pageSize = 512;
+    stateSEA->eraseSizeInPages = 4;
+    stateSEA->numDataPages = 20000;
+    stateSEA->numIndexPages = 1000;
     char dataPath2[] = "build/artifacts/dataFile2.bin", indexPath2[] = "build/artifacts/indexFile2.bin";
-    state2->fileInterface = getFileInterface();
-    state2->dataFile = setupFile(dataPath2);
-    state2->indexFile = setupFile(indexPath2);
-    state2->bufferSizeInBlocks = 4;
-    state2->buffer = malloc(state2->bufferSizeInBlocks * state2->pageSize);
-    state2->parameters = SBITS_USE_BMAP | SBITS_USE_INDEX | SBITS_RESET_DATA;
-    state2->bitmapSize = 2;
-    state2->inBitmap = inBitmapInt16;
-    state2->updateBitmap = updateBitmapInt16;
-    state2->buildBitmapFromRange = buildBitmapInt16FromRange;
-    sbitsInit(state2, 1);
+    stateSEA->fileInterface = getFileInterface();
+    stateSEA->dataFile = setupFile(dataPath2);
+    stateSEA->indexFile = setupFile(indexPath2);
+    stateSEA->bufferSizeInBlocks = 4;
+    stateSEA->buffer = malloc(stateSEA->bufferSizeInBlocks * stateSEA->pageSize);
+    stateSEA->parameters = SBITS_USE_BMAP | SBITS_USE_INDEX | SBITS_RESET_DATA;
+    stateSEA->bitmapSize = 2;
+    stateSEA->inBitmap = inBitmapInt16;
+    stateSEA->updateBitmap = updateBitmapInt16;
+    stateSEA->buildBitmapFromRange = buildBitmapInt16FromRange;
+    sbitsInit(stateSEA, 1);
 
     // Insert records
-    insertData(state2, "data/sea100K.bin");
+    insertData(stateSEA, "data/sea100K.bin");
 
     /** Join
      *	uwa dataset has data from every minute, for the year 2000. sea dataset has samples every hour from 2011 to 2020. Let's compare the temperatures measured in 2000 in the uwa dataset and 2015 in the sea dataset
      */
-    sbitsInitIterator(state, &it);  // Iterator on uwa
+    sbitsInitIterator(stateUWA, &it);  // Iterator on uwa
     sbitsIterator it2;
     uint32_t year2015 = 1420099200;      // 2015-01-01
     uint32_t year2016 = 1451635200 - 1;  // 2016-01-01
@@ -240,10 +238,10 @@ void main() {
     it2.maxKey = &year2016;
     it2.minData = NULL;
     it2.maxData = NULL;
-    sbitsInitIterator(state2, &it2);  // Iterator on sea
+    sbitsInitIterator(stateSEA, &it2);  // Iterator on sea
 
     // Prepare uwa table
-    sbitsOperator* scan4_1 = createTableScanOperator(state, &it, baseSchema);
+    sbitsOperator* scan4_1 = createTableScanOperator(stateUWA, &it, baseSchema);
     sbitsOperator* shift4_1 = malloc(sizeof(sbitsOperator));  // Custom operator to shift the year 2000 to 2015 to make the join work
     shift4_1->input = scan4_1;
     shift4_1->init = customShiftInit;
@@ -251,7 +249,7 @@ void main() {
     shift4_1->close = customShiftClose;
 
     // Prepare sea table
-    sbitsOperator* scan4_2 = createTableScanOperator(state2, &it2, baseSchema);
+    sbitsOperator* scan4_2 = createTableScanOperator(stateSEA, &it2, baseSchema);
     scan4_2->init(scan4_2);
 
     // Join tables
@@ -287,18 +285,18 @@ void main() {
     free(proj4);
 
     // Close sbits
-    sbitsClose(state);
-    tearDownFile(state->dataFile);
-    tearDownFile(state->indexFile);
-    free(state->fileInterface);
-    free(state->buffer);
-    free(state);
-    sbitsClose(state2);
-    tearDownFile(state2->dataFile);
-    tearDownFile(state2->indexFile);
-    free(state2->fileInterface);
-    free(state2->buffer);
-    free(state2);
+    sbitsClose(stateUWA);
+    tearDownFile(stateUWA->dataFile);
+    tearDownFile(stateUWA->indexFile);
+    free(stateUWA->fileInterface);
+    free(stateUWA->buffer);
+    free(stateUWA);
+    sbitsClose(stateSEA);
+    tearDownFile(stateSEA->dataFile);
+    tearDownFile(stateSEA->indexFile);
+    free(stateSEA->fileInterface);
+    free(stateSEA->buffer);
+    free(stateSEA);
     sbitsFreeSchema(&baseSchema);
 }
 
