@@ -299,6 +299,7 @@ void main() {
     free(state2->fileInterface);
     free(state2->buffer);
     free(state2);
+    sbitsFreeSchema(&baseSchema);
 }
 
 void insertData(sbitsState* state, char* filename) {
