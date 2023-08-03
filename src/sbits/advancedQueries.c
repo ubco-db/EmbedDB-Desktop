@@ -152,7 +152,7 @@ void closeTableScan(sbitsOperator* operator) {
 sbitsOperator* createTableScanOperator(sbitsState* state, sbitsIterator* it, sbitsSchema* baseSchema) {
     // Ensure all fields are not NULL
     if (state == NULL || it == NULL || baseSchema == NULL) {
-        printf("ERROR: All fields must be provided to create a TableScan operator\n");
+        printf("ERROR: All parameters must be provided to create a TableScan operator\n");
         return NULL;
     }
 
@@ -581,7 +581,7 @@ void initKeyJoin(sbitsOperator* operator) {
 
     // Check that join is compatible
     if (schema1->columnSizes[0] != schema2->columnSizes[0] || schema1->columnSizes[0] < 0 || schema2->columnSizes[0] < 0) {
-        printf("ERROR: The first columns of the two tables must be the key and must have the size. Make sure you haven't projected them out.\n");
+        printf("ERROR: The first columns of the two tables must be the key and must be the same size. Make sure you haven't projected them out.\n");
         return;
     }
 

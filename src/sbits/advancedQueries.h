@@ -30,7 +30,7 @@ typedef struct sbitsAggregateFunc {
     void (*compute)(struct sbitsAggregateFunc* aggFunc, sbitsSchema* schema, void* recordBuffer, const void* lastRecord);
 
     /**
-     * @brief	A user-malloced space where the operator saves its state. E.g. a sum operator might have 4 bytes allocated to store the sum of all data
+     * @brief	A user-allocated space where the operator saves its state. E.g. a sum operator might have 4 bytes allocated to store the sum of all data
      */
     void* state;
 
@@ -124,9 +124,9 @@ sbitsOperator* createProjectionOperator(sbitsOperator* input, uint8_t numCols, u
 sbitsOperator* createSelectionOperator(sbitsOperator* input, int8_t colNum, int8_t operation, void* compVal);
 
 /**
- * @brief	Creates an operator that will find groups and preform aggreagte functions over each group.
+ * @brief	Creates an operator that will find groups and preform aggregate functions over each group.
  * @param	input			The operator that this operator can pull records from
- * @param	groupfunc		A function that returns whether or not the @c record is part of the same group as the @c lastRecord. Assumes that groups are always next to each other/sorted when read in (i.e. Groups need to be 1122333, not 13213213)
+ * @param	groupfunc		A function that returns whether or not the @c record is part of the same group as the @c lastRecord. Assumes that records in groups are always next to each other and sorted when read in (i.e. Groups need to be 1122333, not 13213213)
  * @param	functions		An array of aggregate functions, each of which will be updated with each record read from the iterator
  * @param	functionsLength			The number of sbitsAggregateFuncs in @c functions
  */

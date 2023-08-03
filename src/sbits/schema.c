@@ -7,7 +7,7 @@
 
 /**
  * @brief	Create an sbitsSchema from a list of column sizes including both key and data
- * @param	numCols			The total number of key & data columns in table
+ * @param	numCols			The total number of columns in table
  * @param	colSizes		An array with the size of each column. Max size is 127
  * @param	colSignedness	An array describing if the data in the column is signed or unsigned. Use the defined constants SBITS_COLUMNN_SIGNED or SBITS_COLUMN_UNSIGNED
  */
@@ -92,11 +92,11 @@ uint16_t getColOffsetFromSchema(sbitsSchema* schema, uint8_t colNum) {
  * @brief	Calculates record size from schema
  */
 uint16_t getRecordSizeFromSchema(sbitsSchema* schema) {
-    uint16_t pos = 0;
+    uint16_t size = 0;
     for (uint8_t i = 0; i < schema->numCols; i++) {
-        pos += abs(schema->columnSizes[i]);
+        size += abs(schema->columnSizes[i]);
     }
-    return pos;
+    return size;
 }
 
 void printSchema(sbitsSchema* schema) {
