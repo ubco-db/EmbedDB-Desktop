@@ -392,13 +392,16 @@ sbitsOperator* createSelectionOperator(sbitsOperator* input, int8_t colNum, int8
     return operator;
 }
 
+/**
+ * @brief	A private struct to hold the state of the aggregate operator
+ */
 struct aggregateInfo {
     int8_t (*groupfunc)(const void* lastRecord, const void* record);  // Function that determins if both records are in the same group
-    sbitsAggregateFunc* functions;
-    uint32_t functionsLength;
-    void* lastRecordBuffer;
-    uint16_t bufferSize;
-    int8_t isLastRecordUsable;  // Is the data in lastRecordBuffer usable for checking if the recently read record is in the same group? Is set to 0 at start, and also after the last record
+    sbitsAggregateFunc* functions;                                    // An array of aggregate functions
+    uint32_t functionsLength;                                         // The length of the functions array
+    void* lastRecordBuffer;                                           // Buffer for the last record read by input->next
+    uint16_t bufferSize;                                              // Size of the input buffer (and lastRecordBuffer)
+    int8_t isLastRecordUsable;                                        // Is the data in lastRecordBuffer usable for checking if the recently read record is in the same group? Is set to 0 at start, and also after the last record
 };
 
 void initAggregate(sbitsOperator* operator) {
