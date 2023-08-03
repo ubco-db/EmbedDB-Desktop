@@ -103,11 +103,11 @@ uint16_t getColOffsetFromSchema(sbitsSchema* schema, uint8_t colNum) {
  * @brief	Calculates record size from schema
  */
 uint16_t getRecordSizeFromSchema(sbitsSchema* schema) {
-    uint16_t pos = 0;
+    uint16_t size = 0;
     for (uint8_t i = 0; i < schema->numCols; i++) {
-        pos += abs(schema->columnSizes[i]);
+        size += abs(schema->columnSizes[i]);
     }
-    return pos;
+    return size;
 }
 
 void printSchema(sbitsSchema* schema) {
