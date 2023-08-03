@@ -628,37 +628,39 @@ int8_t nextKeyJoin(sbitsOperator* operator) {
 
     int8_t colSize = abs(schema1->columnSizes[0]);
 
-    while (1) {
-        if (state->firstCall) {
-            state->firstCall = 0;
+    if (state->firstCall) {
+        state->firstCall = 0;
 
+        if (!input1->next(input1) || !input2->next(input2)) {
+            // If this case happens, you goofed, but I'll handle it anyway
+            return 0;
+        }
+        goto check;
+    }
+
+    while (1) {
+        // Advance the input with the smaller value
+        int8_t comp = compareUnsignedNumbers(record1, record2, colSize);
+        if (comp == 0) {
+            // Move both forward because if they match at this point, they've already been matched
             if (!input1->next(input1) || !input2->next(input2)) {
-                // If this case happens, you goofed, but I'll handle it anyway
+                return 0;
+            }
+        } else if (comp < 0) {
+            // Move record 1 forward
+            if (!input1->next(input1)) {
+                // We are out of records on one side. Given the assumption that the inputs are sorted, there are no more possible joins
                 return 0;
             }
         } else {
-            // Advance the input with the smaller value
-            int8_t comp = compareUnsignedNumbers(record1, record2, colSize);
-            if (comp == 0) {
-                // Move both forward because if they match at this point, they've already been matched
-                if (!input1->next(input1) || !input2->next(input2)) {
-                    return 0;
-                }
-            } else if (comp < 0) {
-                // Move record 1 forward
-                if (!input1->next(input1)) {
-                    // We are out of records on one side. Given the assumption that the inputs are sorted, there are no more possible joins
-                    return 0;
-                }
-            } else {
-                // Move record 2 forward
-                if (!input2->next(input2)) {
-                    // We are out of records on one side. Given the assumption that the inputs are sorted, there are no more possible joins
-                    return 0;
-                }
+            // Move record 2 forward
+            if (!input2->next(input2)) {
+                // We are out of records on one side. Given the assumption that the inputs are sorted, there are no more possible joins
+                return 0;
             }
         }
 
+    check:
         // See if these records join
         if (compareUnsignedNumbers(record1, record2, colSize) == 0) {
             // Copy both records into the output
