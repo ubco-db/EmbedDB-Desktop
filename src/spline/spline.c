@@ -184,6 +184,10 @@ void splineAdd(spline *spl, void *key, uint32_t page) {
     spl->tempLastPoint = 1;
 }
 
+void splineClean(spline *spl) {
+    
+}
+
 /**
  * @brief	Builds a spline structure given a sorted data set. GreedySplineCorridor
  * implementation from "Smooth interpolating histograms with error guarantees"
