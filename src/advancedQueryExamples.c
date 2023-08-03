@@ -14,10 +14,10 @@ int8_t sameDayGroup(const void* lastRecord, const void* record) {
     return dayGroup(lastRecord) == dayGroup(record);
 }
 
-void writeDayGroup(sbitsAggrOp* aggrOp, sbitsSchema* schema, void* recordBuffer, const void* lastRecord) {
+void writeDayGroup(sbitsAggregateFunc* aggFunc, sbitsSchema* schema, void* recordBuffer, const void* lastRecord) {
     // Put day in record
     uint32_t day = dayGroup(lastRecord);
-    memcpy((int8_t*)recordBuffer + getColOffsetFromSchema(schema, aggrOp->colNum), &day, sizeof(uint32_t));
+    memcpy((int8_t*)recordBuffer + getColOffsetFromSchema(schema, aggFunc->colNum), &day, sizeof(uint32_t));
 }
 
 void customShiftInit(sbitsOperator* operator) {
@@ -159,12 +159,12 @@ void main() {
     sbitsOperator* scanOp3 = createTableScanOperator(stateUWA, &it, baseSchema);
     selVal = 150;
     sbitsOperator* selectOp3 = createSelectionOperator(scanOp3, 3, SELECT_GTE, &selVal);
-    sbitsAggrOp groupName = {NULL, NULL, writeDayGroup, NULL, 4};
-    sbitsAggrOp* counter = createCountAggregate();
-    sbitsAggrOp* sum = createSumAggregate(8, -4);
-    sbitsAggrOp aggrOperators[] = {groupName, *counter, *sum};
-    uint32_t numOps = 3;
-    sbitsOperator* aggOp3 = createAggregateOperator(selectOp3, sameDayGroup, aggrOperators, numOps);
+    sbitsAggregateFunc groupName = {NULL, NULL, writeDayGroup, NULL, 4};
+    sbitsAggregateFunc* counter = createCountAggregate();
+    sbitsAggregateFunc* sum = createSumAggregate(8, -4);
+    sbitsAggregateFunc aggFunctions[] = {groupName, *counter, *sum};
+    uint32_t functionsLength = 3;
+    sbitsOperator* aggOp3 = createAggregateOperator(selectOp3, sameDayGroup, aggFunctions, functionsLength);
     uint32_t minWindCount = 50;
     sbitsOperator* countSelect3 = createSelectionOperator(aggOp3, 1, SELECT_GT, &minWindCount);
     countSelect3->init(countSelect3);
@@ -186,9 +186,9 @@ void main() {
     }
 
     // Free states
-    for (int i = 0; i < numOps; i++) {
-        if (aggrOperators[i].state != NULL) {
-            free(aggrOperators[i].state);
+    for (int i = 0; i < functionsLength; i++) {
+        if (aggFunctions[i].state != NULL) {
+            free(aggFunctions[i].state);
         }
     }
 

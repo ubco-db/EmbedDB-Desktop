@@ -77,7 +77,7 @@ int8_t compare(void* a, uint8_t operation, void* b, int8_t isSigned, int8_t numB
 
 /**
  * @brief	Extract a record from an operator
- * @return	1 if a record was returned, 0 if there are no more pairs to return
+ * @return	1 if a record was returned, 0 if there are no more rows to return
  */
 int8_t exec(sbitsOperator* operator) {
     return operator->next(operator);
@@ -89,6 +89,22 @@ void initTableScan(sbitsOperator* operator) {
     }
     if (operator->schema == NULL) {
         printf("ERROR: TableScan operator needs its schema defined\n");
+        return;
+    }
+
+    if (operator->schema->numCols<2) {
+        printf("ERROR: When creating a table scan, you must include at least two columns: one for the key and one for the data from the iterator\n");
+        return;
+    }
+
+    // Check that the provided key schema matches what is in the state
+    sbitsState* sbitsstate = (sbitsState*)(((void**)operator->state)[0]);
+    if (operator->schema->columnSizes[0] <= 0 || abs(operator->schema->columnSizes[0]) != sbitsstate->keySize) {
+        printf("ERROR: Make sure the the key column is at index 0 of the schema initialization and that it matches the keySize in the state and is unsigned\n");
+        return;
+    }
+    if (getRecordSizeFromSchema(operator->schema) != (sbitsstate->keySize + sbitsstate->dataSize)) {
+        printf("ERROR: Size of provided schema doesn't match the size that will be returned by the provided iterator\n");
         return;
     }
 
@@ -110,8 +126,8 @@ int8_t nextTableScan(sbitsOperator* operator) {
     }
 
     // Get next record
-    sbitsState* state = (sbitsState*)(((void**)operator->info)[0]);
-    sbitsIterator* it = (sbitsIterator*)(((void**)operator->info)[1]);
+    sbitsState* state = (sbitsState*)(((void**)operator->state)[0]);
+    sbitsIterator* it = (sbitsIterator*)(((void**)operator->state)[1]);
     if (!sbitsNext(state, it, operator->recordBuffer, (int8_t*)operator->recordBuffer + state->keySize)) {
         return 0;
     }
@@ -123,8 +139,8 @@ void closeTableScan(sbitsOperator* operator) {
     sbitsFreeSchema(&operator->schema);
     free(operator->recordBuffer);
     operator->recordBuffer = NULL;
-    free(operator->info);
-    operator->info = NULL;
+    free(operator->state);
+    operator->state = NULL;
 }
 
 /**
@@ -146,13 +162,13 @@ sbitsOperator* createTableScanOperator(sbitsState* state, sbitsIterator* it, sbi
         return NULL;
     }
 
-    operator->info = malloc(2 * sizeof(void*));
-    if (operator->info == NULL) {
+    operator->state = malloc(2 * sizeof(void*));
+    if (operator->state == NULL) {
         printf("ERROR: malloc failed while creating TableScan operator\n");
         return NULL;
     }
-    memcpy(operator->info, &state, sizeof(void*));
-    memcpy((int8_t*)operator->info + sizeof(void*), &it, sizeof(void*));
+    memcpy(operator->state, &state, sizeof(void*));
+    memcpy((int8_t*)operator->state + sizeof(void*), &it, sizeof(void*));
 
     operator->schema = copySchema(baseSchema);
     operator->input = NULL;
@@ -174,9 +190,9 @@ void initProjection(sbitsOperator* operator) {
     // Init input
     operator->input->init(operator->input);
 
-    // Get info
-    uint8_t numCols = *(uint8_t*)operator->info;
-    uint8_t* cols = (uint8_t*)operator->info + 1;
+    // Get state
+    uint8_t numCols = *(uint8_t*)operator->state;
+    uint8_t* cols = (uint8_t*)operator->state + 1;
     const sbitsSchema* inputSchema = operator->input->schema;
 
     // Init output schema
@@ -208,8 +224,8 @@ void initProjection(sbitsOperator* operator) {
 }
 
 int8_t nextProjection(sbitsOperator* operator) {
-    uint8_t numCols = *(uint8_t*)operator->info;
-    uint8_t* cols = (uint8_t*)operator->info + 1;
+    uint8_t numCols = *(uint8_t*)operator->state;
+    uint8_t* cols = (uint8_t*)operator->state + 1;
     uint16_t curColPos = 0;
     uint8_t nextProjCol = 0;
     uint16_t nextProjColPos = 0;
@@ -236,8 +252,8 @@ void closeProjection(sbitsOperator* operator) {
     operator->input->close(operator->input);
 
     sbitsFreeSchema(&operator->schema);
-    free(operator->info);
-    operator->info = NULL;
+    free(operator->state);
+    operator->state = NULL;
     free(operator->recordBuffer);
     operator->recordBuffer = NULL;
 }
@@ -246,7 +262,7 @@ void closeProjection(sbitsOperator* operator) {
  * @brief	Creates an operator capable of projecting the specified columns. Cannot re-order columns
  * @param	input	The operator that this operator can pull records from
  * @param	numCols	How many columns will be in the final projection
- * @param	cols	The indexes of the columns to be outputted. *Zero indexed*
+ * @param	cols	The indexes of the columns to be outputted. Zero indexed. Column indexes must be strictly increasing i.e. columns must stay in the same order, can only remove columns from input
  */
 sbitsOperator* createProjectionOperator(sbitsOperator* input, uint8_t numCols, uint8_t* cols) {
     // Ensure column numbers are strictly increasing
@@ -258,14 +274,14 @@ sbitsOperator* createProjectionOperator(sbitsOperator* input, uint8_t numCols, u
         }
         lastCol = cols[i];
     }
-    // Create info
-    uint8_t* info = malloc(numCols + 1);
-    if (info == NULL) {
+    // Create state
+    uint8_t* state = malloc(numCols + 1);
+    if (state == NULL) {
         printf("ERROR: malloc failed while creating Projection operator\n");
         return NULL;
     }
-    info[0] = numCols;
-    memcpy(info + 1, cols, numCols);
+    state[0] = numCols;
+    memcpy(state + 1, cols, numCols);
 
     sbitsOperator* operator= malloc(sizeof(sbitsOperator));
     if (operator== NULL) {
@@ -273,7 +289,7 @@ sbitsOperator* createProjectionOperator(sbitsOperator* input, uint8_t numCols, u
         return NULL;
     }
 
-    operator->info = info;
+    operator->state = state;
     operator->input = input;
     operator->schema = NULL;
     operator->recordBuffer = NULL;
@@ -311,9 +327,9 @@ void initSelection(sbitsOperator* operator) {
 int8_t nextSelection(sbitsOperator* operator) {
     sbitsSchema* schema = operator->input->schema;
 
-    int8_t colNum = *(int8_t*)operator->info;
+    int8_t colNum = *(int8_t*)operator->state;
     uint16_t colPos = getColOffsetFromSchema(schema, colNum);
-    int8_t operation = *((int8_t*)operator->info + 1);
+    int8_t operation = *((int8_t*)operator->state + 1);
     int8_t colSize = schema->columnSizes[colNum];
     int8_t isSigned = 0;
     if (colSize < 0) {
@@ -324,7 +340,7 @@ int8_t nextSelection(sbitsOperator* operator) {
     while (operator->input->next(operator->input)) {
         void* colData = (int8_t*)operator->input->recordBuffer + colPos;
 
-        if (compare(colData, operation, *(void**)((int8_t*)operator->info + 2), isSigned, colSize)) {
+        if (compare(colData, operation, *(void**)((int8_t*)operator->state + 2), isSigned, colSize)) {
             memcpy(operator->recordBuffer, operator->input->recordBuffer, getRecordSizeFromSchema(operator->schema));
             return 1;
         }
@@ -337,8 +353,8 @@ void closeSelection(sbitsOperator* operator) {
     operator->input->close(operator->input);
 
     sbitsFreeSchema(&operator->schema);
-    free(operator->info);
-    operator->info = NULL;
+    free(operator->state);
+    operator->state = NULL;
     free(operator->recordBuffer);
     operator->recordBuffer = NULL;
 }
@@ -351,21 +367,21 @@ void closeSelection(sbitsOperator* operator) {
  * @param	compVal		A pointer to the value to compare with. Make sure the size of this is the same number of bytes as is described in the schema
  */
 sbitsOperator* createSelectionOperator(sbitsOperator* input, int8_t colNum, int8_t operation, void* compVal) {
-    int8_t* info = malloc(2 + sizeof(void*));
-    if (info == NULL) {
+    int8_t* state = malloc(2 + sizeof(void*));
+    if (state == NULL) {
         printf("ERROR: Failed to malloc while creating Selection operator\n");
         return NULL;
     }
-    info[0] = colNum;
-    info[1] = operation;
-    memcpy(info + 2, &compVal, sizeof(void*));
+    state[0] = colNum;
+    state[1] = operation;
+    memcpy(state + 2, &compVal, sizeof(void*));
 
     sbitsOperator* operator= malloc(sizeof(sbitsOperator));
     if (operator== NULL) {
         printf("ERROR: Failed to malloc while creating Selection operator\n");
         return NULL;
     }
-    operator->info = info;
+    operator->state = state;
     operator->input = input;
     operator->schema = NULL;
     operator->recordBuffer = NULL;
@@ -377,12 +393,12 @@ sbitsOperator* createSelectionOperator(sbitsOperator* input, int8_t colNum, int8
 }
 
 struct aggregateInfo {
-    int8_t (*groupfunc)(const void* lastRecord, const void* record);  // record is in same group as last record
-    sbitsAggrOp* operators;
-    uint32_t numOps;
+    int8_t (*groupfunc)(const void* lastRecord, const void* record);  // Function that determins if both records are in the same group
+    sbitsAggregateFunc* functions;
+    uint32_t functionsLength;
     void* lastRecordBuffer;
     uint16_t bufferSize;
-    int8_t lastRecordUsable;  // Is the data in lastRecordBuffer usable?
+    int8_t isLastRecordUsable;  // Is the data in lastRecordBuffer usable for checking if the recently read record is in the same group? Is set to 0 at start, and also after the last record
 };
 
 void initAggregate(sbitsOperator* operator) {
@@ -394,8 +410,8 @@ void initAggregate(sbitsOperator* operator) {
     // Init input
     operator->input->init(operator->input);
 
-    struct aggregateInfo* info = operator->info;
-    info->lastRecordUsable = 0;
+    struct aggregateInfo* state = operator->state;
+    state->isLastRecordUsable = 0;
 
     // Init output schema
     if (operator->schema == NULL) {
@@ -404,20 +420,20 @@ void initAggregate(sbitsOperator* operator) {
             printf("ERROR: Failed to malloc while initializing aggregate operator\n");
             return;
         }
-        operator->schema->numCols = info->numOps;
-        operator->schema->columnSizes = malloc(info->numOps);
+        operator->schema->numCols = state->functionsLength;
+        operator->schema->columnSizes = malloc(state->functionsLength);
         if (operator->schema->columnSizes == NULL) {
             printf("ERROR: Failed to malloc while initializing aggregate operator\n");
             return;
         }
-        for (uint8_t i = 0; i < info->numOps; i++) {
-            operator->schema->columnSizes[i] = info->operators[i].colSize;
-            info->operators[i].colNum = i;
+        for (uint8_t i = 0; i < state->functionsLength; i++) {
+            operator->schema->columnSizes[i] = state->functions[i].colSize;
+            state->functions[i].colNum = i;
         }
     }
 
     // Init buffers
-    info->bufferSize = getRecordSizeFromSchema(operator->input->schema);
+    state->bufferSize = getRecordSizeFromSchema(operator->input->schema);
     if (operator->recordBuffer == NULL) {
         operator->recordBuffer = createBufferFromSchema(operator->schema);
         if (operator->recordBuffer == NULL) {
@@ -425,9 +441,9 @@ void initAggregate(sbitsOperator* operator) {
             return;
         }
     }
-    if (info->lastRecordBuffer == NULL) {
-        info->lastRecordBuffer = malloc(info->bufferSize);
-        if (info->lastRecordBuffer == NULL) {
+    if (state->lastRecordBuffer == NULL) {
+        state->lastRecordBuffer = malloc(state->bufferSize);
+        if (state->lastRecordBuffer == NULL) {
             printf("ERROR: Failed to malloc while initializing aggregate operator\n");
             return;
         }
@@ -435,24 +451,24 @@ void initAggregate(sbitsOperator* operator) {
 }
 
 int8_t nextAggregate(sbitsOperator* operator) {
-    struct aggregateInfo* info = operator->info;
+    struct aggregateInfo* state = operator->state;
     sbitsOperator* input = operator->input;
 
     // Reset each operator
-    for (int i = 0; i < info->numOps; i++) {
-        if (info->operators[i].reset != NULL) {
-            info->operators[i].reset(info->operators + i);
+    for (int i = 0; i < state->functionsLength; i++) {
+        if (state->functions[i].reset != NULL) {
+            state->functions[i].reset(state->functions + i);
         }
     }
 
     int8_t recordsInGroup = 0;
 
     // Check flag used to indicate whether the last record read has been added to a group
-    if (info->lastRecordUsable) {
+    if (state->isLastRecordUsable) {
         recordsInGroup = 1;
-        for (int i = 0; i < info->numOps; i++) {
-            if (info->operators[i].add != NULL) {
-                info->operators[i].add(info->operators + i, info->lastRecordBuffer);
+        for (int i = 0; i < state->functionsLength; i++) {
+            if (state->functions[i].add != NULL) {
+                state->functions[i].add(state->functions + i, state->lastRecordBuffer);
             }
         }
     }
@@ -460,11 +476,11 @@ int8_t nextAggregate(sbitsOperator* operator) {
     int8_t exitType = 0;
     while (input->next(input)) {
         // Check if record is in the same group as the last record
-        if (!info->lastRecordUsable || info->groupfunc(info->lastRecordBuffer, input->recordBuffer)) {
+        if (!state->isLastRecordUsable || state->groupfunc(state->lastRecordBuffer, input->recordBuffer)) {
             recordsInGroup = 1;
-            for (int i = 0; i < info->numOps; i++) {
-                if (info->operators[i].add != NULL) {
-                    info->operators[i].add(info->operators + i, input->recordBuffer);
+            for (int i = 0; i < state->functionsLength; i++) {
+                if (state->functions[i].add != NULL) {
+                    state->functions[i].add(state->functions + i, input->recordBuffer);
                 }
             }
         } else {
@@ -473,8 +489,8 @@ int8_t nextAggregate(sbitsOperator* operator) {
         }
 
         // Save this record
-        memcpy(info->lastRecordBuffer, input->recordBuffer, info->bufferSize);
-        info->lastRecordUsable = 1;
+        memcpy(state->lastRecordBuffer, input->recordBuffer, state->bufferSize);
+        state->isLastRecordUsable = 1;
     }
 
     if (!recordsInGroup) {
@@ -483,18 +499,18 @@ int8_t nextAggregate(sbitsOperator* operator) {
 
     if (exitType == 0) {
         // Exited because ran out of records, so all read records have been added to a group
-        info->lastRecordUsable = 0;
+        state->isLastRecordUsable = 0;
     }
 
-    // Perform final compute on all operators
-    for (int i = 0; i < info->numOps; i++) {
-        if (info->operators[i].compute != NULL) {
-            info->operators[i].compute(info->operators + i, operator->schema, operator->recordBuffer, info->lastRecordBuffer);
+    // Perform final compute on all functions
+    for (int i = 0; i < state->functionsLength; i++) {
+        if (state->functions[i].compute != NULL) {
+            state->functions[i].compute(state->functions + i, operator->schema, operator->recordBuffer, state->lastRecordBuffer);
         }
     }
 
     // Put last read record into lastRecordBuffer
-    memcpy(info->lastRecordBuffer, input->recordBuffer, info->bufferSize);
+    memcpy(state->lastRecordBuffer, input->recordBuffer, state->bufferSize);
 
     return 1;
 }
@@ -503,31 +519,31 @@ void closeAggregate(sbitsOperator* operator) {
     operator->input->close(operator->input);
     operator->input = NULL;
     sbitsFreeSchema(&operator->schema);
-    free(((struct aggregateInfo*)operator->info)->lastRecordBuffer);
-    free(operator->info);
-    operator->info = NULL;
+    free(((struct aggregateInfo*)operator->state)->lastRecordBuffer);
+    free(operator->state);
+    operator->state = NULL;
     free(operator->recordBuffer);
     operator->recordBuffer = NULL;
 }
 
 /**
- * @brief	Creates an operator that will find groups and preform aggreagte functions over each group.
+ * @brief	Creates an operator that will find groups and preform aggregate functions over each group.
  * @param	input			The operator that this operator can pull records from
- * @param	groupfunc		A function that returns whether or not the @c record is part of the same group as the @c lastRecord. Assumes that groups are always next to each other/sorted when read in (i.e. Groups need to be 1122333, not 13213213)
- * @param	operators		An array of aggregate operators, each of which will be updated with each record read from the iterator
- * @param	numOps			The number of sbitsAggrOps in @c operators
+ * @param	groupfunc		A function that returns whether or not the @c record is part of the same group as the @c lastRecord. Assumes that records in groups are always next to each other and sorted when read in (i.e. Groups need to be 1122333, not 13213213)
+ * @param	functions		An array of aggregate functions, each of which will be updated with each record read from the iterator
+ * @param	functionsLength			The number of sbitsAggregateFuncs in @c functions
  */
-sbitsOperator* createAggregateOperator(sbitsOperator* input, int8_t (*groupfunc)(const void* lastRecord, const void* record), sbitsAggrOp* operators, uint32_t numOps) {
-    struct aggregateInfo* info = malloc(sizeof(struct aggregateInfo));
-    if (info == NULL) {
+sbitsOperator* createAggregateOperator(sbitsOperator* input, int8_t (*groupfunc)(const void* lastRecord, const void* record), sbitsAggregateFunc* functions, uint32_t functionsLength) {
+    struct aggregateInfo* state = malloc(sizeof(struct aggregateInfo));
+    if (state == NULL) {
         printf("ERROR: Failed to malloc while creating aggregate operator\n");
         return NULL;
     }
 
-    info->groupfunc = groupfunc;
-    info->operators = operators;
-    info->numOps = numOps;
-    info->lastRecordBuffer = NULL;
+    state->groupfunc = groupfunc;
+    state->functions = functions;
+    state->functionsLength = functionsLength;
+    state->lastRecordBuffer = NULL;
 
     sbitsOperator* operator= malloc(sizeof(sbitsOperator));
     if (operator== NULL) {
@@ -535,7 +551,7 @@ sbitsOperator* createAggregateOperator(sbitsOperator* input, int8_t (*groupfunc)
         return NULL;
     }
 
-    operator->info = info;
+    operator->state = state;
     operator->input = input;
     operator->schema = NULL;
     operator->recordBuffer = NULL;
@@ -552,9 +568,9 @@ struct keyJoinInfo {
 };
 
 void initKeyJoin(sbitsOperator* operator) {
-    struct keyJoinInfo* info = operator->info;
+    struct keyJoinInfo* state = operator->state;
     sbitsOperator* input1 = operator->input;
-    sbitsOperator* input2 = info->input2;
+    sbitsOperator* input2 = state->input2;
 
     // Init inputs
     input1->init(input1);
@@ -593,13 +609,13 @@ void initKeyJoin(sbitsOperator* operator) {
         return;
     }
 
-    info->firstCall = 1;
+    state->firstCall = 1;
 }
 
 int8_t nextKeyJoin(sbitsOperator* operator) {
-    struct keyJoinInfo* info = operator->info;
+    struct keyJoinInfo* state = operator->state;
     sbitsOperator* input1 = operator->input;
-    sbitsOperator* input2 = info->input2;
+    sbitsOperator* input2 = state->input2;
     sbitsSchema* schema1 = input1->schema;
     sbitsSchema* schema2 = input2->schema;
 
@@ -610,8 +626,8 @@ int8_t nextKeyJoin(sbitsOperator* operator) {
     int8_t colSize = abs(schema1->columnSizes[0]);
 
     while (1) {
-        if (info->firstCall) {
-            info->firstCall = 0;
+        if (state->firstCall) {
+            state->firstCall = 0;
 
             if (!input1->next(input1) || !input2->next(input2)) {
                 // If this case happens, you goofed, but I'll handle it anyway
@@ -655,9 +671,9 @@ int8_t nextKeyJoin(sbitsOperator* operator) {
 }
 
 void closeKeyJoin(sbitsOperator* operator) {
-    struct keyJoinInfo* info = operator->info;
+    struct keyJoinInfo* state = operator->state;
     sbitsOperator* input1 = operator->input;
-    sbitsOperator* input2 = info->input2;
+    sbitsOperator* input2 = state->input2;
     sbitsSchema* schema1 = input1->schema;
     sbitsSchema* schema2 = input2->schema;
 
@@ -665,8 +681,8 @@ void closeKeyJoin(sbitsOperator* operator) {
     input2->close(input2);
 
     sbitsFreeSchema(&operator->schema);
-    free(operator->info);
-    operator->info = NULL;
+    free(operator->state);
+    operator->state = NULL;
     free(operator->recordBuffer);
     operator->recordBuffer = NULL;
 }
@@ -681,15 +697,15 @@ sbitsOperator* createKeyJoinOperator(sbitsOperator* input1, sbitsOperator* input
         return NULL;
     }
 
-    struct keyJoinInfo* info = malloc(sizeof(struct keyJoinInfo));
-    if (info == NULL) {
+    struct keyJoinInfo* state = malloc(sizeof(struct keyJoinInfo));
+    if (state == NULL) {
         printf("ERROR: Failed to malloc while creating join operator\n");
         return NULL;
     }
-    info->input2 = input2;
+    state->input2 = input2;
 
     operator->input = input1;
-    operator->info = info;
+    operator->state = state;
     operator->recordBuffer = NULL;
     operator->schema = NULL;
     operator->init = initKeyJoin;
@@ -699,39 +715,39 @@ sbitsOperator* createKeyJoinOperator(sbitsOperator* input1, sbitsOperator* input
     return operator;
 }
 
-void countReset(sbitsAggrOp* aggrOp) {
-    *(uint32_t*)aggrOp->state = 0;
+void countReset(sbitsAggregateFunc* aggFunc) {
+    *(uint32_t*)aggFunc->state = 0;
 }
 
-void countAdd(sbitsAggrOp* aggrOp, const void* recordBuffer) {
-    (*(uint32_t*)aggrOp->state)++;
+void countAdd(sbitsAggregateFunc* aggFunc, const void* recordBuffer) {
+    (*(uint32_t*)aggFunc->state)++;
 }
 
-void countCompute(sbitsAggrOp* aggrOp, sbitsSchema* schema, void* recordBuffer, const void* lastRecord) {
+void countCompute(sbitsAggregateFunc* aggFunc, sbitsSchema* schema, void* recordBuffer, const void* lastRecord) {
     // Put count in record
-    memcpy((int8_t*)recordBuffer + getColOffsetFromSchema(schema, aggrOp->colNum), aggrOp->state, sizeof(uint32_t));
+    memcpy((int8_t*)recordBuffer + getColOffsetFromSchema(schema, aggFunc->colNum), aggFunc->state, sizeof(uint32_t));
 }
 
 /**
- * @brief	Creates an aggregate operator to count the number of records in a group. To be used in combination with an sbitsOperator produced by createAggregateOperator
+ * @brief	Creates an aggregate function to count the number of records in a group. To be used in combination with an sbitsOperator produced by createAggregateOperator
  */
-sbitsAggrOp* createCountAggregate() {
-    sbitsAggrOp* aggrop = malloc(sizeof(sbitsAggrOp));
-    aggrop->reset = countReset;
-    aggrop->add = countAdd;
-    aggrop->compute = countCompute;
-    aggrop->state = malloc(sizeof(uint32_t));
-    aggrop->colSize = 4;
-    return aggrop;
+sbitsAggregateFunc* createCountAggregate() {
+    sbitsAggregateFunc* aggFunc = malloc(sizeof(sbitsAggregateFunc));
+    aggFunc->reset = countReset;
+    aggFunc->add = countAdd;
+    aggFunc->compute = countCompute;
+    aggFunc->state = malloc(sizeof(uint32_t));
+    aggFunc->colSize = 4;
+    return aggFunc;
 }
 
-void sumReset(sbitsAggrOp* aggrOp) {
-    *(int64_t*)aggrOp->state = 0;
+void sumReset(sbitsAggregateFunc* aggFunc) {
+    *(int64_t*)aggFunc->state = 0;
 }
 
-void sumAdd(sbitsAggrOp* aggrOp, const void* recordBuffer) {
-    uint8_t colOffset = *((uint8_t*)aggrOp->state + sizeof(int64_t));
-    int8_t colSize = *((int8_t*)aggrOp->state + sizeof(int64_t) + sizeof(uint8_t));
+void sumAdd(sbitsAggregateFunc* aggFunc, const void* recordBuffer) {
+    uint8_t colOffset = *((uint8_t*)aggFunc->state + sizeof(int64_t));
+    int8_t colSize = *((int8_t*)aggFunc->state + sizeof(int64_t) + sizeof(uint8_t));
     int8_t isSigned = colSize < 0;
     colSize = min(abs(colSize), sizeof(int64_t));
     void* colPos = (int8_t*)recordBuffer + colOffset;
@@ -744,46 +760,50 @@ void sumAdd(sbitsAggrOp* aggrOp, const void* recordBuffer) {
         if (sign != 0) {
             memset(((int8_t*)(&val)) + colSize, 0xff, sizeof(int64_t) - colSize);
         }
-        (*(int64_t*)aggrOp->state) += val;
+        (*(int64_t*)aggFunc->state) += val;
     } else {
         uint64_t val = 0;
         memcpy(&val, colPos, colSize);
-        (*(uint64_t*)aggrOp->state) += val;
+        (*(uint64_t*)aggFunc->state) += val;
     }
 }
 
-void sumCompute(sbitsAggrOp* aggrOp, sbitsSchema* schema, void* recordBuffer, const void* lastRecord) {
+void sumCompute(sbitsAggregateFunc* aggFunc, sbitsSchema* schema, void* recordBuffer, const void* lastRecord) {
     // Put count in record
-    memcpy((int8_t*)recordBuffer + getColOffsetFromSchema(schema, aggrOp->colNum), aggrOp->state, sizeof(int64_t));
+    memcpy((int8_t*)recordBuffer + getColOffsetFromSchema(schema, aggFunc->colNum), aggFunc->state, sizeof(int64_t));
 }
 
 /**
- * @brief	Creates an aggregate operator to sum a column over a group. To be used in combination with an sbitsOperator produced by createAggregateOperator. Column must be no bigger than 8 bytes.
+ * @brief	Creates an aggregate function to sum a column over a group. To be used in combination with an sbitsOperator produced by createAggregateOperator. Column must be no bigger than 8 bytes.
  * @param	colOffset	The number of bytes from the start of the record to the start of the column you want to sum
  * @param	colSize		The size of the column to sum in bytes
  */
-sbitsAggrOp* createSumAggregate(uint8_t colOffset, int8_t colSize) {
-    sbitsAggrOp* aggrop = malloc(sizeof(sbitsAggrOp));
-    aggrop->reset = sumReset;
-    aggrop->add = sumAdd;
-    aggrop->compute = sumCompute;
-    aggrop->state = malloc(2 * sizeof(int8_t) + sizeof(int64_t));
-    *((uint8_t*)aggrop->state + sizeof(int64_t)) = colOffset;
-    *((int8_t*)aggrop->state + sizeof(int64_t) + sizeof(uint8_t)) = colSize;
-    aggrop->colSize = -8;
-    return aggrop;
+sbitsAggregateFunc* createSumAggregate(uint8_t colOffset, int8_t colSize) {
+    sbitsAggregateFunc* aggFunc = malloc(sizeof(sbitsAggregateFunc));
+    aggFunc->reset = sumReset;
+    aggFunc->add = sumAdd;
+    aggFunc->compute = sumCompute;
+    aggFunc->state = malloc(2 * sizeof(int8_t) + sizeof(int64_t));
+    *((uint8_t*)aggFunc->state + sizeof(int64_t)) = colOffset;
+    if (abs(colSize) > 8) {
+        printf("ERROR: Can't use this sum function for columns bigger than 8 bytes\n");
+        return NULL;
+    }
+    *((int8_t*)aggFunc->state + sizeof(int64_t) + sizeof(uint8_t)) = colSize;
+    aggFunc->colSize = -8;
+    return aggFunc;
 }
 
 /**
- * @brief	Completely free a chain of operators recursively after it's already been closed.
+ * @brief	Completely free a chain of functions recursively after it's already been closed.
  */
 void sbitsFreeOperatorRecursive(sbitsOperator** operator) {
     if ((*operator)->input != NULL) {
         sbitsFreeOperatorRecursive(&(*operator)->input);
     }
-    if ((*operator)->info != NULL) {
-        free((*operator)->info);
-        (*operator)->info = NULL;
+    if ((*operator)->state != NULL) {
+        free((*operator)->state);
+        (*operator)->state = NULL;
     }
     if ((*operator)->schema != NULL) {
         sbitsFreeSchema(&(*operator)->schema);

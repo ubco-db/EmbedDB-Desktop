@@ -9,20 +9,9 @@
  * @brief	Create an sbitsSchema from a list of column sizes including both key and data
  * @param	numCols			The total number of key & data columns in table
  * @param	colSizes		An array with the size of each column. Max size is 127
- * @param	colSignedness	An array describing if the data in the column is SBITS_COLUMNN_SIGNED or SBITS_COLUMN_UNSIGNED
+ * @param	colSignedness	An array describing if the data in the column is signed or unsigned. Use the defined constants SBITS_COLUMNN_SIGNED or SBITS_COLUMN_UNSIGNED
  */
 sbitsSchema* sbitsCreateSchema(uint8_t numCols, int8_t* colSizes, int8_t* colSignedness) {
-    if (numCols < 2) {
-        printf("ERROR: When creating a schema, you must include all key and data attributes\n");
-        return NULL;
-    }
-
-    // Check that the provided key schema matches what is in the state
-    if (colSignedness[0] != SBITS_COLUMN_UNSIGNED) {
-        printf("ERROR: Make sure the the key column is at index 0 of the schema initialization and that it matches the keySize in the state and is unsigned\n");
-        return NULL;
-    }
-
     sbitsSchema* schema = malloc(sizeof(sbitsSchema));
     schema->columnSizes = malloc(numCols * sizeof(int8_t));
     schema->numCols = numCols;
@@ -40,7 +29,7 @@ sbitsSchema* sbitsCreateSchema(uint8_t numCols, int8_t* colSizes, int8_t* colSig
         } else if (sign == SBITS_COLUMN_UNSIGNED) {
             schema->columnSizes[i] = colSizes[i];
         } else {
-            printf("ERROR: Invalid signedness of column\n");
+            printf("ERROR: Must only use SBITS_COLUMN_SIGNED or SBITS_COLUMN_UNSIGNED to describe column signedness\n");
             return NULL;
         }
     }

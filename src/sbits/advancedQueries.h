@@ -11,23 +11,23 @@
 #define SELECT_EQ 4
 #define SELECT_NEQ 5
 
-typedef struct sbitsAggrOp {
+typedef struct sbitsAggregateFunc {
     /**
      * @brief	Resets the state
      */
-    void (*reset)(struct sbitsAggrOp* aggrOp);
+    void (*reset)(struct sbitsAggregateFunc* aggFunc);
 
     /**
      * @brief	Adds another record to the group and updates the state
      * @param	state	The state tracking the value of the aggregate function e.g. sum
      * @param	record	The record being added
      */
-    void (*add)(struct sbitsAggrOp* aggrOp, const void* record);
+    void (*add)(struct sbitsAggregateFunc* aggFunc, const void* record);
 
     /**
      * @brief	Finalize aggregate result into the record buffer and modify the schema accordingly. Is called once right before aggroup returns.
      */
-    void (*compute)(struct sbitsAggrOp* aggrOp, sbitsSchema* schema, void* recordBuffer, const void* lastRecord);
+    void (*compute)(struct sbitsAggregateFunc* aggFunc, sbitsSchema* schema, void* recordBuffer, const void* lastRecord);
 
     /**
      * @brief	A user-malloced space where the operator saves its state. E.g. a sum operator might have 4 bytes allocated to store the sum of all data
@@ -43,7 +43,7 @@ typedef struct sbitsAggrOp {
      * @brief	Which column number should compute write to
      */
     uint8_t colNum;
-} sbitsAggrOp;
+} sbitsAggregateFunc;
 
 typedef struct sbitsOperator {
     /**
@@ -70,7 +70,7 @@ typedef struct sbitsOperator {
     /**
      * @brief	A pre-allocated memory area that can be loaded with any extra parameters that the function needs to operate (e.g. column numbers or selection predicates)
      */
-    void* info;
+    void* state;
 
     /**
      * @brief	The output schema of this operator
@@ -85,7 +85,7 @@ typedef struct sbitsOperator {
 
 /**
  * @brief	Extract a record from an operator
- * @return	1 if a record was returned, 0 if there are no more pairs to return
+ * @return	1 if a record was returned, 0 if there are no more rows to return
  */
 int8_t exec(sbitsOperator* operator);
 
@@ -127,10 +127,10 @@ sbitsOperator* createSelectionOperator(sbitsOperator* input, int8_t colNum, int8
  * @brief	Creates an operator that will find groups and preform aggreagte functions over each group.
  * @param	input			The operator that this operator can pull records from
  * @param	groupfunc		A function that returns whether or not the @c record is part of the same group as the @c lastRecord. Assumes that groups are always next to each other/sorted when read in (i.e. Groups need to be 1122333, not 13213213)
- * @param	operators		An array of aggregate operators, each of which will be updated with each record read from the iterator
- * @param	numOps			The number of sbitsAggrOps in @c operators
+ * @param	functions		An array of aggregate functions, each of which will be updated with each record read from the iterator
+ * @param	functionsLength			The number of sbitsAggregateFuncs in @c functions
  */
-sbitsOperator* createAggregateOperator(sbitsOperator* input, int8_t (*groupfunc)(const void* lastRecord, const void* record), sbitsAggrOp* operators, uint32_t numOps);
+sbitsOperator* createAggregateOperator(sbitsOperator* input, int8_t (*groupfunc)(const void* lastRecord, const void* record), sbitsAggregateFunc* functions, uint32_t functionsLength);
 
 /**
  * @brief	Creates an operator for perfoming an equijoin on the keys (sorted and distinct) of two tables
@@ -138,19 +138,19 @@ sbitsOperator* createAggregateOperator(sbitsOperator* input, int8_t (*groupfunc)
 sbitsOperator* createKeyJoinOperator(sbitsOperator* input1, sbitsOperator* input2);
 
 //////////////////////////////////
-// Prebuilt aggregate operators //
+// Prebuilt aggregate functions //
 //////////////////////////////////
 
 /**
- * @brief	Creates an aggregate operator to count the number of records in a group. To be used in combination with an sbitsOperator produced by createAggregateOperator
+ * @brief	Creates an aggregate function to count the number of records in a group. To be used in combination with an sbitsOperator produced by createAggregateOperator
  */
-sbitsAggrOp* createCountAggregate();
+sbitsAggregateFunc* createCountAggregate();
 
 /**
- * @brief	Creates an aggregate operator to sum a column over a group. To be used in combination with an sbitsOperator produced by createAggregateOperator. Column must be no bigger than 8 bytes.
+ * @brief	Creates an aggregate function to sum a column over a group. To be used in combination with an sbitsOperator produced by createAggregateOperator. Column must be no bigger than 8 bytes.
  * @param	colOffset	The number of bytes from the start of the record to the start of the column you want to sum
  * @param	colSize		The size of the column to sum in bytes
  */
-sbitsAggrOp* createSumAggregate(uint8_t colOffset, int8_t colSize);
+sbitsAggregateFunc* createSumAggregate(uint8_t colOffset, int8_t colSize);
 
 #endif

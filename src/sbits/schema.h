@@ -19,7 +19,7 @@ typedef struct {
  * @brief	Create an sbitsSchema from a list of column sizes including both key and data
  * @param	numCols			The total number of key & data columns in table
  * @param	colSizes		An array with the size of each column. Max size is 127
- * @param	colSignedness	An array describing if the data in the column is SBITS_COLUMNN_SIGNED or SBITS_COLUMN_UNSIGNED
+ * @param	colSignedness	An array describing if the data in the column is signed or unsigned. Use the defined constants SBITS_COLUMNN_SIGNED or SBITS_COLUMN_UNSIGNED
  */
 sbitsSchema* sbitsCreateSchema(uint8_t numCols, int8_t* colSizes, int8_t* colSignedness);
 

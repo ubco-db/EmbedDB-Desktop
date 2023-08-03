@@ -16,7 +16,7 @@ void insertData(sbitsState* state, char* filename);
 void* nextRecord(DataSource* source);
 uint32_t dayGroup(const void* record);
 int8_t sameDayGroup(const void* lastRecord, const void* record);
-void writeDayGroup(sbitsAggrOp* aggrOp, sbitsSchema* schema, void* recordBuffer, const void* lastRecord);
+void writeDayGroup(sbitsAggregateFunc* aggFunc, sbitsSchema* schema, void* recordBuffer, const void* lastRecord);
 void customShiftInit(sbitsOperator* operator);
 int8_t customShiftNext(sbitsOperator* operator);
 void customShiftClose(sbitsOperator* operator);
@@ -170,12 +170,12 @@ void test_aggregate() {
     sbitsOperator* scanOp = createTableScanOperator(stateUWA, &it, baseSchema);
     int32_t selVal = 150;
     sbitsOperator* selectOp = createSelectionOperator(scanOp, 3, SELECT_GTE, &selVal);
-    sbitsAggrOp groupName = {NULL, NULL, writeDayGroup, NULL, 4};
-    sbitsAggrOp* counter = createCountAggregate();
-    sbitsAggrOp* sum = createSumAggregate(8, -4);
-    sbitsAggrOp aggrOperators[] = {groupName, *counter, *sum};
-    uint32_t numOps = 3;
-    sbitsOperator* aggOp = createAggregateOperator(selectOp, sameDayGroup, aggrOperators, numOps);
+    sbitsAggregateFunc groupName = {NULL, NULL, writeDayGroup, NULL, 4};
+    sbitsAggregateFunc* counter = createCountAggregate();
+    sbitsAggregateFunc* sum = createSumAggregate(8, -4);
+    sbitsAggregateFunc aggFunctions[] = {groupName, *counter, *sum};
+    uint32_t functionsLength = 3;
+    sbitsOperator* aggOp = createAggregateOperator(selectOp, sameDayGroup, aggFunctions, functionsLength);
     aggOp->init(aggOp);
 
     int32_t recordsReturned = 0;
@@ -210,9 +210,9 @@ void test_aggregate() {
     }
 
     // Free states
-    for (int i = 0; i < numOps; i++) {
-        if (aggrOperators[i].state != NULL) {
-            free(aggrOperators[i].state);
+    for (int i = 0; i < functionsLength; i++) {
+        if (aggFunctions[i].state != NULL) {
+            free(aggFunctions[i].state);
         }
     }
 
@@ -355,10 +355,10 @@ int8_t sameDayGroup(const void* lastRecord, const void* record) {
     return dayGroup(lastRecord) == dayGroup(record);
 }
 
-void writeDayGroup(sbitsAggrOp* aggrOp, sbitsSchema* schema, void* recordBuffer, const void* lastRecord) {
+void writeDayGroup(sbitsAggregateFunc* aggFunc, sbitsSchema* schema, void* recordBuffer, const void* lastRecord) {
     // Put day in record
     uint32_t day = dayGroup(lastRecord);
-    memcpy((int8_t*)recordBuffer + getColOffsetFromSchema(schema, aggrOp->colNum), &day, sizeof(uint32_t));
+    memcpy((int8_t*)recordBuffer + getColOffsetFromSchema(schema, aggFunc->colNum), &day, sizeof(uint32_t));
 }
 
 void customShiftInit(sbitsOperator* operator) {
