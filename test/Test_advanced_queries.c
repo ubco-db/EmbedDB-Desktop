@@ -172,7 +172,7 @@ void test_aggregate() {
     sbitsOperator* selectOp = createSelectionOperator(scanOp, 3, SELECT_GTE, &selVal);
     sbitsAggregateFunc groupName = {NULL, NULL, writeDayGroup, NULL, 4};
     sbitsAggregateFunc* counter = createCountAggregate();
-    sbitsAggregateFunc* sum = createSumAggregate(8, -4);
+    sbitsAggregateFunc* sum = createSumAggregate(2);
     sbitsAggregateFunc aggFunctions[] = {groupName, *counter, *sum};
     uint32_t functionsLength = 3;
     sbitsOperator* aggOp = createAggregateOperator(selectOp, sameDayGroup, aggFunctions, functionsLength);

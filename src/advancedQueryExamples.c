@@ -161,7 +161,7 @@ void main() {
     sbitsOperator* selectOp3 = createSelectionOperator(scanOp3, 3, SELECT_GTE, &selVal);
     sbitsAggregateFunc groupName = {NULL, NULL, writeDayGroup, NULL, 4};
     sbitsAggregateFunc* counter = createCountAggregate();
-    sbitsAggregateFunc* sum = createSumAggregate(8, -4);
+    sbitsAggregateFunc* sum = createSumAggregate(2);
     sbitsAggregateFunc aggFunctions[] = {groupName, *counter, *sum};
     uint32_t functionsLength = 3;
     sbitsOperator* aggOp3 = createAggregateOperator(selectOp3, sameDayGroup, aggFunctions, functionsLength);

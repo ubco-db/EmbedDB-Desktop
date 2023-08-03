@@ -457,7 +457,7 @@ int8_t nextAggregate(sbitsOperator* operator) {
     // Reset each operator
     for (int i = 0; i < state->functionsLength; i++) {
         if (state->functions[i].reset != NULL) {
-            state->functions[i].reset(state->functions + i);
+            state->functions[i].reset(state->functions + i, input->schema);
         }
     }
 
@@ -468,7 +468,7 @@ int8_t nextAggregate(sbitsOperator* operator) {
         recordsInGroup = 1;
         for (int i = 0; i < state->functionsLength; i++) {
             if (state->functions[i].add != NULL) {
-                state->functions[i].add(state->functions + i, state->lastRecordBuffer);
+                state->functions[i].add(state->functions + i, input->schema, state->lastRecordBuffer);
             }
         }
     }
@@ -480,7 +480,7 @@ int8_t nextAggregate(sbitsOperator* operator) {
             recordsInGroup = 1;
             for (int i = 0; i < state->functionsLength; i++) {
                 if (state->functions[i].add != NULL) {
-                    state->functions[i].add(state->functions + i, input->recordBuffer);
+                    state->functions[i].add(state->functions + i, input->schema, input->recordBuffer);
                 }
             }
         } else {
@@ -715,17 +715,17 @@ sbitsOperator* createKeyJoinOperator(sbitsOperator* input1, sbitsOperator* input
     return operator;
 }
 
-void countReset(sbitsAggregateFunc* aggFunc) {
+void countReset(sbitsAggregateFunc* aggFunc, sbitsSchema* inputSchema) {
     *(uint32_t*)aggFunc->state = 0;
 }
 
-void countAdd(sbitsAggregateFunc* aggFunc, const void* recordBuffer) {
+void countAdd(sbitsAggregateFunc* aggFunc, sbitsSchema* inputSchema, const void* recordBuffer) {
     (*(uint32_t*)aggFunc->state)++;
 }
 
-void countCompute(sbitsAggregateFunc* aggFunc, sbitsSchema* schema, void* recordBuffer, const void* lastRecord) {
+void countCompute(sbitsAggregateFunc* aggFunc, sbitsSchema* outputSchema, void* recordBuffer, const void* lastRecord) {
     // Put count in record
-    memcpy((int8_t*)recordBuffer + getColOffsetFromSchema(schema, aggFunc->colNum), aggFunc->state, sizeof(uint32_t));
+    memcpy((int8_t*)recordBuffer + getColOffsetFromSchema(outputSchema, aggFunc->colNum), aggFunc->state, sizeof(uint32_t));
 }
 
 /**
@@ -741,16 +741,19 @@ sbitsAggregateFunc* createCountAggregate() {
     return aggFunc;
 }
 
-void sumReset(sbitsAggregateFunc* aggFunc) {
+void sumReset(sbitsAggregateFunc* aggFunc, sbitsSchema* inputSchema) {
+    if (abs(inputSchema->columnSizes[*((uint8_t*)aggFunc->state + sizeof(int64_t))]) > 8) {
+        printf("WARNING: Can't use this sum function for columns bigger than 8 bytes\n");
+    }
     *(int64_t*)aggFunc->state = 0;
 }
 
-void sumAdd(sbitsAggregateFunc* aggFunc, const void* recordBuffer) {
-    uint8_t colOffset = *((uint8_t*)aggFunc->state + sizeof(int64_t));
-    int8_t colSize = *((int8_t*)aggFunc->state + sizeof(int64_t) + sizeof(uint8_t));
-    int8_t isSigned = colSize < 0;
+void sumAdd(sbitsAggregateFunc* aggFunc, sbitsSchema* inputSchema, const void* recordBuffer) {
+    uint8_t colNum = *((uint8_t*)aggFunc->state + sizeof(int64_t));
+    int8_t colSize = inputSchema->columnSizes[colNum];
+    int8_t isSigned = SBITS_IS_COL_SIGNED(colSize);
     colSize = min(abs(colSize), sizeof(int64_t));
-    void* colPos = (int8_t*)recordBuffer + colOffset;
+    void* colPos = (int8_t*)recordBuffer + getColOffsetFromSchema(inputSchema, colNum);
     if (isSigned) {
         // Get val to sum from record
         int64_t val = 0;
@@ -768,28 +771,22 @@ void sumAdd(sbitsAggregateFunc* aggFunc, const void* recordBuffer) {
     }
 }
 
-void sumCompute(sbitsAggregateFunc* aggFunc, sbitsSchema* schema, void* recordBuffer, const void* lastRecord) {
+void sumCompute(sbitsAggregateFunc* aggFunc, sbitsSchema* outputSchema, void* recordBuffer, const void* lastRecord) {
     // Put count in record
-    memcpy((int8_t*)recordBuffer + getColOffsetFromSchema(schema, aggFunc->colNum), aggFunc->state, sizeof(int64_t));
+    memcpy((int8_t*)recordBuffer + getColOffsetFromSchema(outputSchema, aggFunc->colNum), aggFunc->state, sizeof(int64_t));
 }
 
 /**
  * @brief	Creates an aggregate function to sum a column over a group. To be used in combination with an sbitsOperator produced by createAggregateOperator. Column must be no bigger than 8 bytes.
- * @param	colOffset	The number of bytes from the start of the record to the start of the column you want to sum
- * @param	colSize		The size of the column to sum in bytes
+ * @param	colNum	The index (zero-indexed) of the column which you want to sum. Column must be <= 8 bytes
  */
-sbitsAggregateFunc* createSumAggregate(uint8_t colOffset, int8_t colSize) {
+sbitsAggregateFunc* createSumAggregate(uint8_t colNum) {
     sbitsAggregateFunc* aggFunc = malloc(sizeof(sbitsAggregateFunc));
     aggFunc->reset = sumReset;
     aggFunc->add = sumAdd;
     aggFunc->compute = sumCompute;
-    aggFunc->state = malloc(2 * sizeof(int8_t) + sizeof(int64_t));
-    *((uint8_t*)aggFunc->state + sizeof(int64_t)) = colOffset;
-    if (abs(colSize) > 8) {
-        printf("ERROR: Can't use this sum function for columns bigger than 8 bytes\n");
-        return NULL;
-    }
-    *((int8_t*)aggFunc->state + sizeof(int64_t) + sizeof(uint8_t)) = colSize;
+    aggFunc->state = malloc(sizeof(int8_t) + sizeof(int64_t));
+    *((uint8_t*)aggFunc->state + sizeof(int64_t)) = colNum;
     aggFunc->colSize = -8;
     return aggFunc;
 }

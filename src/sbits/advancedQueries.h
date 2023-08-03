@@ -15,19 +15,19 @@ typedef struct sbitsAggregateFunc {
     /**
      * @brief	Resets the state
      */
-    void (*reset)(struct sbitsAggregateFunc* aggFunc);
+    void (*reset)(struct sbitsAggregateFunc* aggFunc, sbitsSchema* inputSchema);
 
     /**
      * @brief	Adds another record to the group and updates the state
      * @param	state	The state tracking the value of the aggregate function e.g. sum
      * @param	record	The record being added
      */
-    void (*add)(struct sbitsAggregateFunc* aggFunc, const void* record);
+    void (*add)(struct sbitsAggregateFunc* aggFunc, sbitsSchema* inputSchema, const void* record);
 
     /**
      * @brief	Finalize aggregate result into the record buffer and modify the schema accordingly. Is called once right before aggroup returns.
      */
-    void (*compute)(struct sbitsAggregateFunc* aggFunc, sbitsSchema* schema, void* recordBuffer, const void* lastRecord);
+    void (*compute)(struct sbitsAggregateFunc* aggFunc, sbitsSchema* outputSchema, void* recordBuffer, const void* lastRecord);
 
     /**
      * @brief	A user-allocated space where the operator saves its state. E.g. a sum operator might have 4 bytes allocated to store the sum of all data
@@ -148,9 +148,8 @@ sbitsAggregateFunc* createCountAggregate();
 
 /**
  * @brief	Creates an aggregate function to sum a column over a group. To be used in combination with an sbitsOperator produced by createAggregateOperator. Column must be no bigger than 8 bytes.
- * @param	colOffset	The number of bytes from the start of the record to the start of the column you want to sum
- * @param	colSize		The size of the column to sum in bytes
+ * @param	colNum	The index (zero-indexed) of the column which you want to sum. Column must be <= 8 bytes
  */
-sbitsAggregateFunc* createSumAggregate(uint8_t colOffset, int8_t colSize);
+sbitsAggregateFunc* createSumAggregate(uint8_t colNum);
 
 #endif
