@@ -152,4 +152,25 @@ sbitsAggregateFunc* createCountAggregate();
  */
 sbitsAggregateFunc* createSumAggregate(uint8_t colNum);
 
+/**
+ * @brief	Creates an aggregate function to find the min value in a group
+ * @param	colNum	The zero-indexed column to find the min of
+ * @param	colSize	The size, in bytes, of the column to find the min of. Negative number represents a signed number, positive is unsigned.
+ */
+sbitsAggregateFunc* createMinAggregate(uint8_t colNum, int8_t colSize);
+
+/**
+ * @brief	Creates an aggregate function to find the max value in a group
+ * @param	colNum	The zero-indexed column to find the max of
+ * @param	colSize	The size, in bytes, of the column to find the max of. Negative number represents a signed number, positive is unsigned.
+ */
+sbitsAggregateFunc* createMaxAggregate(uint8_t colNum, int8_t colSize);
+
+/**
+ * @brief	Creates an operator to compute the average of a column over a group. **WARNING: Outputs a floating point number that may not be compatible with other operators**
+ * @param	colNum			Zero-indexed column to take average of
+ * @param	outputFloatSize	Size of float to output. Must be either 4 (float) or 8 (double)
+ */
+sbitsAggregateFunc* createAvgAggregate(uint8_t colNum, int8_t outputFloatSize);
+
 #endif

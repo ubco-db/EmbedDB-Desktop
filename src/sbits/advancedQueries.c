@@ -796,6 +796,228 @@ sbitsAggregateFunc* createSumAggregate(uint8_t colNum) {
     return aggFunc;
 }
 
+struct minMaxState {
+    uint8_t colNum;  // Which column of input to use
+    void* current;   // The value currently regarded as the min/max
+};
+
+void minReset(sbitsAggregateFunc* aggFunc, sbitsSchema* inputSchema) {
+    struct minMaxState* state = aggFunc->state;
+    int8_t colSize = inputSchema->columnSizes[state->colNum];
+    if (aggFunc->colSize != colSize) {
+        printf("WARNING: Your provided column size for min aggregate function doesn't match the column size in the input schema\n");
+    }
+    int8_t isSigned = SBITS_IS_COL_SIGNED(colSize);
+    colSize = abs(colSize);
+    memset(state->current, 0xff, colSize);
+    if (isSigned) {
+        // If the number is signed, flip MSB else it will read as -1, not MAX_INT
+        memset((int8_t*)state->current + colSize - 1, 0x7f, 1);
+    }
+}
+
+void minAdd(sbitsAggregateFunc* aggFunc, sbitsSchema* inputSchema, const void* record) {
+    struct minMaxState* state = aggFunc->state;
+    int8_t colSize = inputSchema->columnSizes[state->colNum];
+    int8_t isSigned = SBITS_IS_COL_SIGNED(colSize);
+    colSize = abs(colSize);
+    void* newValue = (int8_t*)record + getColOffsetFromSchema(inputSchema, state->colNum);
+    if (compare(newValue, SELECT_LT, state->current, isSigned, colSize)) {
+        memcpy(state->current, newValue, colSize);
+    }
+}
+
+void minMaxCompute(sbitsAggregateFunc* aggFunc, sbitsSchema* outputSchema, void* recordBuffer, const void* lastRecord) {
+    // Put count in record
+    memcpy((int8_t*)recordBuffer + getColOffsetFromSchema(outputSchema, aggFunc->colNum), ((struct minMaxState*)aggFunc->state)->current, abs(outputSchema->columnSizes[aggFunc->colNum]));
+}
+
+/**
+ * @brief	Creates an aggregate function to find the min value in a group
+ * @param	colNum	The zero-indexed column to find the min of
+ * @param	colSize	The size, in bytes, of the column to find the min of. Negative number represents a signed number, positive is unsigned.
+ */
+sbitsAggregateFunc* createMinAggregate(uint8_t colNum, int8_t colSize) {
+    sbitsAggregateFunc* aggFunc = malloc(sizeof(sbitsAggregateFunc));
+    if (aggFunc == NULL) {
+        printf("ERROR: Failed to allocate while creating min aggregate function\n");
+        return NULL;
+    }
+    struct minMaxState* state = malloc(sizeof(struct minMaxState));
+    if (state == NULL) {
+        printf("ERROR: Failed to allocate while creating min aggregate function\n");
+        return NULL;
+    }
+    state->colNum = colNum;
+    state->current = malloc(abs(colSize));
+    if (state->current == NULL) {
+        printf("ERROR: Failed to allocate while creating min aggregate function\n");
+        return NULL;
+    }
+    aggFunc->state = state;
+    aggFunc->colSize = colSize;
+    aggFunc->reset = minReset;
+    aggFunc->add = minAdd;
+    aggFunc->compute = minMaxCompute;
+
+    return aggFunc;
+}
+
+void maxReset(sbitsAggregateFunc* aggFunc, sbitsSchema* inputSchema) {
+    struct minMaxState* state = aggFunc->state;
+    int8_t colSize = inputSchema->columnSizes[state->colNum];
+    if (aggFunc->colSize != colSize) {
+        printf("WARNING: Your provided column size for max aggregate function doesn't match the column size in the input schema\n");
+    }
+    int8_t isSigned = SBITS_IS_COL_SIGNED(colSize);
+    colSize = abs(colSize);
+    memset(state->current, 0, colSize);
+    if (isSigned) {
+        // If the number is signed, flip MSB else it will read as 0, not MIN_INT
+        memset((int8_t*)state->current + colSize - 1, 0x80, 1);
+    }
+}
+
+void maxAdd(sbitsAggregateFunc* aggFunc, sbitsSchema* inputSchema, const void* record) {
+    struct minMaxState* state = aggFunc->state;
+    int8_t colSize = inputSchema->columnSizes[state->colNum];
+    int8_t isSigned = SBITS_IS_COL_SIGNED(colSize);
+    colSize = abs(colSize);
+    void* newValue = (int8_t*)record + getColOffsetFromSchema(inputSchema, state->colNum);
+    if (compare(newValue, SELECT_GT, state->current, isSigned, colSize)) {
+        memcpy(state->current, newValue, colSize);
+    }
+}
+
+/**
+ * @brief	Creates an aggregate function to find the max value in a group
+ * @param	colNum	The zero-indexed column to find the max of
+ * @param	colSize	The size, in bytes, of the column to find the max of. Negative number represents a signed number, positive is unsigned.
+ */
+sbitsAggregateFunc* createMaxAggregate(uint8_t colNum, int8_t colSize) {
+    sbitsAggregateFunc* aggFunc = malloc(sizeof(sbitsAggregateFunc));
+    if (aggFunc == NULL) {
+        printf("ERROR: Failed to allocate while creating max aggregate function\n");
+        return NULL;
+    }
+    struct minMaxState* state = malloc(sizeof(struct minMaxState));
+    if (state == NULL) {
+        printf("ERROR: Failed to allocate while creating max aggregate function\n");
+        return NULL;
+    }
+    state->colNum = colNum;
+    state->current = malloc(abs(colSize));
+    if (state->current == NULL) {
+        printf("ERROR: Failed to allocate while creating max aggregate function\n");
+        return NULL;
+    }
+    aggFunc->state = state;
+    aggFunc->colSize = colSize;
+    aggFunc->reset = maxReset;
+    aggFunc->add = maxAdd;
+    aggFunc->compute = minMaxCompute;
+
+    return aggFunc;
+}
+
+struct avgState {
+    uint8_t colNum;   // Column to take avg of
+    int8_t isSigned;  // Is input column signed?
+    uint32_t count;   // Count of records seen in group so far
+    int64_t sum;      // Sum of records seen in group so far
+};
+
+void avgReset(struct sbitsAggregateFunc* aggFunc, sbitsSchema* inputSchema) {
+    struct avgState* state = aggFunc->state;
+    if (abs(inputSchema->columnSizes[state->colNum]) > 8) {
+        printf("WARNING: Can't use this sum function for columns bigger than 8 bytes\n");
+    }
+    state->count = 0;
+    state->sum = 0;
+    state->isSigned = SBITS_IS_COL_SIGNED(inputSchema->columnSizes[state->colNum]);
+}
+
+void avgAdd(struct sbitsAggregateFunc* aggFunc, sbitsSchema* inputSchema, const void* record) {
+    struct avgState* state = aggFunc->state;
+    uint8_t colNum = state->colNum;
+    int8_t colSize = inputSchema->columnSizes[colNum];
+    int8_t isSigned = SBITS_IS_COL_SIGNED(colSize);
+    colSize = min(abs(colSize), sizeof(int64_t));
+    void* colPos = (int8_t*)record + getColOffsetFromSchema(inputSchema, colNum);
+    if (isSigned) {
+        // Get val to sum from record
+        int64_t val = 0;
+        memcpy(&val, colPos, colSize);
+        // Extend two's complement sign to fill 64 bit number if val is negative
+        int64_t sign = val & (128 << ((colSize - 1) * 8));
+        if (sign != 0) {
+            memset(((int8_t*)(&val)) + colSize, 0xff, sizeof(int64_t) - colSize);
+        }
+        state->sum += val;
+    } else {
+        uint64_t val = 0;
+        memcpy(&val, colPos, colSize);
+        val += (uint64_t)state->sum;
+        memcpy(&state->sum, &val, sizeof(uint64_t));
+    }
+    state->count++;
+}
+
+void avgCompute(struct sbitsAggregateFunc* aggFunc, sbitsSchema* outputSchema, void* recordBuffer, const void* lastRecord) {
+    struct avgState* state = aggFunc->state;
+    if (aggFunc->colSize == 8) {
+        double avg = state->sum / (double)state->count;
+        if (state->isSigned) {
+            avg = state->sum / (double)state->count;
+        } else {
+            avg = (uint64_t)state->sum / (double)state->count;
+        }
+        memcpy((int8_t*)recordBuffer + getColOffsetFromSchema(outputSchema, aggFunc->colNum), &avg, sizeof(double));
+    } else {
+        float avg;
+        if (state->isSigned) {
+            avg = state->sum / (float)state->count;
+        } else {
+            avg = (uint64_t)state->sum / (float)state->count;
+        }
+        memcpy((int8_t*)recordBuffer + getColOffsetFromSchema(outputSchema, aggFunc->colNum), &avg, sizeof(float));
+    }
+}
+
+/**
+ * @brief	Creates an operator to compute the average of a column over a group. **WARNING: Outputs a floating point number that may not be compatible with other operators**
+ * @param	colNum			Zero-indexed column to take average of
+ * @param	outputFloatSize	Size of float to output. Must be either 4 (float) or 8 (double)
+ */
+sbitsAggregateFunc* createAvgAggregate(uint8_t colNum, int8_t outputFloatSize) {
+    sbitsAggregateFunc* aggFunc = malloc(sizeof(sbitsAggregateFunc));
+    if (aggFunc == NULL) {
+        printf("ERROR: Failed to allocate while creating avg aggregate function\n");
+        return NULL;
+    }
+    struct avgState* state = malloc(sizeof(struct avgState));
+    if (state == NULL) {
+        printf("ERROR: Failed to allocate while creating avg aggregate function\n");
+        return NULL;
+    }
+    state->colNum = colNum;
+    aggFunc->state = state;
+    if (outputFloatSize > 8 || (outputFloatSize < 8 && outputFloatSize > 4)) {
+        printf("WARNING: The size of the output float for AVG must be exactly 4 or 8. Defaulting to 8.");
+        aggFunc->colSize = 8;
+    } else if (outputFloatSize < 4) {
+        printf("WARNING: The size of the output float for AVG must be exactly 4 or 8. Defaulting to 4.");
+        aggFunc->colSize = 4;
+    } else {
+        aggFunc->colSize = outputFloatSize;
+    }
+    aggFunc->reset = avgReset;
+    aggFunc->add = avgAdd;
+    aggFunc->compute = avgCompute;
+
+    return aggFunc;
+}
+
 /**
  * @brief	Completely free a chain of functions recursively after it's already been closed.
  */

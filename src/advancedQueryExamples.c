@@ -161,9 +161,12 @@ void main() {
     sbitsOperator* selectOp3 = createSelectionOperator(scanOp3, 3, SELECT_GTE, &selVal);
     sbitsAggregateFunc groupName = {NULL, NULL, writeDayGroup, NULL, 4};
     sbitsAggregateFunc* counter = createCountAggregate();
+    sbitsAggregateFunc* maxWind = createMaxAggregate(3, -4);
+    sbitsAggregateFunc* avgWind = createAvgAggregate(3, 4);
     sbitsAggregateFunc* sum = createSumAggregate(2);
-    sbitsAggregateFunc aggFunctions[] = {groupName, *counter, *sum};
-    uint32_t functionsLength = 3;
+    sbitsAggregateFunc* minTemp = createMinAggregate(1, -4);
+    sbitsAggregateFunc aggFunctions[] = {groupName, *counter, *maxWind, *avgWind, *sum, *minTemp};
+    uint32_t functionsLength = 6;
     sbitsOperator* aggOp3 = createAggregateOperator(selectOp3, sameDayGroup, aggFunctions, functionsLength);
     uint32_t minWindCount = 50;
     sbitsOperator* countSelect3 = createSelectionOperator(aggOp3, 1, SELECT_GT, &minWindCount);
@@ -173,11 +176,11 @@ void main() {
     printLimit = 10000;
     recordBuffer = countSelect3->recordBuffer;
     printf("\nCount Result:\n");
-    printf("Day        | Count | Sum\n");
-    printf("-----------+-------+-----\n");
+    printf("Day   | Count | MxWnd | avgWnd | Sum      | MnTmp\n");
+    printf("------+-------+-------+--------+----------+-------\n");
     while (exec(countSelect3)) {
         if (++recordsReturned < printLimit) {
-            printf("%-10lu | %-5lu | %lld\n", recordBuffer[0], recordBuffer[1], ((int64_t*)recordBuffer)[1]);
+            printf("%5lu | %5lu | %5.1f | %6.1f | %8lld | %5.1f\n", recordBuffer[0], recordBuffer[1], recordBuffer[2] / 10.0, ((float*)recordBuffer + 3)[3] / 10, *(int64_t*)((uint32_t*)recordBuffer + 4), recordBuffer[6] / 10.0);
         }
     }
     if (recordsReturned > printLimit) {

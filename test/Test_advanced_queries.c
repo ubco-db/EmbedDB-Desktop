@@ -172,9 +172,12 @@ void test_aggregate() {
     sbitsOperator* selectOp = createSelectionOperator(scanOp, 3, SELECT_GTE, &selVal);
     sbitsAggregateFunc groupName = {NULL, NULL, writeDayGroup, NULL, 4};
     sbitsAggregateFunc* counter = createCountAggregate();
+    sbitsAggregateFunc* maxWind = createMaxAggregate(3, -4);
+    sbitsAggregateFunc* avgWind = createAvgAggregate(3, 4);
     sbitsAggregateFunc* sum = createSumAggregate(2);
-    sbitsAggregateFunc aggFunctions[] = {groupName, *counter, *sum};
-    uint32_t functionsLength = 3;
+    sbitsAggregateFunc* minTemp = createMinAggregate(1, -4);
+    sbitsAggregateFunc aggFunctions[] = {groupName, *counter, *maxWind, *avgWind, *sum, *minTemp};
+    uint32_t functionsLength = 6;
     sbitsOperator* aggOp = createAggregateOperator(selectOp, sameDayGroup, aggFunctions, functionsLength);
     aggOp->init(aggOp);
 
@@ -190,9 +193,18 @@ void test_aggregate() {
         uint32_t day = 0;
         uint32_t count = 0;
         int64_t sum = 0;
+        int32_t minTmp = INT32_MAX, maxWnd = INT32_MIN, avgSum = 0;
+        ;
         do {
             count++;
             sum += expectedRecord[2];
+            avgSum += expectedRecord[3];
+            if (expectedRecord[3] > maxWnd) {
+                maxWnd = expectedRecord[3];
+            }
+            if (expectedRecord[1] < minTmp) {
+                minTmp = expectedRecord[1];
+            }
             expectedRecord = (int32_t*)nextRecord(uwaData);
             while (expectedRecord[3] < selVal) {
                 expectedRecord = (int32_t*)nextRecord(uwaData);
@@ -206,7 +218,10 @@ void test_aggregate() {
         uwaData->pageRecord--;
         TEST_ASSERT_EQUAL_UINT32_MESSAGE(firstInGroupDay, recordBuffer[0], "Group label is wrong");
         TEST_ASSERT_EQUAL_UINT32_MESSAGE(count, recordBuffer[1], "Count is wrong");
-        TEST_ASSERT_EQUAL_INT64_MESSAGE(sum, ((int64_t*)recordBuffer)[1], "Sum is wrong");
+        TEST_ASSERT_EQUAL_INT32_MESSAGE(maxWnd, recordBuffer[2], "Max is wrong");
+        TEST_ASSERT_EQUAL_FLOAT_MESSAGE((float)avgSum / count, ((float*)recordBuffer)[3], "Average is wrong");
+        TEST_ASSERT_EQUAL_INT64_MESSAGE(sum, *(int64_t*)(recordBuffer + 4), "Sum is wrong");
+        TEST_ASSERT_EQUAL_INT32_MESSAGE(minTmp, recordBuffer[6], "Min is wrong");
     }
 
     // Free states
