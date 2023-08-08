@@ -12,7 +12,7 @@
     -   [Final Initialization](#final-initilization)
 -   [Setup Index](#setup-index-method-and-optional-radix-table)
 -   [Insert Records](#insert-put-items-into-table)
--   [Query Records](#query-get-items-from-tree)
+-   [Query Records](#query-get-items-from-table)
 -   [Iterate over Records](#iterate-through-items-in-tree)
     -   [Filter by key](#iterator-with-filter-on-keys)
     -   [Filter by data](#iterator-with-filter-on-data)
@@ -160,7 +160,9 @@ Flush the sbits buffer to write the currently buffered page to storage. Not nece
 sbitsFlush(state);
 ```
 
-## Query (get) items from tree
+## Query (get) items from table
+
+_For a simpler query interface, see [Simple Query Interface](advancedQueries.md)_
 
 `keyPtr` points to key to search for. `dataPtr` must point to pre-allocated space to copy data into.
 

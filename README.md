@@ -32,6 +32,7 @@ A paper describing SBITS use for time series indexing is [available from the pub
 ### Additional documentation files
 
 -   [Setup & usage](docs/usageInfo.md)
+-   [Simple Query Interface](docs/advancedQueries.md)
 -   [Building project](docs/buildRunInformation.md)
 -   [Test suite](docs/testInfo.md)
 

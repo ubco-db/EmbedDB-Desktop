@@ -32,8 +32,9 @@ PATHR = build/results/
 PATHA = build/artifacts/
 
 BUILD_PATHS = $(PATHB) $(PATHD) $(PATHO) $(PATHR) $(PATHA)
+
+OBJECTS = $(PATHO)sbits.o $(PATHO)spline.o $(PATHO)radixspline.o $(PATHO)utilityFunctions.o $(PATHO)advancedQueries.o $(PATHO)schema.o
 CFLAGS= -I. -I$(PATHU) -I$(PATHS) -DTEST
-OBJECTS = $(PATHO)sbits.o $(PATHO)spline.o $(PATHO)radixspline.o $(PATHO)utilityFunctions.o
 
 SRCT = $(wildcard $(PATHT)*.c)
 
