@@ -105,7 +105,7 @@ void printSchema(sbitsSchema* schema) {
             printf(", ");
         }
         int8_t col = schema->columnSizes[i];
-        printf("%sint%d", SBITS_IS_COL_SIGNED(col) ? "" : "u", abs(col));
+        printf("%sint%d", SBITS_IS_COL_SIGNED(col) ? "" : "u", abs(col) * 8);
     }
     printf("\n");
 }
