@@ -46,25 +46,20 @@ extern "C" {
 /* Define type for keys and location ids. */
 typedef uint32_t id_t;
 
-typedef struct {
-    void *key;
-    uint32_t page;
-} point;
-
 typedef struct spline_s spline;
 
 #include "radixspline.h"
 struct spline_s {
     size_t count;         /* Number of points in spline */
     size_t size;          /* Maximum number of points */
-    point *points;        /* Array of points */
-    point upper;          /* Upper spline limit */
-    point lower;          /* Lower spline limit */
-    id_t lastLoc;         /* Location of previous spline key */
+    void *points;        /* Array of points */
+    void *upper;          /* Upper spline limit */
+    void *lower;          /* Lower spline limit */
+    uint32_t lastLoc;         /* Location of previous spline key */
     void *lastKey;        /* Previous spline key */
     uint32_t maxError;    /* Maximum error */
     uint32_t numAddCalls; /* Number of times the add method has been called */
-    id_t tempLastPoint;   /* Last spline point is temporary if value is not 0 */
+    uint32_t tempLastPoint;   /* Last spline point is temporary if value is not 0 */
     uint8_t keySize;      /* Size of key in bytes */
 };
 
