@@ -228,7 +228,7 @@ void splinePrint(spline *spl) {
     uint8_t pointSize = spl->keySize + sizeof(uint32_t);
     for (id_t i = 0; i < spl->count; i++) {
         memcpy(&keyVal, spl->points + (i * pointSize), spl->keySize);
-        printf("[%i]: (%li, %i)\n", i, keyVal, spl->points + (i * pointSize) + spl->keySize);
+        printf("[%i]: (%li, %i)\n", i, keyVal, *(uint32_t*)(spl->points + (i * pointSize) + spl->keySize));
     }
     printf("\n");
 }
