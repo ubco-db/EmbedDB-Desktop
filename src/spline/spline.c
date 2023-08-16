@@ -122,9 +122,8 @@ void splineAdd(spline *spl, void *key, uint32_t page) {
     if (spl->tempLastPoint != 0) {
         spl->count--;
     }
-    void *lastKey;
+    
     uint32_t lastPage = 0;
-
     uint8_t pointSize = spl->keySize + sizeof(uint32_t);
 
     uint64_t lastPointKey = 0, upperKey = 0, lowerKey = 0;
@@ -186,7 +185,7 @@ void splineAdd(spline *spl, void *key, uint32_t page) {
     memcpy(spl->lastKey, key, spl->keySize);
     assert(spl->count < spl->size);
     memcpy(spl->points + (spl->count * pointSize), spl->lastKey, spl->keySize);
-    memcpy(spl->points + (spl->count * pointSize) + spl->keySize, spl->lastLoc, sizeof(uint32_t));
+    memcpy(spl->points + (spl->count * pointSize) + spl->keySize, &spl->lastLoc, sizeof(uint32_t));
     spl->count++;
 
     spl->tempLastPoint = 1;

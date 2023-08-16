@@ -347,7 +347,7 @@ void radixsplineFind(radixspline *rsidx, void *key, int8_t compareKey(void *, vo
     *low = (rsidx->spl->maxError > *loc) ? 0 : *loc - rsidx->spl->maxError;
     void* lastSplinePoint;
     uint8_t pointSize = rsidx->spl->keySize + sizeof(uint32_t);
-    memcpy(&lastSplinePoint, rsidx->spl->points + (pointSize * (rsidx->spl->count - 1), pointSize);
+    memcpy(&lastSplinePoint, rsidx->spl->points + (pointSize * (rsidx->spl->count - 1)), pointSize);
     uint64_t lastKey = 0;
     memcpy(&lastKey, lastSplinePoint, rsidx->keySize);
     *high = (*loc + rsidx->spl->maxError > lastKey) ? lastKey : *loc + rsidx->spl->maxError;

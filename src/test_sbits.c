@@ -92,12 +92,12 @@ void runalltests_sbits() {
         // testRecords = 4085589;
 
         // Watch_gyroscope.bin
-        infile = fopen("data/Watch_gyroscope.bin", "r+b");
-        infileRandom = fopen("data/Watch_gyroscope_randomized.bin", "r+b");
-        minRange = 0;
-        maxRange = INT32_MAX;
-        numRecords = 2865713;
-        testRecords = 2865713;
+        // infile = fopen("data/Watch_gyroscope.bin", "r+b");
+        // infileRandom = fopen("data/Watch_gyroscope_randomized.bin", "r+b");
+        // minRange = 0;
+        // maxRange = INT32_MAX;
+        // numRecords = 2865713;
+        // testRecords = 2865713;
 
         // PRSA_Data_Hongxin.bin
         // infile = fopen("data/PRSA_Data_Hongxin.bin", "r+b");
@@ -118,13 +118,13 @@ void runalltests_sbits() {
         // "r+b"); minRange = 1314604380; maxRange = 1609487580; numRecords =
         // 100001; testRecords = 100001;
 
-        // infile = fopen("data/uwa500K.bin", "r+b");
+        infile = fopen("data/uwa500K.bin", "r+b");
         // infileRandom =
         // fopen("data/uwa_data_only_2000_500KSorted_randomized.bin", "r+b");
-        // minRange = 946713600;
-        // maxRange = 977144040;
-        // numRecords = 500000;
-        // testRecords = 500000;
+        minRange = 946713600;
+        maxRange = 977144040;
+        numRecords = 500000;
+        testRecords = 500000;
 
         splineMaxError = 1;
         useRandom = 0;
