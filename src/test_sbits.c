@@ -140,6 +140,7 @@ void runalltests_sbits() {
         state->keySize = 4;
         state->dataSize = 12;
         state->pageSize = 512;
+        state->numSplinePoints = 300;
         state->bitmapSize = 0;
         state->bufferSizeInBlocks = M;
         state->buffer = malloc((size_t)state->bufferSizeInBlocks * state->pageSize);

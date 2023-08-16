@@ -36,6 +36,7 @@ void setUp(void) {
     stateUWA->eraseSizeInPages = 4;
     stateUWA->numDataPages = 20000;
     stateUWA->numIndexPages = 1000;
+    stateUWA->numSplinePoints = 300;
     char dataPath[] = "build/artifacts/dataFile.bin", indexPath[] = "build/artifacts/indexFile.bin";
     stateUWA->fileInterface = getFileInterface();
     stateUWA->dataFile = setupFile(dataPath);
@@ -60,6 +61,7 @@ void setUp(void) {
     stateSEA->eraseSizeInPages = 4;
     stateSEA->numDataPages = 20000;
     stateSEA->numIndexPages = 1000;
+    stateSEA->numSplinePoints = 300;
     char dataPath2[] = "build/artifacts/dataFile2.bin", indexPath2[] = "build/artifacts/indexFile2.bin";
     stateSEA->fileInterface = getFileInterface();
     stateSEA->dataFile = setupFile(dataPath2);

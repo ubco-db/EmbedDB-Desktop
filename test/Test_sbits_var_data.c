@@ -31,6 +31,7 @@ void initState(uint32_t dataSize) {
     state->dataSize = dataSize;
     state->pageSize = 512;
     state->bufferSizeInBlocks = 6;
+    state->numSplinePoints = 300;
     state->buffer = calloc(1, state->pageSize * state->bufferSizeInBlocks);
     state->numDataPages = 1000;
     state->numIndexPages = 48;

@@ -14,6 +14,7 @@ void setUp(void) {
     state->dataSize = 4;
     state->pageSize = 512;
     state->bufferSizeInBlocks = 6;
+    state->numSplinePoints = 300;
     state->buffer = calloc(1, state->pageSize * state->bufferSizeInBlocks);
     state->numDataPages = 65;
     state->numVarPages = 75;
@@ -38,6 +39,7 @@ void initalizeSbitsFromFile(void) {
     state->dataSize = 4;
     state->pageSize = 512;
     state->bufferSizeInBlocks = 6;
+    state->numSplinePoints = 300;
     state->buffer = calloc(1, state->pageSize * state->bufferSizeInBlocks);
     state->numDataPages = 65;
     state->numVarPages = 75;

@@ -133,11 +133,11 @@ void initBufferPage(sbitsState *state, int pageNum) {
  * @param   radixSize   number bits to be indexed by radix
  * @return  void
  */
-void initRadixSpline(sbitsState *state, uint64_t size, size_t radixSize) {
+void initRadixSpline(sbitsState *state, size_t radixSize) {
     spline *spl = (spline *)malloc(sizeof(spline));
     state->spl = spl;
 
-    splineInit(state->spl, size, state->indexMaxError, state->keySize);
+    splineInit(state->spl, state->numSplinePoints, state->indexMaxError, state->keySize);
 
     radixspline *rsidx = (radixspline *)malloc(sizeof(radixspline));
     state->rdix = rsidx;
@@ -221,10 +221,10 @@ int8_t sbitsInit(sbitsState *state, size_t indexMaxError) {
     /* Initalize the spline or radix spline structure if either are to be used */
     if (SEARCH_METHOD == 2) {
         if (RADIX_BITS > 0) {
-            initRadixSpline(state, ALLOCATED_SPLINE_POINTS, RADIX_BITS);
+            initRadixSpline(state, RADIX_BITS);
         } else {
             state->spl = malloc(sizeof(spline));
-            splineInit(state->spl, ALLOCATED_SPLINE_POINTS, indexMaxError, state->keySize);
+            splineInit(state->spl, state->numSplinePoints, indexMaxError, state->keySize);
         }
     }
 

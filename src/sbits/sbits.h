@@ -196,6 +196,7 @@ typedef struct {
     id_t currentVarLoc;                                                   /* Current variable address offset to write at (bytes from beginning of file) */
     void *buffer;                                                         /* Pre-allocated memory buffer for use by algorithm */
     spline *spl;                                                          /* Spline model */
+    uint32_t numSplinePoints;                                             /* Number of spline points to allocate */
     radixspline *rdix;                                                    /* Radix Spline search model */
     int32_t indexMaxError;                                                /* Max error for indexing structure (Spline or PGM) */
     int8_t bufferSizeInBlocks;                                            /* Size of buffer in blocks */

@@ -13,6 +13,7 @@ void setUp(void) {
     state->dataSize = 8;
     state->pageSize = 512;
     state->bufferSizeInBlocks = 6;
+    state->numSplinePoints = 300;
     state->buffer = calloc(1, state->pageSize * state->bufferSizeInBlocks);
     state->fileInterface = getFileInterface();
     char dataPath[] = "build/artifacts/dataFile.bin";
@@ -32,6 +33,7 @@ void initalizeSbitsFromFile(void) {
     state->dataSize = 8;
     state->pageSize = 512;
     state->bufferSizeInBlocks = 6;
+    state->numSplinePoints = 300;
     state->buffer = calloc(1, state->pageSize * state->bufferSizeInBlocks);
     state->fileInterface = getFileInterface();
     char dataPath[] = "build/artifacts/dataFile.bin";

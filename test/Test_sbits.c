@@ -13,6 +13,7 @@ void setUp(void) {
     state->dataSize = 4;
     state->pageSize = 512;
     state->bufferSizeInBlocks = 6;
+    state->numSplinePoints = 300;
     state->buffer = calloc(1, state->pageSize * state->bufferSizeInBlocks);
     state->numDataPages = 1000;
     state->parameters = SBITS_RESET_DATA;
