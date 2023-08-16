@@ -35,6 +35,7 @@
  */
 /******************************************************************************/
 #include "spline.h"
+
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -52,7 +53,7 @@ void splineInit(spline *spl, id_t size, size_t maxError, uint8_t keySize) {
     spl->count = 0;
     spl->size = size;
     spl->maxError = maxError;
-    spl->points = (void *) malloc(pointSize * size);
+    spl->points = (void *)malloc(pointSize * size);
     spl->tempLastPoint = 0;
     spl->keySize = keySize;
     spl->lastKey = malloc(keySize);
@@ -121,7 +122,7 @@ void splineAdd(spline *spl, void *key, uint32_t page) {
     if (spl->tempLastPoint != 0) {
         spl->count--;
     }
-    void* lastKey;
+    void *lastKey;
     uint32_t lastPage = 0;
 
     uint8_t pointSize = spl->keySize + sizeof(uint32_t);
@@ -139,16 +140,16 @@ void splineAdd(spline *spl, void *key, uint32_t page) {
     xdiff = keyVal - lastPointKey;
     ydiff = page - lastPage;
     upperXDiff = upperKey - lastPointKey;
-    upperYDiff = *((uint32_t*)(spl->upper + spl->keySize)) - lastPage;
+    upperYDiff = *((uint32_t *)(spl->upper + spl->keySize)) - lastPage;
     lowerXDiff = lowerKey - lastPointKey;
-    lowerYDiff = (int64_t)*((uint32_t*)(spl->lower + spl->keySize)) - lastPage;
+    lowerYDiff = (int64_t) * ((uint32_t *)(spl->lower + spl->keySize)) - lastPage;
 
     /* Check if next point still in error corridor */
     if (splineIsLeft(xdiff, ydiff, upperXDiff, upperYDiff) == 1 ||
         splineIsRight(xdiff, ydiff, lowerXDiff, lowerYDiff) == 1) {
         /* Point is not in error corridor. Add previous point to spline. */
         assert(spl->count < spl->size);
-        memcpy((void*)(spl->points + (spl->count * pointSize)), spl->lastKey, spl->keySize);
+        memcpy((void *)(spl->points + (spl->count * pointSize)), spl->lastKey, spl->keySize);
         memcpy(spl->points + (spl->count * pointSize) + spl->keySize, &spl->lastLoc, sizeof(uint32_t));
         spl->count++;
         spl->tempLastPoint = 0;
@@ -192,7 +193,6 @@ void splineAdd(spline *spl, void *key, uint32_t page) {
 }
 
 void splineClean(spline *spl) {
-    
 }
 
 /**
@@ -264,11 +264,11 @@ size_t pointsBinarySearch(spline *spl, int low, int high, void *key, int8_t comp
 
         uint8_t pointSize = spl->keySize + sizeof(uint32_t);
 
-        if (compareKey(arr[mid].key, key) >= 0 && compareKey(arr[mid - 1].key, key) <= 0)
+        if (compareKey(spl->points + (pointSize * mid), key) >= 0 && compareKey(spl->points + (pointSize * (mid - 1)), key) <= 0)
             return mid;
 
-        if (compareKey(arr[mid].key, key) > 0)
-            return pointsBinarySearch(arr, low, mid - 1, key, compareKey);
+        if (compareKey(spl->points + (pointSize * mid), key) > 0)
+            return pointsBinarySearch(spl, low, mid - 1, key, compareKey);
 
         return pointsBinarySearch(spl, mid + 1, high, key, compareKey);
     }
@@ -293,16 +293,17 @@ size_t pointsBinarySearch(spline *spl, int low, int high, void *key, int8_t comp
 void splineFind(spline *spl, void *key, int8_t compareKey(void *, void *), id_t *loc, id_t *low, id_t *high) {
     size_t pointIdx;
     uint64_t keyVal = 0, smallestKeyVal = 0, largestKeyVal = 0;
+    uint8_t pointSize = spl->keySize + sizeof(uint32_t);
     memcpy(&keyVal, key, spl->keySize);
-    memcpy(&smallestKeyVal, spl->points[0].key, spl->keySize);
-    memcpy(&largestKeyVal, spl->points[spl->count - 1].key, spl->keySize);
+    memcpy(&smallestKeyVal, spl->points, spl->keySize);
+    memcpy(&largestKeyVal, spl->points + ((spl->count - 1) * pointSize), spl->keySize);
 
-    if (compareKey(key, spl->points[0].key) < 0 || spl->count <= 1) {
+    if (compareKey(key, spl->points) < 0 || spl->count <= 1) {
         // Key is smaller than any we have on record
-        *loc = *low = *high = spl->points[0].page;
+        *loc = *low = *high = *(uint32_t*)(spl->points + spl->keySize);
         return;
-    } else if (compareKey(key, spl->points[spl->count - 1].key) > 0) {
-        *loc = *low = *high = spl->points[spl->count - 1].page;
+    } else if (compareKey(key, spl->points + ((spl->count - 1) * pointSize)) > 0) {
+        *loc = *low = *high = *(uint32_t*)(spl->points + ((spl->count - 1) * pointSize) + spl->keySize);
         return;
     } else {
         // Perform a binary seach to find the spline point above the key we're looking for
@@ -310,20 +311,22 @@ void splineFind(spline *spl, void *key, int8_t compareKey(void *, void *), id_t 
     }
 
     // Interpolate between two spline points
-    point down = spl->points[pointIdx - 1];
-    point up = spl->points[pointIdx];
+    void *downKey = spl->points + (pointSize * (pointIdx - 1));
+    uint32_t downPage = *(uint32_t*)(spl->points + (pointSize * (pointIdx - 1)) + spl->keySize);
+    void *upKey = spl->points + (pointSize * pointIdx);
+    uint32_t upPage = *(uint32_t*)(spl->points + (pointSize * pointIdx) + spl->keySize);
     uint64_t downKeyVal = 0, upKeyVal = 0;
-    memcpy(&downKeyVal, down.key, spl->keySize);
-    memcpy(&upKeyVal, up.key, spl->keySize);
+    memcpy(&downKeyVal, downKey, spl->keySize);
+    memcpy(&upKeyVal, upKey, spl->keySize);
 
     // Estimate location as page number
     // Keydiff * slope + y
-    *loc = (id_t)((keyVal - downKeyVal) * (up.page - down.page) / (long double)(upKeyVal - downKeyVal)) + down.page;
+    *loc = (id_t)((keyVal - downKeyVal) * (upPage - downPage) / (long double)(upKeyVal - downKeyVal)) + downPage;
 
     // Set error bounds based on maxError from spline construction
     *low = (spl->maxError > *loc) ? 0 : *loc - spl->maxError;
-    point lastSplinePoint = spl->points[spl->count - 1];
-    *high = (*loc + spl->maxError > lastSplinePoint.page) ? lastSplinePoint.page : *loc + spl->maxError;
+    uint32_t lastSplinePointPage = *(uint32_t*)(spl->points + (pointSize * (spl->count - 1)));
+    *high = (*loc + spl->maxError > lastSplinePointPage) ? lastSplinePointPage : *loc + spl->maxError;
 }
 
 /**
@@ -331,11 +334,8 @@ void splineFind(spline *spl, void *key, int8_t compareKey(void *, void *), id_t 
  * @param    spl        Spline structure
  */
 void splineClose(spline *spl) {
-    for (id_t i = 0; i < spl->size; i++) {
-        free(spl->points[i].key);
-    }
     free(spl->points);
     free(spl->lastKey);
-    free(spl->lower.key);
-    free(spl->upper.key);
+    free(spl->lower);
+    free(spl->upper);
 }
