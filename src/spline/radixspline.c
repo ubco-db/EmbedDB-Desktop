@@ -105,7 +105,7 @@ void radixsplineAddPoint(radixspline *rsidx, void *key, uint32_t page) {
     uint8_t pointSize = rsidx->spl->keySize + sizeof(uint32_t);
 
     // take the last point that was added to spline
-    key = (int8_t*)rsidx->spl->points + (pointSize * (rsidx->spl->count - 1));
+    key = (int8_t *)rsidx->spl->points + (pointSize * (rsidx->spl->count - 1));
 
     // Initialize table and minKey on first key added
     if (rsidx->pointsSeen == 0) {
@@ -198,8 +198,8 @@ size_t radixBinarySearch(radixspline *rsidx, int low, int high, void *key, int8_
     if (high >= low) {
         mid = low + (high - low) / 2;
         uint8_t pointSize = rsidx->spl->keySize + sizeof(uint32_t);
-        void *midKey = (int8_t*)arr + (pointSize * mid);
-        if (compareKey(midKey, key) >= 0 && compareKey((int8_t*)midKey - pointSize, key) <= 0)
+        void *midKey = (int8_t *)arr + (pointSize * mid);
+        if (compareKey(midKey, key) >= 0 && compareKey((int8_t *)midKey - pointSize, key) <= 0)
             return mid;
 
         if (compareKey(midKey, key) > 0)
@@ -312,15 +312,15 @@ size_t radixsplineEstimateLocation(radixspline *rsidx, void *key, int8_t compare
     /* Interpolate between two spline points */
     void *down, *up;
     uint8_t pointSize = rsidx->spl->keySize + sizeof(uint32_t);
-    down = (int8_t*)rsidx->spl->points + (pointSize * (index - 1));
-    up = (int8_t*)rsidx->spl->points + (pointSize * (index - 1));
+    down = (int8_t *)rsidx->spl->points + (pointSize * (index - 1));
+    up = (int8_t *)rsidx->spl->points + (pointSize * (index - 1));
 
     uint64_t downKey = 0, upKey = 0;
     memcpy(&downKey, down, rsidx->keySize);
     memcpy(&upKey, up, rsidx->keySize);
 
-    uint32_t upPage = *(uint32_t*)(up + rsidx->spl->keySize);
-    uint32_t downPage = *(uint32_t*)(down + rsidx->spl->keySize);
+    uint32_t upPage = *(uint32_t *)(up + rsidx->spl->keySize);
+    uint32_t downPage = *(uint32_t *)(down + rsidx->spl->keySize);
 
     /* Keydiff * slope + y */
     uint32_t estimatedPage = (uint32_t)((keyVal - downKey) * (upPage - downPage) / (long double)(upKey - downKey)) + downPage;
@@ -343,7 +343,7 @@ void radixsplineFind(radixspline *rsidx, void *key, int8_t compareKey(void *, vo
     /* Set error bounds based on maxError from spline construction */
     *low = (rsidx->spl->maxError > *loc) ? 0 : *loc - rsidx->spl->maxError;
     uint8_t pointSize = rsidx->spl->keySize + sizeof(uint32_t);
-    void* lastSplinePoint = (int8_t*)rsidx->spl->points + (pointSize * (rsidx->spl->count - 1));
+    void *lastSplinePoint = (int8_t *)rsidx->spl->points + (pointSize * (rsidx->spl->count - 1));
     uint64_t lastKey = 0;
     memcpy(&lastKey, lastSplinePoint, rsidx->keySize);
     *high = (*loc + rsidx->spl->maxError > lastKey) ? lastKey : *loc + rsidx->spl->maxError;
