@@ -193,7 +193,8 @@ void splineAdd(spline *spl, void *key, uint32_t page) {
     spl->tempLastPoint = 1;
 }
 
-void splineClean(spline *spl) {
+void splineClean(spline *spl, uint32_t numPoints) {
+    
 }
 
 /**
