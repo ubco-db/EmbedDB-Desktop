@@ -50,18 +50,19 @@ typedef struct spline_s spline;
 
 #include "radixspline.h"
 struct spline_s {
-    size_t count;           /* Number of points in spline */
-    size_t size;            /* Maximum number of points */
-    void *points;           /* Array of points */
-    void *upper;            /* Upper spline limit */
-    void *lower;            /* Lower spline limit */
-    uint32_t lastLoc;       /* Location of previous spline key */
-    void *lastKey;          /* Previous spline key */
-    uint32_t eraseSize;     /* Size of points to erase if none can be cleaned */
-    uint32_t maxError;      /* Maximum error */
-    uint32_t numAddCalls;   /* Number of times the add method has been called */
-    uint32_t tempLastPoint; /* Last spline point is temporary if value is not 0 */
-    uint8_t keySize;        /* Size of key in bytes */
+    size_t count;               /* Number of points in spline */
+    size_t size;                /* Maximum number of points */
+    size_t firstSplinePoint;    /* Index of the first spline point */
+    void *points;               /* Array of points */
+    void *upper;                /* Upper spline limit */
+    void *lower;                /* Lower spline limit */
+    uint32_t lastLoc;           /* Location of previous spline key */
+    void *lastKey;              /* Previous spline key */
+    uint32_t eraseSize;         /* Size of points to erase if none can be cleaned */
+    uint32_t maxError;          /* Maximum error */
+    uint32_t numAddCalls;       /* Number of times the add method has been called */
+    uint32_t tempLastPoint;     /* Last spline point is temporary if value is not 0 */
+    uint8_t keySize;            /* Size of key in bytes */
 };
 
 /**
@@ -121,7 +122,7 @@ void splineFind(spline *spl, void *key, int8_t compareKey(void *, void *), id_t 
  */
 void splineClose(spline *spl);
 
-void splineClean(spline *spl, uint32_t numPoints);
+int splineErase(spline *spl, uint32_t numPoints);
 
 #ifdef __cplusplus
 }

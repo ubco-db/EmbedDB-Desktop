@@ -41,6 +41,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+void *splinePointLocation(spline *spl, size_t pointIndex);
+
 /**
  * @brief    Initialize a spline structure with given maximum size and error.
  * @param    spl        Spline structure
@@ -51,6 +53,7 @@
 void splineInit(spline *spl, id_t size, size_t maxError, uint8_t keySize) {
     uint8_t pointSize = sizeof(uint32_t) + keySize;
     spl->count = 0;
+    spl->firstSplinePoint = 0;
     spl->size = size;
     spl->maxError = maxError;
     spl->points = (void *)malloc(pointSize * size);
@@ -84,11 +87,13 @@ static inline int8_t splineIsRight(uint64_t x1, int64_t y1, uint64_t x2, int64_t
  */
 void splineAdd(spline *spl, void *key, uint32_t page) {
     spl->numAddCalls++;
+    uint8_t pointSize = spl->keySize + sizeof(uint32_t);
     /* Check if no spline points are currently empty */
     if (spl->numAddCalls == 1) {
         /* Add first point in data set to spline. */
-        memcpy(spl->points, key, spl->keySize);
-        memcpy((((int8_t *)spl->points) + spl->keySize), &page, sizeof(uint32_t));
+        void *firstPoint = splinePointLocation(spl, spl->firstSplinePoint);
+        memcpy(firstPoint, key, spl->keySize);
+        memcpy(((int8_t *)firstPoint + spl->keySize), &page, sizeof(uint32_t));
         spl->count++;
         memcpy(spl->lastKey, key, spl->keySize);
         return;
@@ -112,11 +117,9 @@ void splineAdd(spline *spl, void *key, uint32_t page) {
     uint64_t keyVal = 0, lastKeyVal = 0;
     memcpy(&keyVal, key, spl->keySize);
     memcpy(&lastKeyVal, spl->lastKey, spl->keySize);
-    if (keyVal == lastKeyVal) {
-        return;
-    }
 
-    assert(keyVal > lastKeyVal);
+    if (keyVal <= lastKeyVal)
+        return;
 
     /* Last point added to spline, check if previous point is temporary - overwrite previous point if temporary */
     if (spl->tempLastPoint != 0) {
@@ -124,13 +127,12 @@ void splineAdd(spline *spl, void *key, uint32_t page) {
     }
 
     uint32_t lastPage = 0;
-    uint8_t pointSize = spl->keySize + sizeof(uint32_t);
-
     uint64_t lastPointKey = 0, upperKey = 0, lowerKey = 0;
-    memcpy(&lastPointKey, (int8_t *)spl->points + ((spl->count - 1) * pointSize), spl->keySize);
+    void *lastPointLocation = splinePointLocation(spl, spl->count - 1);
+    memcpy(&lastPointKey, lastPointLocation, spl->keySize);
     memcpy(&upperKey, spl->upper, spl->keySize);
     memcpy(&lowerKey, spl->lower, spl->keySize);
-    memcpy(&lastPage, (int8_t *)spl->points + ((spl->count - 1) * pointSize) + spl->keySize, sizeof(uint32_t));
+    memcpy(&lastPage, (int8_t *)lastPointLocation + spl->keySize, sizeof(uint32_t));
 
     uint64_t xdiff, upperXDiff, lowerXDiff;
     uint32_t ydiff, upperYDiff;
@@ -145,13 +147,16 @@ void splineAdd(spline *spl, void *key, uint32_t page) {
     memcpy(&lowerYDiff, (int8_t *)spl->lower + spl->keySize, sizeof(uint32_t));
     lowerYDiff -= lastPage;
 
+    if (spl->count >= spl->size)
+        splineErase(spl, spl->eraseSize);
+
     /* Check if next point still in error corridor */
     if (splineIsLeft(xdiff, ydiff, upperXDiff, upperYDiff) == 1 ||
         splineIsRight(xdiff, ydiff, lowerXDiff, lowerYDiff) == 1) {
         /* Point is not in error corridor. Add previous point to spline. */
-        assert(spl->count < spl->size);
-        memcpy(((int8_t *)spl->points + (spl->count * pointSize)), spl->lastKey, spl->keySize);
-        memcpy((int8_t *)spl->points + (spl->count * pointSize) + spl->keySize, &spl->lastLoc, sizeof(uint32_t));
+        void *nextSplinePoint = splinePointLocation(spl, spl->count);
+        memcpy(nextSplinePoint, spl->lastKey, spl->keySize);
+        memcpy((int8_t *)nextSplinePoint + spl->keySize, &spl->lastLoc, sizeof(uint32_t));
         spl->count++;
         spl->tempLastPoint = 0;
 
@@ -185,15 +190,22 @@ void splineAdd(spline *spl, void *key, uint32_t page) {
     /* Add last key on spline if not already there. */
     /* This will get overwritten the next time a new spline point is added */
     memcpy(spl->lastKey, key, spl->keySize);
-    assert(spl->count < spl->size);
-    memcpy((int8_t *)spl->points + (spl->count * pointSize), spl->lastKey, spl->keySize);
-    memcpy((int8_t *)spl->points + (spl->count * pointSize) + spl->keySize, &spl->lastLoc, sizeof(uint32_t));
+    void *tempSplinePoint = splinePointLocation(spl, spl->count);
+    memcpy(tempSplinePoint, spl->lastKey, spl->keySize);
+    memcpy((int8_t *)tempSplinePoint + spl->keySize, &spl->lastLoc, sizeof(uint32_t));
     spl->count++;
 
     spl->tempLastPoint = 1;
 }
 
-void splineClean(spline *spl, uint32_t numPoints) {
+int splineErase(spline *spl, uint32_t numPoints) {
+    if (numPoints > spl->size)
+        return 1;
+    spl->count -= numPoints;
+    spl->firstSplinePoint = (spl->firstSplinePoint + numPoints) % spl->size;
+    if (spl->count == 0)
+        spl->numAddCalls = 0;
+    return 0;
 }
 
 /**
@@ -266,11 +278,13 @@ size_t pointsBinarySearch(spline *spl, int low, int high, void *key, int8_t comp
         }
 
         uint8_t pointSize = spl->keySize + sizeof(uint32_t);
+        void *midSplinePoint = splinePointLocation(spl, mid);
+        void *midSplineMinusOnePoint = splinePointLocation(spl, mid - 1);
 
-        if (compareKey((int8_t *)spl->points + (pointSize * mid), key) >= 0 && compareKey((int8_t *)spl->points + (pointSize * (mid - 1)), key) <= 0)
+        if (compareKey(midSplinePoint, key) >= 0 && compareKey(midSplineMinusOnePoint, key) <= 0)
             return mid;
 
-        if (compareKey((int8_t *)spl->points + (pointSize * mid), key) > 0)
+        if (compareKey(midSplinePoint, key) > 0)
             return pointsBinarySearch(spl, low, mid - 1, key, compareKey);
 
         return pointsBinarySearch(spl, mid + 1, high, key, compareKey);
@@ -297,16 +311,22 @@ void splineFind(spline *spl, void *key, int8_t compareKey(void *, void *), id_t 
     size_t pointIdx;
     uint64_t keyVal = 0, smallestKeyVal = 0, largestKeyVal = 0;
     uint8_t pointSize = spl->keySize + sizeof(uint32_t);
+    void *smallestSplinePoint = splinePointLocation(spl, spl->firstSplinePoint);
+    void *largestSplinePoint = splinePointLocation(spl, spl->count - 1);
     memcpy(&keyVal, key, spl->keySize);
-    memcpy(&smallestKeyVal, (int8_t *)spl->points, spl->keySize);
-    memcpy(&largestKeyVal, (int8_t *)spl->points + ((spl->count - 1) * pointSize), spl->keySize);
+    memcpy(&smallestKeyVal, smallestSplinePoint, spl->keySize);
+    memcpy(&largestKeyVal, largestSplinePoint, spl->keySize);
 
     if (compareKey(key, (int8_t *)spl->points) < 0 || spl->count <= 1) {
         // Key is smaller than any we have on record
-        *loc = *low = *high = *(uint32_t *)((int8_t *)spl->points + spl->keySize);
+        memcpy(loc, (int8_t *)smallestSplinePoint + spl->keySize, sizeof(uint32_t));
+        memcpy(low, (int8_t *)smallestSplinePoint + spl->keySize, sizeof(uint32_t));
+        memcpy(high, (int8_t *)smallestSplinePoint + spl->keySize, sizeof(uint32_t));
         return;
     } else if (compareKey(key, (int8_t *)spl->points + ((spl->count - 1) * pointSize)) > 0) {
-        *loc = *low = *high = *(uint32_t *)((int8_t *)spl->points + ((spl->count - 1) * pointSize) + spl->keySize);
+        memcpy(loc, (int8_t *)largestSplinePoint + spl->keySize, sizeof(uint32_t));
+        memcpy(low, (int8_t *)largestSplinePoint + spl->keySize, sizeof(uint32_t));
+        memcpy(high, (int8_t *)largestSplinePoint + spl->keySize, sizeof(uint32_t));
         return;
     } else {
         // Perform a binary seach to find the spline point above the key we're looking for
@@ -314,22 +334,29 @@ void splineFind(spline *spl, void *key, int8_t compareKey(void *, void *), id_t 
     }
 
     // Interpolate between two spline points
-    void *downKey = (int8_t *)spl->points + (pointSize * (pointIdx - 1));
-    uint32_t downPage = *(uint32_t *)((int8_t *)spl->points + (pointSize * (pointIdx - 1)) + spl->keySize);
-    void *upKey = (int8_t *)spl->points + (pointSize * pointIdx);
-    uint32_t upPage = *(uint32_t *)((int8_t *)spl->points + (pointSize * pointIdx) + spl->keySize);
+    void *downKey = splinePointLocation(spl, pointIdx - 1);
+    uint32_t downPage = 0;
+    memcpy(&downPage, (int8_t*)downKey + spl->keySize, sizeof(uint32_t));
+    void *upKey = splinePointLocation(spl, pointIdx);
+    uint32_t upPage = 0;
+    memcpy(&upPage, (int8_t*)upKey + spl->keySize, sizeof(uint32_t));
     uint64_t downKeyVal = 0, upKeyVal = 0;
     memcpy(&downKeyVal, downKey, spl->keySize);
     memcpy(&upKeyVal, upKey, spl->keySize);
 
     // Estimate location as page number
     // Keydiff * slope + y
-    *loc = (id_t)((keyVal - downKeyVal) * (upPage - downPage) / (long double)(upKeyVal - downKeyVal)) + downPage;
+    id_t locationEstimate = (id_t)((keyVal - downKeyVal) * (upPage - downPage) / (long double)(upKeyVal - downKeyVal)) + downPage;
+    memcpy(loc, &locationEstimate, sizeof(id_t));
 
     // Set error bounds based on maxError from spline construction
-    *low = (spl->maxError > *loc) ? 0 : *loc - spl->maxError;
-    uint32_t lastSplinePointPage = *(uint32_t *)((int8_t *)spl->points + (pointSize * (spl->count - 1)));
-    *high = (*loc + spl->maxError > lastSplinePointPage) ? lastSplinePointPage : *loc + spl->maxError;
+    id_t lowEstiamte = (spl->maxError > locationEstimate) ? 0 :locationEstimate - spl->maxError;
+    memcpy(low, &lowEstiamte, sizeof(id_t));
+    void *lastSplinePoint = splinePointLocation(spl, spl->count - 1);
+    uint32_t lastSplinePointPage = 0;
+    memcpy(&lastSplinePointPage, (int8_t*)lastSplinePoint + spl->keySize, sizeof(uint32_t));
+    id_t highEstimate = (locationEstimate + spl->maxError > lastSplinePointPage) ? lastSplinePointPage : locationEstimate + spl->maxError;
+    memcpy(high, &highEstimate, sizeof(id_t));
 }
 
 /**
@@ -341,4 +368,8 @@ void splineClose(spline *spl) {
     free(spl->lastKey);
     free(spl->lower);
     free(spl->upper);
+}
+
+inline void *splinePointLocation(spline *spl, size_t pointIndex) {
+    return (int8_t *)spl->points + (((pointIndex + spl->firstSplinePoint) % spl->size) * (spl->keySize + sizeof(uint32_t)));
 }
