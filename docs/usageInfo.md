@@ -189,7 +189,7 @@ if (varStream != NULL) {
 }
 ```
 
-## Iterate through items in tree
+## Iterate through items in table
 
 ### Iterator with filter on keys
 
