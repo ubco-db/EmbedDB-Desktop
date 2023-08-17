@@ -121,7 +121,7 @@ void splineFind(spline *spl, void *key, int8_t compareKey(void *, void *), id_t 
  */
 void splineClose(spline *spl);
 
-void splineClean(spline *spl);
+void splineClean(spline *spl, uint32_t numPoints);
 
 #ifdef __cplusplus
 }
