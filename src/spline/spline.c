@@ -194,7 +194,6 @@ void splineAdd(spline *spl, void *key, uint32_t page) {
 }
 
 void splineClean(spline *spl, uint32_t numPoints) {
-    
 }
 
 /**
