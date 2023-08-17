@@ -242,8 +242,9 @@ void splinePrint(spline *spl) {
     uint8_t pointSize = spl->keySize + sizeof(uint32_t);
     uint32_t page = 0;
     for (id_t i = 0; i < spl->count; i++) {
-        memcpy(&keyVal, (int8_t *)spl->points + (i * pointSize), spl->keySize);
-        memcpy(&page, (int8_t *)spl->points + (i * pointSize) + spl->keySize, sizeof(uint32_t));
+        void *point = splinePointLocation(spl, i);
+        memcpy(&keyVal, point, spl->keySize);
+        memcpy(&page, (int8_t *)point + spl->keySize, sizeof(uint32_t));
         printf("[%i]: (%li, %i)\n", i, keyVal, page);
     }
     printf("\n");
@@ -255,7 +256,7 @@ void splinePrint(spline *spl) {
  * @return   size of the spline in bytes
  */
 uint32_t splineSize(spline *spl) {
-    return sizeof(spline) + (spl->count * (spl->keySize + sizeof(uint32_t)));
+    return sizeof(spline) + (spl->size * (spl->keySize + sizeof(uint32_t)));
 }
 
 /**
