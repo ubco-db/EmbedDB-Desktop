@@ -124,6 +124,8 @@ void splineClose(spline *spl);
 
 int splineErase(spline *spl, uint32_t numPoints);
 
+inline void *splinePointLocation(spline *spl, size_t pointIndex);
+
 #ifdef __cplusplus
 }
 #endif

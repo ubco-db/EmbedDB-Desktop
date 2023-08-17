@@ -41,8 +41,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-void *splinePointLocation(spline *spl, size_t pointIndex);
-
 /**
  * @brief    Initialize a spline structure with given maximum size and error.
  * @param    spl        Spline structure
