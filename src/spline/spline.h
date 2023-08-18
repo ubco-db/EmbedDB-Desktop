@@ -52,10 +52,11 @@ typedef struct spline_s spline;
 struct spline_s {
     size_t count;               /* Number of points in spline */
     size_t size;                /* Maximum number of points */
-    size_t firstSplinePoint;    /* Index of the first spline point */
+    size_t pointsStartIndex;    /* Index of the first spline point */
     void *points;               /* Array of points */
     void *upper;                /* Upper spline limit */
     void *lower;                /* Lower spline limit */
+    void *firstSplinePoint;           /* First Point that was added to the spline */
     uint32_t lastLoc;           /* Location of previous spline key */
     void *lastKey;              /* Previous spline key */
     uint32_t eraseSize;         /* Size of points to erase if none can be cleaned */

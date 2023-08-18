@@ -140,7 +140,7 @@ void runalltests_sbits() {
         state->keySize = 4;
         state->dataSize = 12;
         state->pageSize = 512;
-        state->numSplinePoints = 300;
+        state->numSplinePoints = 20;
         state->bitmapSize = 0;
         state->bufferSizeInBlocks = M;
         state->buffer = malloc((size_t)state->bufferSizeInBlocks * state->pageSize);
@@ -181,7 +181,7 @@ void runalltests_sbits() {
             return;
         }
 
-        state->spl->eraseSize = 5;
+        state->spl->eraseSize = 1;
 
         /* Data record is empty. Only need to reset to 0 once as reusing struct.
          */
@@ -285,7 +285,7 @@ void runalltests_sbits() {
          * 2: Query random records in the range of original data set.
          * 3: Query range of records using an iterator.
          */
-        int8_t queryType = 3;
+        int8_t queryType = 1;
 
         if (seqdata == 1) {
             if (queryType == 1) {
