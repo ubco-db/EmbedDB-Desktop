@@ -369,6 +369,6 @@ void splineClose(spline *spl) {
     free(spl->upper);
 }
 
-inline void *splinePointLocation(spline *spl, size_t pointIndex) {
+void *splinePointLocation(spline *spl, size_t pointIndex) {
     return (int8_t *)spl->points + (((pointIndex + spl->firstSplinePoint) % spl->size) * (spl->keySize + sizeof(uint32_t)));
 }

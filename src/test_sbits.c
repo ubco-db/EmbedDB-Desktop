@@ -181,6 +181,8 @@ void runalltests_sbits() {
             return;
         }
 
+        state->spl->eraseSize = 5;
+
         /* Data record is empty. Only need to reset to 0 once as reusing struct.
          */
         int32_t i;
