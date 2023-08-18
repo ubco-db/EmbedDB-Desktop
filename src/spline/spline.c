@@ -132,9 +132,9 @@ void splineAdd(spline *spl, void *key, uint32_t page) {
     memcpy(&lowerKey, spl->lower, spl->keySize);
     memcpy(&lastPage, (int8_t *)lastPointLocation + spl->keySize, sizeof(uint32_t));
 
-    uint64_t xdiff, upperXDiff, lowerXDiff;
-    uint32_t ydiff, upperYDiff;
-    int64_t lowerYDiff; /* This may be negative */
+    uint64_t xdiff, upperXDiff, lowerXDiff = 0;
+    uint32_t ydiff, upperYDiff = 0;
+    int64_t lowerYDiff = 0; /* This may be negative */
 
     xdiff = keyVal - lastPointKey;
     ydiff = page - lastPage;
