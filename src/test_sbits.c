@@ -52,9 +52,9 @@ void runalltests_sbits() {
     int32_t testRecords = 500000;  // default values
     uint8_t useRandom = 0;         // default values
     size_t splineMaxError = 0;     // default values
-    uint32_t numSteps = 10;
+    uint32_t numSteps = 30;
     uint32_t stepSize = numRecords / numSteps;
-    count_t r, numRuns = 1, l;
+    count_t r, numRuns = 20, l;
     uint32_t times[numSteps][numRuns];
     uint32_t reads[numSteps][numRuns];
     uint32_t writes[numSteps][numRuns];
@@ -148,7 +148,7 @@ void runalltests_sbits() {
         int8_t *recordBuffer = (int8_t *)malloc(state->recordSize);
 
         /* Address level parameters */
-        state->numDataPages = 1000;
+        state->numDataPages = 20000;
         state->numIndexPages = 48;
         state->eraseSizeInPages = 4;
 
@@ -372,7 +372,6 @@ void runalltests_sbits() {
                     for (int j = 0; j < count; j++) {
                         void *buf = (infileBuffer + headerSize + j * state->recordSize);
                         int32_t *key = (int32_t *)buf;
-
                         int8_t result = sbitsGet(state, key, recordBuffer);
                         if (result != 0)
                             printf("ERROR: Failed to find key: %lu, i: %lu\n", *key, i);

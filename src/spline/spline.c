@@ -91,7 +91,7 @@ void splineAdd(spline *spl, void *key, uint32_t page) {
     /* Check if no spline points are currently empty */
     if (spl->numAddCalls == 1) {
         /* Add first point in data set to spline. */
-        void *firstPoint = splinePointLocation(spl, spl->pointsStartIndex);
+        void *firstPoint = splinePointLocation(spl, 0);
         memcpy(firstPoint, key, spl->keySize);
         memcpy(((int8_t *)firstPoint + spl->keySize), &page, sizeof(uint32_t));
         /* Log first point for wrap around purposes */
@@ -315,13 +315,13 @@ void splineFind(spline *spl, void *key, int8_t compareKey(void *, void *), id_t 
     size_t pointIdx;
     uint64_t keyVal = 0, smallestKeyVal = 0, largestKeyVal = 0;
     uint8_t pointSize = spl->keySize + sizeof(uint32_t);
-    void *smallestSplinePoint = splinePointLocation(spl, spl->pointsStartIndex);
+    void *smallestSplinePoint = splinePointLocation(spl, 0);
     void *largestSplinePoint = splinePointLocation(spl, spl->count - 1);
     memcpy(&keyVal, key, spl->keySize);
     memcpy(&smallestKeyVal, smallestSplinePoint, spl->keySize);
     memcpy(&largestKeyVal, largestSplinePoint, spl->keySize);
 
-    if (compareKey(key, (int8_t *)spl->points) < 0 || spl->count <= 1) {
+    if (compareKey(key, splinePointLocation(spl, 0)) < 0 || spl->count <= 1) {
         // Key is smaller than any we have on record
         uint32_t lowEstimate, highEstimate, locEstimate = 0;
         memcpy(&lowEstimate, (int8_t*)spl->firstSplinePoint + spl->keySize, sizeof(uint32_t));
@@ -332,7 +332,7 @@ void splineFind(spline *spl, void *key, int8_t compareKey(void *, void *), id_t 
         memcpy(low, &lowEstimate, sizeof(uint32_t));
         memcpy(high, &highEstimate, sizeof(uint32_t));
         return;
-    } else if (compareKey(key, (int8_t *)spl->points + ((spl->count - 1) * pointSize)) > 0) {
+    } else if (compareKey(key, splinePointLocation(spl, spl->count - 1)) > 0) {
         memcpy(loc, (int8_t *)largestSplinePoint + spl->keySize, sizeof(uint32_t));
         memcpy(low, (int8_t *)largestSplinePoint + spl->keySize, sizeof(uint32_t));
         memcpy(high, (int8_t *)largestSplinePoint + spl->keySize, sizeof(uint32_t));
