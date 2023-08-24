@@ -61,12 +61,6 @@
  */
 #define RADIX_BITS 0
 
-/**
- * Number of spline points to be allocated. This is a set amount and will not grow.
- * The amount you need will depend on how much your key rate varies and what maxSplineError is set during sbits initialization.
- */
-#define ALLOCATED_SPLINE_POINTS 300
-
 /* Helper Functions */
 int8_t sbitsInitData(sbitsState *state);
 int8_t sbitsInitDataFromFile(sbitsState *state);
