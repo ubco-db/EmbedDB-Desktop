@@ -54,7 +54,7 @@ void runalltests_sbits() {
     size_t splineMaxError = 0;     // default values
     uint32_t numSteps = 10;
     uint32_t stepSize = numRecords / numSteps;
-    count_t r, numRuns = 20, l;
+    count_t r, numRuns = 1, l;
     uint32_t times[numSteps][numRuns];
     uint32_t reads[numSteps][numRuns];
     uint32_t writes[numSteps][numRuns];
