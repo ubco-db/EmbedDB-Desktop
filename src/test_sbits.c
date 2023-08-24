@@ -52,7 +52,7 @@ void runalltests_sbits() {
     int32_t testRecords = 500000;  // default values
     uint8_t useRandom = 0;         // default values
     size_t splineMaxError = 0;     // default values
-    uint32_t numSteps = 30;
+    uint32_t numSteps = 10;
     uint32_t stepSize = numRecords / numSteps;
     count_t r, numRuns = 20, l;
     uint32_t times[numSteps][numRuns];
@@ -140,7 +140,7 @@ void runalltests_sbits() {
         state->keySize = 4;
         state->dataSize = 12;
         state->pageSize = 512;
-        state->numSplinePoints = 20;
+        state->numSplinePoints = 300;
         state->bitmapSize = 0;
         state->bufferSizeInBlocks = M;
         state->buffer = malloc((size_t)state->bufferSizeInBlocks * state->pageSize);
