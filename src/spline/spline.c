@@ -201,6 +201,12 @@ void splineAdd(spline *spl, void *key, uint32_t page) {
     spl->tempLastPoint = 1;
 }
 
+/**
+ * @brief   Removes points from the spline
+ * @param   spl         The spline structure to search
+ * @param   numPoints   The number of points to remove from the spline
+ * @return  Returns zero if successful and one if not
+ */
 int splineErase(spline *spl, uint32_t numPoints) {
     if (numPoints > spl->count)
         return 1;
@@ -324,7 +330,7 @@ void splineFind(spline *spl, void *key, int8_t compareKey(void *, void *), id_t 
     if (compareKey(key, splinePointLocation(spl, 0)) < 0 || spl->count <= 1) {
         // Key is smaller than any we have on record
         uint32_t lowEstimate, highEstimate, locEstimate = 0;
-        memcpy(&lowEstimate, (int8_t*)spl->firstSplinePoint + spl->keySize, sizeof(uint32_t));
+        memcpy(&lowEstimate, (int8_t *)spl->firstSplinePoint + spl->keySize, sizeof(uint32_t));
         memcpy(&highEstimate, (int8_t *)smallestSplinePoint + spl->keySize, sizeof(uint32_t));
         locEstimate = (lowEstimate + highEstimate) / 2;
 
@@ -345,10 +351,10 @@ void splineFind(spline *spl, void *key, int8_t compareKey(void *, void *), id_t 
     // Interpolate between two spline points
     void *downKey = splinePointLocation(spl, pointIdx - 1);
     uint32_t downPage = 0;
-    memcpy(&downPage, (int8_t*)downKey + spl->keySize, sizeof(uint32_t));
+    memcpy(&downPage, (int8_t *)downKey + spl->keySize, sizeof(uint32_t));
     void *upKey = splinePointLocation(spl, pointIdx);
     uint32_t upPage = 0;
-    memcpy(&upPage, (int8_t*)upKey + spl->keySize, sizeof(uint32_t));
+    memcpy(&upPage, (int8_t *)upKey + spl->keySize, sizeof(uint32_t));
     uint64_t downKeyVal = 0, upKeyVal = 0;
     memcpy(&downKeyVal, downKey, spl->keySize);
     memcpy(&upKeyVal, upKey, spl->keySize);
@@ -359,11 +365,11 @@ void splineFind(spline *spl, void *key, int8_t compareKey(void *, void *), id_t 
     memcpy(loc, &locationEstimate, sizeof(id_t));
 
     // Set error bounds based on maxError from spline construction
-    id_t lowEstiamte = (spl->maxError > locationEstimate) ? 0 :locationEstimate - spl->maxError;
+    id_t lowEstiamte = (spl->maxError > locationEstimate) ? 0 : locationEstimate - spl->maxError;
     memcpy(low, &lowEstiamte, sizeof(id_t));
     void *lastSplinePoint = splinePointLocation(spl, spl->count - 1);
     uint32_t lastSplinePointPage = 0;
-    memcpy(&lastSplinePointPage, (int8_t*)lastSplinePoint + spl->keySize, sizeof(uint32_t));
+    memcpy(&lastSplinePointPage, (int8_t *)lastSplinePoint + spl->keySize, sizeof(uint32_t));
     id_t highEstimate = (locationEstimate + spl->maxError > lastSplinePointPage) ? lastSplinePointPage : locationEstimate + spl->maxError;
     memcpy(high, &highEstimate, sizeof(id_t));
 }
@@ -379,6 +385,11 @@ void splineClose(spline *spl) {
     free(spl->upper);
 }
 
+/**
+ * @brief   Returns a pointer to the location of the specified spline point in memory. Note that this method does not check if there is a point there, so it may be garbage data.
+ * @param   spl         The spline structure that contains the points
+ * @param   pointIndex  The index of the point to return a pointer to
+ */
 void *splinePointLocation(spline *spl, size_t pointIndex) {
     return (int8_t *)spl->points + (((pointIndex + spl->pointsStartIndex) % spl->size) * (spl->keySize + sizeof(uint32_t)));
 }

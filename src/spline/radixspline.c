@@ -317,8 +317,8 @@ size_t radixsplineEstimateLocation(radixspline *rsidx, void *key, int8_t compare
 
     uint32_t upPage = 0;
     uint32_t downPage = 0;
-    memcpy(&upPage, (int8_t*)up + rsidx->spl->keySize, sizeof(uint32_t));
-    memcpy(&downPage, (int8_t*)down + rsidx->spl->keySize, sizeof(uint32_t));
+    memcpy(&upPage, (int8_t *)up + rsidx->spl->keySize, sizeof(uint32_t));
+    memcpy(&downPage, (int8_t *)down + rsidx->spl->keySize, sizeof(uint32_t));
 
     /* Keydiff * slope + y */
     uint32_t estimatedPage = (uint32_t)((keyVal - downKey) * (upPage - downPage) / (long double)(upKey - downKey)) + downPage;
