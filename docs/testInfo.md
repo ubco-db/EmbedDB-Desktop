@@ -24,4 +24,4 @@ The tests are run using the [makefile](../makefile). This runs the tests by sear
 
 Unity records the sucess and failures of the test suites in a text file in the [results](../build/results/) folder. Afterwards, all of the files are parsed using a python script to build a JUnit XML format file to summarize the results.
 
-- Both the [makefile](../makefile) and [JUnit Script](../scripts/stylize_as_junit.py) are sourced from the [Unity](https://github.com/ThrowTheSwitch/Unity) testing library. Minor modifications were made so they would work with this project. This includes changing directory locations and adding additional checks when parsing the output files in the python script. The only changes to the makefile are due to some c files being dependent on multiple other files.
+- Both the [makefile](../makefile) and [JUnit Script](../scripts/stylize_as_junit.py) are sourced from the [Unity](https://github.com/ThrowTheSwitch/Unity) testing library. Minor modifications were made so they would work with this project.
