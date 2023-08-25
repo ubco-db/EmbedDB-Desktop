@@ -87,7 +87,6 @@ static inline int8_t splineIsRight(uint64_t x1, int64_t y1, uint64_t x2, int64_t
  */
 void splineAdd(spline *spl, void *key, uint32_t page) {
     spl->numAddCalls++;
-    uint8_t pointSize = spl->keySize + sizeof(uint32_t);
     /* Check if no spline points are currently empty */
     if (spl->numAddCalls == 1) {
         /* Add first point in data set to spline. */
@@ -252,7 +251,6 @@ void splinePrint(spline *spl) {
     printf("Spline max error (%i):\n", spl->maxError);
     printf("Spline points (%li):\n", spl->count);
     uint64_t keyVal = 0;
-    uint8_t pointSize = spl->keySize + sizeof(uint32_t);
     uint32_t page = 0;
     for (id_t i = 0; i < spl->count; i++) {
         void *point = splinePointLocation(spl, i);
@@ -291,7 +289,6 @@ size_t pointsBinarySearch(spline *spl, int low, int high, void *key, int8_t comp
             return 1;
         }
 
-        uint8_t pointSize = spl->keySize + sizeof(uint32_t);
         void *midSplinePoint = splinePointLocation(spl, mid);
         void *midSplineMinusOnePoint = splinePointLocation(spl, mid - 1);
 
@@ -324,7 +321,6 @@ size_t pointsBinarySearch(spline *spl, int low, int high, void *key, int8_t comp
 void splineFind(spline *spl, void *key, int8_t compareKey(void *, void *), id_t *loc, id_t *low, id_t *high) {
     size_t pointIdx;
     uint64_t keyVal = 0, smallestKeyVal = 0, largestKeyVal = 0;
-    uint8_t pointSize = spl->keySize + sizeof(uint32_t);
     void *smallestSplinePoint = splinePointLocation(spl, 0);
     void *largestSplinePoint = splinePointLocation(spl, spl->count - 1);
     memcpy(&keyVal, key, spl->keySize);
