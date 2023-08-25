@@ -73,6 +73,7 @@ void sbitsInitSplineFromFile(sbitsState *state);
 int32_t getMaxError(sbitsState *state, void *buffer);
 void updateMaxiumError(sbitsState *state, void *buffer);
 int8_t sbitsSetupVarDataStream(sbitsState *state, void *key, sbitsVarDataStream **varData, id_t recordNumber);
+uint32_t cleanSpline(sbitsState *state, void *key);
 
 void printBitmap(char *bm) {
     for (int8_t i = 0; i <= 7; i++) {
@@ -795,7 +796,7 @@ void updateMaxiumError(sbitsState *state, void *buffer) {
 
 void updateAverageKeyDifference(sbitsState *state, void *buffer) {
     /* Update estimate of average key difference. */
-    int32_t numBlocks = state->nextDataPageId;
+    int32_t numBlocks = state->numDataPages - state->numAvailDataPages;
     if (numBlocks == 0)
         numBlocks = 1;
 
@@ -1520,7 +1521,7 @@ id_t writePage(sbitsState *state, void *buffer) {
         // Erase pages to make space for new data
         state->numAvailDataPages += state->eraseSizeInPages;
         state->minDataPageId += state->eraseSizeInPages;
-
+        cleanSpline(state, &state->minKey);
         // Estimate the smallest key now. Could determine exactly by reading this page
         state->minKey += state->eraseSizeInPages * state->maxRecordsPerPage * state->avgKeyDiff;
     }
@@ -1536,6 +1537,29 @@ id_t writePage(sbitsState *state, void *buffer) {
     state->numWrites++;
 
     return pageNum;
+}
+
+/**
+ * @brief	Calculates the number of spline points not in use by SBITs and deltes them
+ * @param	state	SBITS algorithm state structure
+ * @param	key 	The minimim key SBITS still needs points for
+ * @return	Returns the number of points deleted
+ */
+uint32_t cleanSpline(sbitsState *state, void *key) {
+    uint32_t numPointsErased = 0;
+    void *currentPoint;
+    for (size_t i = 0; i < state->spl->count; i++) {
+        currentPoint = splinePointLocation(state->spl, i);
+        int8_t compareResult = state->compareKey(currentPoint, key);
+        if (compareResult < 0)
+            numPointsErased++;
+        else
+            break;
+    }
+    if (state->spl->count - numPointsErased == 1)
+        numPointsErased--;
+    splineErase(state->spl, numPointsErased);
+    return numPointsErased;
 }
 
 /**

@@ -208,8 +208,12 @@ void splineAdd(spline *spl, void *key, uint32_t page) {
  * @return  Returns zero if successful and one if not
  */
 int splineErase(spline *spl, uint32_t numPoints) {
-    if (numPoints > spl->count)
+    /* If the user tries to delete more points than they allocated or deleting would only leave one spline point */
+    if (numPoints > spl->count || spl->count - numPoints == 1)
         return 1;
+    if (numPoints == 0)
+        return 0;
+    
     spl->count -= numPoints;
     spl->pointsStartIndex = (spl->pointsStartIndex + numPoints) % spl->size;
     if (spl->count == 0)
