@@ -190,6 +190,8 @@ void runalltests_sbits() {
             return;
         }
 
+        sbitsPrintInit(state);
+
         /* Data record is empty. Only need to reset to 0 once as reusing struct.
          */
         int32_t i;

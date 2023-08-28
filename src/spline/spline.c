@@ -244,6 +244,7 @@ void splineBuild(spline *spl, void **data, id_t size, size_t maxError) {
  * @param    spl     Spline structure
  */
 void splinePrint(spline *spl) {
+#ifdef PRINT
     if (spl == NULL) {
         printf("No spline to print.\n");
         return;
@@ -259,6 +260,7 @@ void splinePrint(spline *spl) {
         printf("[%i]: (%li, %i)\n", i, keyVal, page);
     }
     printf("\n");
+#endif
 }
 
 /**

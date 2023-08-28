@@ -354,6 +354,7 @@ void radixsplineFind(radixspline *rsidx, void *key, int8_t compareKey(void *, vo
  * @param	rsidx	Radix spline structure
  */
 void radixsplinePrint(radixspline *rsidx) {
+#ifdef PRINT
     if (rsidx == NULL || rsidx->radixSize == 0) {
         printf("No radix spline index to print.\n");
         return;
@@ -370,6 +371,7 @@ void radixsplinePrint(radixspline *rsidx) {
         printf("(%lu): --> %u\n", (i << rsidx->shiftSize) + minKeyVal, tableVal);
     }
     printf("\n");
+#endif
 }
 
 /**
