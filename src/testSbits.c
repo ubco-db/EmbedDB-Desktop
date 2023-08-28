@@ -42,6 +42,16 @@
 #include "sbits/sbits.h"
 #include "sbits/utilityFunctions.h"
 
+/*
+ * 1: Query each record from original data set.
+ * 2: Query random records in the range of original data set.
+ * 3: Query range of records using an iterator.
+ */
+#define QUERY_TYPE 3
+
+/* Use sequential generated data or one of the data sets */
+#define SEQUENTIAL_DATA 1
+
 /**
  * Runs all tests and collects benchmarks
  */
@@ -63,11 +73,10 @@ void runalltests_sbits() {
     uint32_t rtimes[numSteps][numRuns];
     uint32_t rreads[numSteps][numRuns];
     uint32_t rhits[numSteps][numRuns];
-    int8_t seqdata = 0;
     FILE *infile, *infileRandom;
     uint32_t minRange, maxRange;
 
-    if (seqdata != 1) { /* Open file to read input records */
+    if (SEQUENTIAL_DATA != 1) { /* Open file to read input records */
 
         // measure1_smartphone_sens.bin
         // infile = fopen("data/measure1_smartphone_sens.bin", "r+b");
@@ -181,8 +190,6 @@ void runalltests_sbits() {
             return;
         }
 
-        state->spl->eraseSize = 1;
-
         /* Data record is empty. Only need to reset to 0 once as reusing struct.
          */
         int32_t i;
@@ -193,7 +200,7 @@ void runalltests_sbits() {
         /* Insert records into structure */
         uint32_t start = clock();
 
-        if (seqdata == 1) {
+        if (SEQUENTIAL_DATA) {
             for (i = 0; i < numRecords; i++) {
                 *((int32_t *)recordBuffer) = i;
                 *((int32_t *)(recordBuffer + 4)) = (i % 100);
@@ -280,22 +287,15 @@ void runalltests_sbits() {
         /* Verify that all values can be found and test query performance */
         start = clock();
 
-        /*
-         * 1: Query each record from original data set.
-         * 2: Query random records in the range of original data set.
-         * 3: Query range of records using an iterator.
-         */
-        int8_t queryType = 1;
-
-        if (seqdata == 1) {
-            if (queryType == 1) {
+        if (SEQUENTIAL_DATA) {
+            if (QUERY_TYPE == 1) {
                 for (i = 0; i < numRecords; i++) {
                     int32_t key = i;
                     int8_t result = sbitsGet(state, &key, recordBuffer);
 
                     if (result != 0)
                         printf("ERROR: Failed to find: %lu\n", key);
-                    if (seqdata == 1 && *((int32_t *)recordBuffer) != key % 100) {
+                    if (SEQUENTIAL_DATA && *((int32_t *)recordBuffer) != key % 100) {
                         printf("ERROR: Wrong data for: %lu\n", key);
                         printf("Key: %lu Data: %lu\n", key, *((int32_t *)recordBuffer));
                         return;
@@ -311,7 +311,7 @@ void runalltests_sbits() {
                         }
                     }
                 }
-            } else if (queryType == 3) {
+            } else if (QUERY_TYPE == 3) {
                 uint32_t itKey;
                 void *itData = calloc(1, state->dataSize);
                 sbitsIterator it;
@@ -348,7 +348,7 @@ void runalltests_sbits() {
             int8_t headerSize = 16;
             i = 0;
 
-            if (queryType == 1) {
+            if (QUERY_TYPE == 1) {
                 /* Query each record from original data set. */
                 if (useRandom) {
                     fseek(infileRandom, 0, SEEK_SET);
@@ -403,7 +403,7 @@ void runalltests_sbits() {
                 }
             donetest:
                 numRecords = i;
-            } else if (queryType == 2) {
+            } else if (QUERY_TYPE == 2) {
                 /* Query random values in range. May not exist in data set. */
                 i = 0;
                 int32_t num = maxRange - minRange;
