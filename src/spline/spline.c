@@ -212,7 +212,7 @@ int splineErase(spline *spl, uint32_t numPoints) {
         return 1;
     if (numPoints == 0)
         return 0;
-    
+
     spl->count -= numPoints;
     spl->pointsStartIndex = (spl->pointsStartIndex + numPoints) % spl->size;
     if (spl->count == 0)
