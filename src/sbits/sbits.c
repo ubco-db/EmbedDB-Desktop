@@ -61,12 +61,6 @@
  */
 #define RADIX_BITS 0
 
-/**
- * Number of spline points to be allocated. This is a set amount and will not grow.
- * The amount you need will depend on how much your key rate varies and what maxSplineError is set during sbits initialization.
- */
-#define ALLOCATED_SPLINE_POINTS 300
-
 /* Helper Functions */
 int8_t sbitsInitData(sbitsState *state);
 int8_t sbitsInitDataFromFile(sbitsState *state);
@@ -79,6 +73,7 @@ void sbitsInitSplineFromFile(sbitsState *state);
 int32_t getMaxError(sbitsState *state, void *buffer);
 void updateMaxiumError(sbitsState *state, void *buffer);
 int8_t sbitsSetupVarDataStream(sbitsState *state, void *key, sbitsVarDataStream **varData, id_t recordNumber);
+uint32_t cleanSpline(sbitsState *state, void *key);
 
 void printBitmap(char *bm) {
     for (int8_t i = 0; i <= 7; i++) {
@@ -133,11 +128,11 @@ void initBufferPage(sbitsState *state, int pageNum) {
  * @param   radixSize   number bits to be indexed by radix
  * @return  void
  */
-void initRadixSpline(sbitsState *state, uint64_t size, size_t radixSize) {
+void initRadixSpline(sbitsState *state, size_t radixSize) {
     spline *spl = (spline *)malloc(sizeof(spline));
     state->spl = spl;
 
-    splineInit(state->spl, size, state->indexMaxError, state->keySize);
+    splineInit(state->spl, state->numSplinePoints, state->indexMaxError, state->keySize);
 
     radixspline *rsidx = (radixspline *)malloc(sizeof(radixspline));
     state->rdix = rsidx;
@@ -220,11 +215,12 @@ int8_t sbitsInit(sbitsState *state, size_t indexMaxError) {
 
     /* Initalize the spline or radix spline structure if either are to be used */
     if (SEARCH_METHOD == 2) {
+        state->cleanSpline = 1;
         if (RADIX_BITS > 0) {
-            initRadixSpline(state, ALLOCATED_SPLINE_POINTS, RADIX_BITS);
+            initRadixSpline(state, RADIX_BITS);
         } else {
             state->spl = malloc(sizeof(spline));
-            splineInit(state->spl, ALLOCATED_SPLINE_POINTS, indexMaxError, state->keySize);
+            splineInit(state->spl, state->numSplinePoints, indexMaxError, state->keySize);
         }
     }
 
@@ -801,7 +797,7 @@ void updateMaxiumError(sbitsState *state, void *buffer) {
 
 void updateAverageKeyDifference(sbitsState *state, void *buffer) {
     /* Update estimate of average key difference. */
-    int32_t numBlocks = state->nextDataPageId;
+    int32_t numBlocks = state->numDataPages - state->numAvailDataPages;
     if (numBlocks == 0)
         numBlocks = 1;
 
@@ -1526,7 +1522,8 @@ id_t writePage(sbitsState *state, void *buffer) {
         // Erase pages to make space for new data
         state->numAvailDataPages += state->eraseSizeInPages;
         state->minDataPageId += state->eraseSizeInPages;
-
+        if (state->cleanSpline)
+            cleanSpline(state, &state->minKey);
         // Estimate the smallest key now. Could determine exactly by reading this page
         state->minKey += state->eraseSizeInPages * state->maxRecordsPerPage * state->avgKeyDiff;
     }
@@ -1542,6 +1539,29 @@ id_t writePage(sbitsState *state, void *buffer) {
     state->numWrites++;
 
     return pageNum;
+}
+
+/**
+ * @brief	Calculates the number of spline points not in use by SBITs and deltes them
+ * @param	state	SBITS algorithm state structure
+ * @param	key 	The minimim key SBITS still needs points for
+ * @return	Returns the number of points deleted
+ */
+uint32_t cleanSpline(sbitsState *state, void *key) {
+    uint32_t numPointsErased = 0;
+    void *currentPoint;
+    for (size_t i = 0; i < state->spl->count; i++) {
+        currentPoint = splinePointLocation(state->spl, i);
+        int8_t compareResult = state->compareKey(currentPoint, key);
+        if (compareResult < 0)
+            numPointsErased++;
+        else
+            break;
+    }
+    if (state->spl->count - numPointsErased == 1)
+        numPointsErased--;
+    splineErase(state->spl, numPointsErased);
+    return numPointsErased;
 }
 
 /**

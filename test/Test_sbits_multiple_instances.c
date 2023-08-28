@@ -13,6 +13,7 @@ void setupSbitsInstanceKeySize4DataSize4(sbitsState **stateArray, int number) {
     state->dataSize = 4;
     state->pageSize = 512;
     state->bufferSizeInBlocks = 2;
+    state->numSplinePoints = 300;
     state->buffer = calloc(1, state->pageSize * state->bufferSizeInBlocks);
     state->numDataPages = 2000;
     state->parameters = SBITS_RESET_DATA;
@@ -200,6 +201,7 @@ void setupSbitsInstanceKeySize4DataSize12(sbitsState **stateArray, int number) {
     state->dataSize = 12;
     state->pageSize = 512;
     state->bufferSizeInBlocks = 4;
+    state->numSplinePoints = 300;
     state->buffer = calloc(1, state->pageSize * state->bufferSizeInBlocks);
     state->numDataPages = 20000;
     state->numIndexPages = 1000;
@@ -228,6 +230,7 @@ void setupSbitsInstanceKeySize4DataSize12WithVarData(sbitsState **stateArray, in
     state->dataSize = 12;
     state->pageSize = 512;
     state->bufferSizeInBlocks = 6;
+    state->numSplinePoints = 300;
     state->buffer = calloc(1, state->pageSize * state->bufferSizeInBlocks);
     state->numDataPages = 22000;
     state->numIndexPages = 1000;

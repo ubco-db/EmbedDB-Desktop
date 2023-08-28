@@ -196,6 +196,7 @@ typedef struct {
     id_t currentVarLoc;                                                   /* Current variable address offset to write at (bytes from beginning of file) */
     void *buffer;                                                         /* Pre-allocated memory buffer for use by algorithm */
     spline *spl;                                                          /* Spline model */
+    uint32_t numSplinePoints;                                             /* Number of spline points to allocate */
     radixspline *rdix;                                                    /* Radix Spline search model */
     int32_t indexMaxError;                                                /* Max error for indexing structure (Spline or PGM) */
     int8_t bufferSizeInBlocks;                                            /* Size of buffer in blocks */
@@ -207,6 +208,7 @@ typedef struct {
     int8_t headerSize;                                                    /* Size of header in bytes (calculated during init()) */
     int8_t variableDataHeaderSize;                                        /* Size of page header in variable data files (calculated during init()) */
     int8_t bitmapSize;                                                    /* Size of bitmap in bytes */
+    int8_t cleanSpline;                                                   /* Enables automatic spline cleaning */
     id_t avgKeyDiff;                                                      /* Estimate for difference between key values. Used for get() to predict location of record. */
     count_t maxRecordsPerPage;                                            /* Maximum records per page */
     count_t maxIdxRecordsPerPage;                                         /* Maximum index records per page */

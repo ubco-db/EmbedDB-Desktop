@@ -39,7 +39,7 @@ CFLAGS= -I. -I$(PATHU) -I$(PATHS) -DTEST
 SRCT = $(wildcard $(PATHT)*.c)
 
 VARTEST = $(PATHO)varTest.o
-TEST_SBITS = $(PATHO)test_sbits.o
+TEST_SBITS = $(PATHO)testSbits.o
 
 COMPILE=gcc -c
 LINK=gcc
@@ -55,12 +55,12 @@ varTest: $(BUILD_PATHS) $(PATHB)varTest.$(TARGET_EXTENSION)
 $(PATHB)varTest.$(TARGET_EXTENSION): $(OBJECTS) $(VARTEST)
 	$(LINK) -o $@ $^ $(MATH)
 
-test_sbits: $(BUILD_PATHS) $(PATHB)test_sbits.$(TARGET_EXTENSION)
-	@echo "Running test_sbits"
-	-./$(PATHB)test_sbits.$(TARGET_EXTENSION)
-	@echo "Finished running test_sbits file"
+testSbits: $(BUILD_PATHS) $(PATHB)testSbits.$(TARGET_EXTENSION)
+	@echo "Running testSbits"
+	-./$(PATHB)testSbits.$(TARGET_EXTENSION)
+	@echo "Finished running testSbits file"
 
-$(PATHB)test_sbits.$(TARGET_EXTENSION): $(OBJECTS) $(TEST_SBITS)
+$(PATHB)testSbits.$(TARGET_EXTENSION): $(OBJECTS) $(TEST_SBITS)
 	$(LINK) -o $@ $^
 
 test: $(BUILD_PATHS) $(RESULTS)

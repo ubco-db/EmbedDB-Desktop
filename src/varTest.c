@@ -143,6 +143,7 @@ int main() {
         state->numIndexPages = 48;
         state->numVarPages = 1000;
         state->eraseSizeInPages = 4;
+        state->numSplinePoints = 300;
 
         char dataPath[] = "build/artifacts/dataFile.bin", indexPath[] = "build/artifacts/indexFile.bin", varPath[] = "build/artifacts/varFile.bin";
         state->fileInterface = getFileInterface();
