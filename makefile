@@ -34,7 +34,7 @@ PATHA = build/artifacts/
 BUILD_PATHS = $(PATHB) $(PATHD) $(PATHO) $(PATHR) $(PATHA)
 
 OBJECTS = $(PATHO)sbits.o $(PATHO)spline.o $(PATHO)radixspline.o $(PATHO)utilityFunctions.o $(PATHO)advancedQueries.o $(PATHO)schema.o
-CFLAGS= -I. -I$(PATHU) -I$(PATHS) -DTEST
+CFLAGS= -I. -I$(PATHU) -I$(PATHS) -DTEST -DPRINT
 
 SRCT = $(wildcard $(PATHT)*.c)
 
