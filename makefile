@@ -37,7 +37,7 @@ OBJECTS = $(PATHO)sbits.o $(PATHO)spline.o $(PATHO)radixspline.o $(PATHO)utility
 
 TEST_FLAGS = -I. -I $(PATHU) -I $(PATHS) -D TEST
 
-COMMON_FLAGS = -I. -I$(PATHU) -I$(PATHS) -D PRINT
+COMMON_FLAGS = -I. -I$(PATHU) -I$(PATHS) -D PRINT_ERRORS
 
 CFLAGS = $(if $(filter test,$(MAKECMDGOALS)),$(TEST_FLAGS),$(COMMON_FLAGS))
 
