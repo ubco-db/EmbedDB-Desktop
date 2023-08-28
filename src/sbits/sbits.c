@@ -215,6 +215,7 @@ int8_t sbitsInit(sbitsState *state, size_t indexMaxError) {
 
     /* Initalize the spline or radix spline structure if either are to be used */
     if (SEARCH_METHOD == 2) {
+        state->cleanSpline = 1;
         if (RADIX_BITS > 0) {
             initRadixSpline(state, RADIX_BITS);
         } else {
@@ -1521,7 +1522,8 @@ id_t writePage(sbitsState *state, void *buffer) {
         // Erase pages to make space for new data
         state->numAvailDataPages += state->eraseSizeInPages;
         state->minDataPageId += state->eraseSizeInPages;
-        cleanSpline(state, &state->minKey);
+        if (state->cleanSpline)
+            cleanSpline(state, &state->minKey);
         // Estimate the smallest key now. Could determine exactly by reading this page
         state->minKey += state->eraseSizeInPages * state->maxRecordsPerPage * state->avgKeyDiff;
     }
