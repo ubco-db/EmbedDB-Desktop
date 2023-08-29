@@ -362,7 +362,7 @@ int main() {
         printf("Records inserted: %lu\n", numRecords);
         printf("Records with variable data: %lu\n", numVarData);
 
-        printStats(state);
+        embedDBPrintStats(state);
         embedDBResetStats(state);
 
         printf("\n\nQUERY TEST:\n");

@@ -49,7 +49,7 @@ SRCT = $(wildcard $(PATHT)*.c)
 
 EMBED_VARIABLE_EXAMPLE = $(PATHO)embedDBVariableDataExample.o
 EMBEDDB_EXAMPLE = $(PATHO)embedDBExample.o
-ADVANCED_QUERY = $(PATHO)advancedQueryExamples.o
+ADVANCED_QUERY = $(PATHO)advancedQueryInterfaceExample.o
 
 COMPILE=gcc -c
 LINK=gcc
@@ -73,10 +73,10 @@ embedDBExample: $(BUILD_PATHS) $(PATHB)embedDBExample.$(TARGET_EXTENSION)
 $(PATHB)embedDBExample.$(TARGET_EXTENSION): $(EMBEDDB_OBJECTS) $(EMBEDDB_EXAMPLE)
 	$(LINK) -o $@ $^
 
-advancedQueryExamples: $(BUILD_PATHS) $(PATHB)advancedQueryExamples.$(TARGET_EXTENSION)
-	-./$(PATHB)advancedQueryExamples.$(TARGET_EXTENSION)
+advancedQueryInterfaceExample: $(BUILD_PATHS) $(PATHB)advancedQueryInterfaceExample.$(TARGET_EXTENSION)
+	-./$(PATHB)advancedQueryInterfaceExample.$(TARGET_EXTENSION)
 
-$(PATHB)advancedQueryExamples.$(TARGET_EXTENSION): $(EMBEDDB_OBJECTS) $(QUERY_OBJECTS) $(ADVANCED_QUERY)
+$(PATHB)advancedQueryInterfaceExample.$(TARGET_EXTENSION): $(EMBEDDB_OBJECTS) $(QUERY_OBJECTS) $(ADVANCED_QUERY)
 	$(LINK) -o $@ $^
 
 test: $(BUILD_PATHS) $(RESULTS)
