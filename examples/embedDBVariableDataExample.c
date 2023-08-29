@@ -4,8 +4,8 @@
 #include <string.h>
 #include <time.h>
 
-#include "embedDB/embedDB.h"
-#include "embedDB/utilityFunctions.h"
+#include "../src/embedDB/embedDB.h"
+#include "../src/embedDB/utilityFunctions.h"
 
 #define NUM_STEPS 10
 #define NUM_RUNS 1

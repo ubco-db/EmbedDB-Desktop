@@ -22,6 +22,7 @@ endif
 
 PATHU = Unity/src/
 PATHS = src/
+PATHE = examples/
 PATH_EMBEDDB = src/embedDB/
 PATHSPLINE = src/spline/
 PATH_QUERY = src/query-interface/
@@ -41,9 +42,9 @@ QUERY_OBJECTS = $(PATHO)schema.o $(PATHO)advancedQueries.o
 
 TEST_FLAGS = -I. -I $(PATHU) -I $(PATHS) -D TEST
 
-COMMON_FLAGS = -I. -I$(PATHS) -D PRINT_ERRORS
+EXAMPLE_FLAGS = -I. -I$(PATHS) -I$(PATHE) -D PRINT_ERRORS
 
-CFLAGS = $(if $(filter test,$(MAKECMDGOALS)),$(TEST_FLAGS),$(COMMON_FLAGS))
+CFLAGS = $(if $(filter test,$(MAKECMDGOALS)),$(TEST_FLAGS),$(EXAMPLE_FLAGS))
 
 SRCT = $(wildcard $(PATHT)*.c)
 
@@ -57,7 +58,7 @@ DEPEND=gcc -MM -MG -MF
 
 RESULTS = $(patsubst $(PATHT)Test%.c,$(PATHR)Test%.testpass,$(SRCT))
 
-embedDBVariableDataExample: $(BUILD_PATHS) $(PATHB)embedDBVariableDataExample.$(TARGET_EXTENSION)
+embedDBVariableExample: $(BUILD_PATHS) $(PATHB)embedDBVariableDataExample.$(TARGET_EXTENSION)
 	@echo "Running EmbedDB variable data example"
 	-./$(PATHB)embedDBVariableDataExample.$(TARGET_EXTENSION)
 	@echo "Finished running EmbedDB variable data example"
@@ -92,7 +93,7 @@ $(PATHB)Test%.$(TARGET_EXTENSION): $(PATHO)Test%.o $(EMBEDDB_OBJECTS) $(QUERY_OB
 $(PATHO)%.o:: $(PATHT)%.c
 	$(COMPILE) $(CFLAGS) $< -o $@
 
-$(PATHO)%.o:: $(PATHS)%.c
+$(PATHO)%.o:: $(PATHE)%.c
 	$(COMPILE) $(CFLAGS) $< -o $@
 
 $(PATHO)%.o:: $(PATHSPLINE)%.c

@@ -39,8 +39,8 @@
 #include <string.h>
 #include <time.h>
 
-#include "embedDB/embedDB.h"
-#include "embedDB/utilityFunctions.h"
+#include "../src/embedDB/embedDB.h"
+#include "../src/embedDB/utilityFunctions.h"
 
 /*
  * 1: Query each record from original data set.
