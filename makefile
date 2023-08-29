@@ -24,6 +24,8 @@ PATHU = Unity/src/
 PATHS = src/
 PATHSBITS = src/sbits/
 PATHSPLINE = src/spline/
+PATH_QUERY = src/query-interface/
+
 PATHT = test/
 PATHB = build/
 PATHD = build/depends/
@@ -33,11 +35,13 @@ PATHA = build/artifacts/
 
 BUILD_PATHS = $(PATHB) $(PATHD) $(PATHO) $(PATHR) $(PATHA)
 
-OBJECTS = $(PATHO)sbits.o $(PATHO)spline.o $(PATHO)radixspline.o $(PATHO)utilityFunctions.o $(PATHO)advancedQueries.o $(PATHO)schema.o
+SBITS_OBJECTS = $(PATHO)sbits.o $(PATHO)spline.o $(PATHO)radixspline.o $(PATHO)utilityFunctions.o 
+
+QUERY_OBJECTS = $(PATHO)schema.o $(PATHO)advancedQueries.o
 
 TEST_FLAGS = -I. -I $(PATHU) -I $(PATHS) -D TEST
 
-COMMON_FLAGS = -I. -I$(PATHU) -I$(PATHS) -D PRINT_ERRORS
+COMMON_FLAGS = -I. -I$(PATHS) -D PRINT_ERRORS
 
 CFLAGS = $(if $(filter test,$(MAKECMDGOALS)),$(TEST_FLAGS),$(COMMON_FLAGS))
 
@@ -45,6 +49,7 @@ SRCT = $(wildcard $(PATHT)*.c)
 
 VARTEST = $(PATHO)varTest.o
 TEST_SBITS = $(PATHO)testSbits.o
+ADVANCED_QUERY = $(PATHO)advancedQueryExamples.o
 
 COMPILE=gcc -c
 LINK=gcc
@@ -57,7 +62,7 @@ varTest: $(BUILD_PATHS) $(PATHB)varTest.$(TARGET_EXTENSION)
 	-./$(PATHB)varTest.$(TARGET_EXTENSION)
 	@echo "Finished running varTest file"
 
-$(PATHB)varTest.$(TARGET_EXTENSION): $(OBJECTS) $(VARTEST)
+$(PATHB)varTest.$(TARGET_EXTENSION): $(SBITS_OBJECTS) $(VARTEST)
 	$(LINK) -o $@ $^ $(MATH)
 
 testSbits: $(BUILD_PATHS) $(PATHB)testSbits.$(TARGET_EXTENSION)
@@ -65,7 +70,13 @@ testSbits: $(BUILD_PATHS) $(PATHB)testSbits.$(TARGET_EXTENSION)
 	-./$(PATHB)testSbits.$(TARGET_EXTENSION)
 	@echo "Finished running testSbits file"
 
-$(PATHB)testSbits.$(TARGET_EXTENSION): $(OBJECTS) $(TEST_SBITS)
+$(PATHB)testSbits.$(TARGET_EXTENSION): $(SBITS_OBJECTS) $(TEST_SBITS)
+	$(LINK) -o $@ $^
+
+advancedQueryExamples: $(BUILD_PATHS) $(PATHB)advancedQueryExamples.$(TARGET_EXTENSION)
+	-./$(PATHB)advancedQueryExamples.$(TARGET_EXTENSION)
+
+$(PATHB)advancedQueryExamples.$(TARGET_EXTENSION): $(SBITS_OBJECTS) $(QUERY_OBJECTS) $(ADVANCED_QUERY)
 	$(LINK) -o $@ $^
 
 test: $(BUILD_PATHS) $(RESULTS)
@@ -75,7 +86,7 @@ test: $(BUILD_PATHS) $(RESULTS)
 $(PATHR)%.testpass: $(PATHB)%.$(TARGET_EXTENSION)
 	-./$< > $@ 2>&1
 
-$(PATHB)Test%.$(TARGET_EXTENSION): $(PATHO)Test%.o $(OBJECTS) $(PATHO)unity.o #$(PATHD)Test%.d
+$(PATHB)Test%.$(TARGET_EXTENSION): $(PATHO)Test%.o $(SBITS_OBJECTS) $(PATHO)unity.o #$(PATHD)Test%.d
 	$(LINK) -o $@ $^ $(MATH)
 
 $(PATHO)%.o:: $(PATHT)%.c
@@ -88,6 +99,9 @@ $(PATHO)%.o:: $(PATHSPLINE)%.c
 	$(COMPILE) $(CFLAGS) $< -o $@
 
 $(PATHO)%.o:: $(PATHSBITS)%.c
+	$(COMPILE) $(CFLAGS) $< -o $@
+
+$(PATHO)%.o:: $(PATH_QUERY)%.c
 	$(COMPILE) $(CFLAGS) $< -o $@
 
 $(PATHO)%.o:: $(PATHU)%.c $(PATHU)%.h
