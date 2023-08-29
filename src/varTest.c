@@ -16,7 +16,7 @@
  * 1 = Image data
  * 2 = Set length string
  */
-#define TEST_TYPE 1
+#define TEST_TYPE 2
 
 /*
  * 1: Query each record from original data set.
@@ -28,7 +28,7 @@
 /*
  * 0: Use data from one of the data sets
  * 1: Use sequentially generated data
-*/
+ */
 #define SEQUENTIAL_DATA 1
 
 /* LinkedList for tracking data */
