@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "sbits/advancedQueries.h"
+#include "query-interface/advancedQueries.h"
 #include "sbits/sbits.h"
 #include "sbits/utilityFunctions.h"
 
@@ -44,7 +44,7 @@ void customShiftClose(sbitsOperator* operator) {
 
 void insertData(sbitsState* state, char* filename);
 
-void main() {
+int main() {
     sbitsState* stateUWA = calloc(1, sizeof(sbitsState));
     stateUWA->keySize = 4;
     stateUWA->dataSize = 12;
@@ -54,6 +54,7 @@ void main() {
     stateUWA->eraseSizeInPages = 4;
     stateUWA->numDataPages = 20000;
     stateUWA->numIndexPages = 1000;
+    stateUWA->numSplinePoints = 300;
     char dataPath[] = "build/artifacts/dataFile.bin", indexPath[] = "build/artifacts/indexFile.bin";
     stateUWA->fileInterface = getFileInterface();
     stateUWA->dataFile = setupFile(dataPath);
@@ -301,6 +302,7 @@ void main() {
     free(stateSEA->buffer);
     free(stateSEA);
     sbitsFreeSchema(&baseSchema);
+    return 0;
 }
 
 void insertData(sbitsState* state, char* filename) {

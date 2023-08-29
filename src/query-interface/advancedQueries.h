@@ -1,7 +1,7 @@
 #ifndef _ADVANCEDQUERIES_H
 #define _ADVANCEDQUERIES_H
 
-#include "sbits.h"
+#include "../sbits/sbits.h"
 #include "schema.h"
 
 #define SELECT_GT 0

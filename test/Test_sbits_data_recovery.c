@@ -81,29 +81,6 @@ void insertRecordsParabolic(int32_t startingKey, int64_t startingData, int32_t n
     free(data);
 }
 
-int queryRecordsLinearly(sbitsState *state, uint32_t numberOfRecords, int32_t startingKey, int64_t startingData) {
-    int64_t *result = (int64_t *)malloc(state->recordSize);
-    int32_t key = startingKey;
-    int64_t data = startingData;
-    for (int32_t i = 0; i < numberOfRecords; i++) {
-        key = startingKey += 1;
-        data += 1;
-        int8_t getStatus = sbitsGet(state, &key, (void *)result);
-        if (getStatus != 0) {
-            printf("ERROR: Failed to find: %i\n", key);
-            return 1;
-        }
-        if (*((int64_t *)result) != data) {
-            printf("ERROR: Wrong data for: %i\n", key);
-            printf("Key: %i Data: %lu\n", key, *((int64_t *)result));
-            free(result);
-            return 1;
-        }
-    }
-    free(result);
-    return 0;
-}
-
 void sbits_parameters_initializes_from_data_file_with_twenty_seven_pages_correctly() {
     insertRecordsLinearly(9, 20230614, 1135);
     tearDown();

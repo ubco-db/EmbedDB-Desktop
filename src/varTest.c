@@ -10,14 +10,28 @@
 #define NUM_STEPS 10
 #define NUM_RUNS 1
 #define VALIDATE_VAR_DATA 0
+
 /**
  * 0 = Random data
  * 1 = Image data
  * 2 = Set length string
  */
-#define TEST_TYPE 1
+#define TEST_TYPE 2
 
-// Cursed linkedList for tracking data
+/*
+ * 1: Query each record from original data set.
+ * 2: Query random records in the range of original data set.
+ * 3: Query range of records using an iterator.
+ */
+#define QUERY_TYPE 3
+
+/*
+ * 0: Use data from one of the data sets
+ * 1: Use sequentially generated data
+ */
+#define SEQUENTIAL_DATA 1
+
+/* LinkedList for tracking data */
 typedef struct Node {
     int32_t key;
     void *data;
@@ -54,14 +68,11 @@ int main() {
     uint32_t rreads[NUM_STEPS][NUM_RUNS];
     uint32_t rhits[NUM_STEPS][NUM_RUNS];
 
-    /* Determines if generated, sequential data is used, or data from an input file*/
-    int8_t seqdata = 1;
-
     // Files for non-sequentioal data
     FILE *infile = NULL, *infileRandom = NULL;
     uint32_t minRange, maxRange;
 
-    if (seqdata != 1) {
+    if (!SEQUENTIAL_DATA) {
         /* Open file to read input records */
 
         // measure1_smartphone_sens.bin
@@ -174,6 +185,7 @@ int main() {
             return 1;
         } else {
             printf("Initialization success.\n");
+            sbitsPrintInit(state);
         }
 
         // Initialize Buffer
@@ -192,7 +204,7 @@ int main() {
         int32_t i;
         char vardata[15] = "Testing 000...";
         uint32_t numVarData = 0;
-        if (seqdata == 1) {
+        if (SEQUENTIAL_DATA) {
             for (i = 0; i < numRecords; i++) {
                 // Key = i, fixed data = i % 100
                 *((int32_t *)recordBuffer) = i;
@@ -360,15 +372,8 @@ int main() {
 
         uint32_t varDataFound = 0, fixedFound = 0, deleted = 0, notFound = 0;
 
-        /*
-         * 1: Query each record from original data set.
-         * 2: Query random records in the range of original data set.
-         * 3: Query range of records using an iterator.
-         */
-        int8_t queryType = 1;
-
-        if (seqdata == 1) {
-            if (queryType == 1) {
+        if (SEQUENTIAL_DATA) {
+            if (QUERY_TYPE == 1) {
                 void *keyBuf = calloc(1, state->keySize);
                 uint32_t varBufSize = 6;
                 void *varDataBuf = malloc(varBufSize);
@@ -434,7 +439,7 @@ int main() {
                         }
                     }
                 }
-            } else if (queryType == 3) {
+            } else if (QUERY_TYPE == 3) {
                 uint32_t itKey;
                 void *itData = calloc(1, state->dataSize);
                 sbitsIterator it;
@@ -487,7 +492,7 @@ int main() {
             int8_t headerSize = 16;
             i = 0;
 
-            if (queryType == 1) {
+            if (QUERY_TYPE == 1) {
                 /* Query each record from original data set. */
                 if (useRandom) {
                     fseek(infileRandom, 0, SEEK_SET);
@@ -585,7 +590,7 @@ int main() {
                 }
             donetest:
                 numRecords = i;
-            } else if (queryType == 2) {
+            } else if (QUERY_TYPE == 2) {
                 /* Query random values in range. May not exist in data set. */
 
                 // Only query 10000 records

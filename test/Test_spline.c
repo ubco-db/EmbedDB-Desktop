@@ -127,7 +127,6 @@ void insertData(size_t numRecords, uint64_t startingKey, int64_t startingData, u
         startingKey += keyIncrement;
         startingData += dataIncrement;
     }
-    printf("Starting key: %i\n", startingKey);
 }
 
 int main(void) {

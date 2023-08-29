@@ -258,6 +258,12 @@ typedef struct {
 int8_t sbitsInit(sbitsState *state, size_t indexMaxError);
 
 /**
+ * @brief   Prints the initialization stats of the given SBITS state
+ * @param   state   SBITS state structure
+ */
+void sbitsPrintInit(sbitsState *state);
+
+/**
  * @brief	Puts a given key, data pair into structure.
  * @param	state	SBITS algorithm state structure
  * @param	key		Key for record

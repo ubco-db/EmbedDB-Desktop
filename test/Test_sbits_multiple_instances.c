@@ -91,10 +91,6 @@ void insertRecordsFromFile(sbitsState *state, char *fileName, int32_t numRecords
 void insertRecordsFromFileWithVarData(sbitsState *state, char *fileName, int32_t numRecords) {
     FILE *infile;
     infile = fopen(fileName, "r+b");
-    if (infile == NULL) {
-        printf("Error!!!\n");
-    }
-
     char infileBuffer[512];
     int8_t headerSize = 16;
     int32_t numInserted = 0;
@@ -172,12 +168,6 @@ void queryRecordsFromFileWithVarData(sbitsState *state, char *fileName, int32_t 
             TEST_ASSERT_EQUAL_INT8_MESSAGE(0, getResult, message);
             snprintf(message, 100, "sbitsGetBar did not return the correct data for key %i", *((uint32_t *)buf));
             TEST_ASSERT_EQUAL_MEMORY_MESSAGE(buf + 4, dataBuffer, state->dataSize, message);
-            if (946714800 == *((uint32_t *)buf)) {
-                printf("Expected data: %s, actual data: %s \n", varDataExpected, varDataBuffer);
-                printf("Length of data expected: %i \n", strlen(varDataExpected));
-                printf("Length of data actually: %i \n", stream->totalBytes);
-                printf("Data offset: %i \n", stream->dataStart);
-            }
             uint32_t streamBytesRead = sbitsVarDataStreamRead(state, stream, varDataBuffer, strlen(varDataExpected));
             snprintf(message, 100, "sbitsGetVar did not return the correct variable data for key %i", *((uint32_t *)buf));
 

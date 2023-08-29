@@ -49,7 +49,10 @@
  */
 #define QUERY_TYPE 3
 
-/* Use sequential generated data or one of the data sets */
+/*
+ * 0: Use data from one of the data sets
+ * 1: Use sequentially generated data
+ */
 #define SEQUENTIAL_DATA 1
 
 /**
@@ -189,6 +192,8 @@ void runalltests_sbits() {
             printf("Initialization error.\n");
             return;
         }
+
+        sbitsPrintInit(state);
 
         /* Data record is empty. Only need to reset to 0 once as reusing struct.
          */

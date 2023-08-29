@@ -88,7 +88,6 @@ void sbits_variable_data_page_numbers_are_correct() {
     uint32_t numberOfPagesExpected = 69;
     TEST_ASSERT_EQUAL_UINT32_MESSAGE(numberOfPagesExpected - 1, state->nextVarPageId, "SBITS next variable data logical page number is incorrect.");
     uint32_t pageNumber;
-    printf("Number of pages expected: %i\n", numberOfPagesExpected);
     void *buffer = (int8_t *)state->buffer + state->pageSize * SBITS_VAR_READ_BUFFER(state->parameters);
     for (uint32_t i = 0; i < numberOfPagesExpected - 1; i++) {
         readVariablePage(state, i);
