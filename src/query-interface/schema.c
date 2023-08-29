@@ -6,13 +6,13 @@
 #include <string.h>
 
 /**
- * @brief	Create an sbitsSchema from a list of column sizes including both key and data
+ * @brief	Create an embedDBSchema from a list of column sizes including both key and data
  * @param	numCols			The total number of columns in table
  * @param	colSizes		An array with the size of each column. Max size is 127
- * @param	colSignedness	An array describing if the data in the column is signed or unsigned. Use the defined constants SBITS_COLUMNN_SIGNED or SBITS_COLUMN_UNSIGNED
+ * @param	colSignedness	An array describing if the data in the column is signed or unsigned. Use the defined constants embedDB_COLUMNN_SIGNED or embedDB_COLUMN_UNSIGNED
  */
-sbitsSchema* sbitsCreateSchema(uint8_t numCols, int8_t* colSizes, int8_t* colSignedness) {
-    sbitsSchema* schema = malloc(sizeof(sbitsSchema));
+embedDBSchema* embedDBCreateSchema(uint8_t numCols, int8_t* colSizes, int8_t* colSignedness) {
+    embedDBSchema* schema = malloc(sizeof(embedDBSchema));
     schema->columnSizes = malloc(numCols * sizeof(int8_t));
     schema->numCols = numCols;
     uint16_t totalSize = 0;
@@ -26,13 +26,13 @@ sbitsSchema* sbitsCreateSchema(uint8_t numCols, int8_t* colSizes, int8_t* colSig
 #endif
             return NULL;
         }
-        if (sign == SBITS_COLUMN_SIGNED) {
+        if (sign == embedDB_COLUMN_SIGNED) {
             schema->columnSizes[i] = -colSizes[i];
-        } else if (sign == SBITS_COLUMN_UNSIGNED) {
+        } else if (sign == embedDB_COLUMN_UNSIGNED) {
             schema->columnSizes[i] = colSizes[i];
         } else {
 #ifdef PRINT_ERRORS
-            printf("ERROR: Must only use SBITS_COLUMN_SIGNED or SBITS_COLUMN_UNSIGNED to describe column signedness\n");
+            printf("ERROR: Must only use embedDB_COLUMN_SIGNED or embedDB_COLUMN_UNSIGNED to describe column signedness\n");
 #endif
             return NULL;
         }
@@ -44,7 +44,7 @@ sbitsSchema* sbitsCreateSchema(uint8_t numCols, int8_t* colSizes, int8_t* colSig
 /**
  * @brief	Free a schema. Sets the schema pointer to NULL.
  */
-void sbitsFreeSchema(sbitsSchema** schema) {
+void embedDBFreeSchema(embedDBSchema** schema) {
     if (*schema == NULL) return;
     free((*schema)->columnSizes);
     free(*schema);
@@ -54,7 +54,7 @@ void sbitsFreeSchema(sbitsSchema** schema) {
 /**
  * @brief	Uses schema to determine the length of buffer to allocate and callocs that space
  */
-void* createBufferFromSchema(sbitsSchema* schema) {
+void* createBufferFromSchema(embedDBSchema* schema) {
     uint16_t totalSize = 0;
     for (uint8_t i = 0; i < schema->numCols; i++) {
         totalSize += abs(schema->columnSizes[i]);
@@ -65,8 +65,8 @@ void* createBufferFromSchema(sbitsSchema* schema) {
 /**
  * @brief	Deep copy schema and return a pointer to the copy
  */
-sbitsSchema* copySchema(const sbitsSchema* schema) {
-    sbitsSchema* copy = malloc(sizeof(sbitsSchema));
+embedDBSchema* copySchema(const embedDBSchema* schema) {
+    embedDBSchema* copy = malloc(sizeof(embedDBSchema));
     if (copy == NULL) {
 #ifdef PRINT_ERRORS
         printf("ERROR: malloc failed while copying schema\n");
@@ -88,7 +88,7 @@ sbitsSchema* copySchema(const sbitsSchema* schema) {
 /**
  * @brief	Finds byte offset of the column from the beginning of the record
  */
-uint16_t getColOffsetFromSchema(sbitsSchema* schema, uint8_t colNum) {
+uint16_t getColOffsetFromSchema(embedDBSchema* schema, uint8_t colNum) {
     uint16_t pos = 0;
     for (uint8_t i = 0; i < colNum; i++) {
         pos += abs(schema->columnSizes[i]);
@@ -99,7 +99,7 @@ uint16_t getColOffsetFromSchema(sbitsSchema* schema, uint8_t colNum) {
 /**
  * @brief	Calculates record size from schema
  */
-uint16_t getRecordSizeFromSchema(sbitsSchema* schema) {
+uint16_t getRecordSizeFromSchema(embedDBSchema* schema) {
     uint16_t size = 0;
     for (uint8_t i = 0; i < schema->numCols; i++) {
         size += abs(schema->columnSizes[i]);
@@ -107,13 +107,13 @@ uint16_t getRecordSizeFromSchema(sbitsSchema* schema) {
     return size;
 }
 
-void printSchema(sbitsSchema* schema) {
+void printSchema(embedDBSchema* schema) {
     for (uint8_t i = 0; i < schema->numCols; i++) {
         if (i) {
             printf(", ");
         }
         int8_t col = schema->columnSizes[i];
-        printf("%sint%d", SBITS_IS_COL_SIGNED(col) ? "" : "u", abs(col));
+        printf("%sint%d", embedDB_IS_COL_SIGNED(col) ? "" : "u", abs(col));
     }
     printf("\n");
 }

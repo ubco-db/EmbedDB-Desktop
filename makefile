@@ -22,7 +22,7 @@ endif
 
 PATHU = Unity/src/
 PATHS = src/
-PATHSBITS = src/sbits/
+PATH_EMBEDDB = src/embedDB/
 PATHSPLINE = src/spline/
 PATH_QUERY = src/query-interface/
 
@@ -35,7 +35,7 @@ PATHA = build/artifacts/
 
 BUILD_PATHS = $(PATHB) $(PATHD) $(PATHO) $(PATHR) $(PATHA)
 
-SBITS_OBJECTS = $(PATHO)sbits.o $(PATHO)spline.o $(PATHO)radixspline.o $(PATHO)utilityFunctions.o 
+EMBEDDB_OBJECTS = $(PATHO)embedDB.o $(PATHO)spline.o $(PATHO)radixspline.o $(PATHO)utilityFunctions.o 
 
 QUERY_OBJECTS = $(PATHO)schema.o $(PATHO)advancedQueries.o
 
@@ -47,8 +47,8 @@ CFLAGS = $(if $(filter test,$(MAKECMDGOALS)),$(TEST_FLAGS),$(COMMON_FLAGS))
 
 SRCT = $(wildcard $(PATHT)*.c)
 
-VARTEST = $(PATHO)varTest.o
-TEST_SBITS = $(PATHO)testSbits.o
+EMBED_VARIABLE_EXAMPLE = $(PATHO)embedDBVariableDataExample.o
+EMBEDDB_EXAMPLE = $(PATHO)embedDBExample.o
 ADVANCED_QUERY = $(PATHO)advancedQueryExamples.o
 
 COMPILE=gcc -c
@@ -57,26 +57,26 @@ DEPEND=gcc -MM -MG -MF
 
 RESULTS = $(patsubst $(PATHT)Test%.c,$(PATHR)Test%.testpass,$(SRCT))
 
-varTest: $(BUILD_PATHS) $(PATHB)varTest.$(TARGET_EXTENSION)
-	@echo "Running varTest"
-	-./$(PATHB)varTest.$(TARGET_EXTENSION)
-	@echo "Finished running varTest file"
+embedDBVariableDataExample: $(BUILD_PATHS) $(PATHB)embedDBVariableDataExample.$(TARGET_EXTENSION)
+	@echo "Running EmbedDB variable data example"
+	-./$(PATHB)embedDBVariableDataExample.$(TARGET_EXTENSION)
+	@echo "Finished running EmbedDB variable data example"
 
-$(PATHB)varTest.$(TARGET_EXTENSION): $(SBITS_OBJECTS) $(VARTEST)
+$(PATHB)embedDBVariableDataExample.$(TARGET_EXTENSION): $(EMBEDDB_OBJECTS) $(EMBED_VARIABLE_EXAMPLE)
 	$(LINK) -o $@ $^ $(MATH)
 
-testSbits: $(BUILD_PATHS) $(PATHB)testSbits.$(TARGET_EXTENSION)
-	@echo "Running testSbits"
-	-./$(PATHB)testSbits.$(TARGET_EXTENSION)
-	@echo "Finished running testSbits file"
+embedDBExample: $(BUILD_PATHS) $(PATHB)embedDBExample.$(TARGET_EXTENSION)
+	@echo "Running EmbedDB Example"
+	-./$(PATHB)embedDBExample.$(TARGET_EXTENSION)
+	@echo "Finished running EmbedDB example file"
 
-$(PATHB)testSbits.$(TARGET_EXTENSION): $(SBITS_OBJECTS) $(TEST_SBITS)
+$(PATHB)embedDBExample.$(TARGET_EXTENSION): $(EMBEDDB_OBJECTS) $(EMBEDDB_EXAMPLE)
 	$(LINK) -o $@ $^
 
 advancedQueryExamples: $(BUILD_PATHS) $(PATHB)advancedQueryExamples.$(TARGET_EXTENSION)
 	-./$(PATHB)advancedQueryExamples.$(TARGET_EXTENSION)
 
-$(PATHB)advancedQueryExamples.$(TARGET_EXTENSION): $(SBITS_OBJECTS) $(QUERY_OBJECTS) $(ADVANCED_QUERY)
+$(PATHB)advancedQueryExamples.$(TARGET_EXTENSION): $(EMBEDDB_OBJECTS) $(QUERY_OBJECTS) $(ADVANCED_QUERY)
 	$(LINK) -o $@ $^
 
 test: $(BUILD_PATHS) $(RESULTS)
@@ -86,7 +86,7 @@ test: $(BUILD_PATHS) $(RESULTS)
 $(PATHR)%.testpass: $(PATHB)%.$(TARGET_EXTENSION)
 	-./$< > $@ 2>&1
 
-$(PATHB)Test%.$(TARGET_EXTENSION): $(PATHO)Test%.o $(SBITS_OBJECTS) $(QUERY_OBJECTS) $(PATHO)unity.o #$(PATHD)Test%.d
+$(PATHB)Test%.$(TARGET_EXTENSION): $(PATHO)Test%.o $(EMBEDDB_OBJECTS) $(QUERY_OBJECTS) $(PATHO)unity.o #$(PATHD)Test%.d
 	$(LINK) -o $@ $^ $(MATH)
 
 $(PATHO)%.o:: $(PATHT)%.c
@@ -98,7 +98,7 @@ $(PATHO)%.o:: $(PATHS)%.c
 $(PATHO)%.o:: $(PATHSPLINE)%.c
 	$(COMPILE) $(CFLAGS) $< -o $@
 
-$(PATHO)%.o:: $(PATHSBITS)%.c
+$(PATHO)%.o:: $(PATH_EMBEDDB)%.c
 	$(COMPILE) $(CFLAGS) $< -o $@
 
 $(PATHO)%.o:: $(PATH_QUERY)%.c

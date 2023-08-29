@@ -79,11 +79,11 @@ int8_t compare(void* a, uint8_t operation, void* b, int8_t isSigned, int8_t numB
  * @brief	Extract a record from an operator
  * @return	1 if a record was returned, 0 if there are no more rows to return
  */
-int8_t exec(sbitsOperator* operator) {
+int8_t exec(embedDBOperator* operator) {
     return operator->next(operator);
 }
 
-void initTableScan(sbitsOperator* operator) {
+void initTableScan(embedDBOperator* operator) {
     if (operator->input != NULL) {
 #ifdef PRINT_ERRORS
         printf("WARNING: TableScan operator should not have an input operator\n");
@@ -104,14 +104,14 @@ void initTableScan(sbitsOperator* operator) {
     }
 
     // Check that the provided key schema matches what is in the state
-    sbitsState* sbitsstate = (sbitsState*)(((void**)operator->state)[0]);
-    if (operator->schema->columnSizes[0] <= 0 || abs(operator->schema->columnSizes[0]) != sbitsstate->keySize) {
+    embedDBState* embedDBstate = (embedDBState*)(((void**)operator->state)[0]);
+    if (operator->schema->columnSizes[0] <= 0 || abs(operator->schema->columnSizes[0]) != embedDBstate->keySize) {
 #ifdef PRINT_ERRORS
         printf("ERROR: Make sure the the key column is at index 0 of the schema initialization and that it matches the keySize in the state and is unsigned\n");
 #endif
         return;
     }
-    if (getRecordSizeFromSchema(operator->schema) != (sbitsstate->keySize + sbitsstate->dataSize)) {
+    if (getRecordSizeFromSchema(operator->schema) != (embedDBstate->keySize + embedDBstate->dataSize)) {
 #ifdef PRINT_ERRORS
         printf("ERROR: Size of provided schema doesn't match the size that will be returned by the provided iterator\n");
 #endif
@@ -130,7 +130,7 @@ void initTableScan(sbitsOperator* operator) {
     }
 }
 
-int8_t nextTableScan(sbitsOperator* operator) {
+int8_t nextTableScan(embedDBOperator* operator) {
     // Check that a schema was set
     if (operator->schema == NULL) {
 #ifdef PRINT_ERRORS
@@ -140,17 +140,17 @@ int8_t nextTableScan(sbitsOperator* operator) {
     }
 
     // Get next record
-    sbitsState* state = (sbitsState*)(((void**)operator->state)[0]);
-    sbitsIterator* it = (sbitsIterator*)(((void**)operator->state)[1]);
-    if (!sbitsNext(state, it, operator->recordBuffer, (int8_t*)operator->recordBuffer + state->keySize)) {
+    embedDBState* state = (embedDBState*)(((void**)operator->state)[0]);
+    embedDBIterator* it = (embedDBIterator*)(((void**)operator->state)[1]);
+    if (!embedDBNext(state, it, operator->recordBuffer, (int8_t*)operator->recordBuffer + state->keySize)) {
         return 0;
     }
 
     return 1;
 }
 
-void closeTableScan(sbitsOperator* operator) {
-    sbitsFreeSchema(&operator->schema);
+void closeTableScan(embedDBOperator* operator) {
+    embedDBFreeSchema(&operator->schema);
     free(operator->recordBuffer);
     operator->recordBuffer = NULL;
     free(operator->state);
@@ -163,7 +163,7 @@ void closeTableScan(sbitsOperator* operator) {
  * @param	it			An initialized iterator setup to read relevent records for this query
  * @param	baseSchema	The schema of the database being read from
  */
-sbitsOperator* createTableScanOperator(sbitsState* state, sbitsIterator* it, sbitsSchema* baseSchema) {
+embedDBOperator* createTableScanOperator(embedDBState* state, embedDBIterator* it, embedDBSchema* baseSchema) {
     // Ensure all fields are not NULL
     if (state == NULL || it == NULL || baseSchema == NULL) {
 #ifdef PRINT_ERRORS
@@ -172,7 +172,7 @@ sbitsOperator* createTableScanOperator(sbitsState* state, sbitsIterator* it, sbi
         return NULL;
     }
 
-    sbitsOperator* operator= malloc(sizeof(sbitsOperator));
+    embedDBOperator* operator= malloc(sizeof(embedDBOperator));
     if (operator== NULL) {
 #ifdef PRINT_ERRORS
         printf("ERROR: malloc failed while creating TableScan operator\n");
@@ -201,7 +201,7 @@ sbitsOperator* createTableScanOperator(sbitsState* state, sbitsIterator* it, sbi
     return operator;
 }
 
-void initProjection(sbitsOperator* operator) {
+void initProjection(embedDBOperator* operator) {
     if (operator->input == NULL) {
 #ifdef PRINT_ERRORS
         printf("ERROR: Projection operator needs an input operator\n");
@@ -215,11 +215,11 @@ void initProjection(sbitsOperator* operator) {
     // Get state
     uint8_t numCols = *(uint8_t*)operator->state;
     uint8_t* cols = (uint8_t*)operator->state + 1;
-    const sbitsSchema* inputSchema = operator->input->schema;
+    const embedDBSchema* inputSchema = operator->input->schema;
 
     // Init output schema
     if (operator->schema == NULL) {
-        operator->schema = malloc(sizeof(sbitsSchema));
+        operator->schema = malloc(sizeof(embedDBSchema));
         if (operator->schema == NULL) {
 #ifdef PRINT_ERRORS
             printf("ERROR: Failed to allocate space for projection schema\n");
@@ -251,13 +251,13 @@ void initProjection(sbitsOperator* operator) {
     }
 }
 
-int8_t nextProjection(sbitsOperator* operator) {
+int8_t nextProjection(embedDBOperator* operator) {
     uint8_t numCols = *(uint8_t*)operator->state;
     uint8_t* cols = (uint8_t*)operator->state + 1;
     uint16_t curColPos = 0;
     uint8_t nextProjCol = 0;
     uint16_t nextProjColPos = 0;
-    const sbitsSchema* inputSchema = operator->input->schema;
+    const embedDBSchema* inputSchema = operator->input->schema;
 
     // Get next record
     if (operator->input->next(operator->input)) {
@@ -276,10 +276,10 @@ int8_t nextProjection(sbitsOperator* operator) {
     }
 }
 
-void closeProjection(sbitsOperator* operator) {
+void closeProjection(embedDBOperator* operator) {
     operator->input->close(operator->input);
 
-    sbitsFreeSchema(&operator->schema);
+    embedDBFreeSchema(&operator->schema);
     free(operator->state);
     operator->state = NULL;
     free(operator->recordBuffer);
@@ -292,7 +292,7 @@ void closeProjection(sbitsOperator* operator) {
  * @param	numCols	How many columns will be in the final projection
  * @param	cols	The indexes of the columns to be outputted. Zero indexed. Column indexes must be strictly increasing i.e. columns must stay in the same order, can only remove columns from input
  */
-sbitsOperator* createProjectionOperator(sbitsOperator* input, uint8_t numCols, uint8_t* cols) {
+embedDBOperator* createProjectionOperator(embedDBOperator* input, uint8_t numCols, uint8_t* cols) {
     // Ensure column numbers are strictly increasing
     uint8_t lastCol = cols[0];
     for (uint8_t i = 1; i < numCols; i++) {
@@ -315,7 +315,7 @@ sbitsOperator* createProjectionOperator(sbitsOperator* input, uint8_t numCols, u
     state[0] = numCols;
     memcpy(state + 1, cols, numCols);
 
-    sbitsOperator* operator= malloc(sizeof(sbitsOperator));
+    embedDBOperator* operator= malloc(sizeof(embedDBOperator));
     if (operator== NULL) {
 #ifdef PRINT_ERRORS
         printf("ERROR: malloc failed while creating Projection operator\n");
@@ -334,7 +334,7 @@ sbitsOperator* createProjectionOperator(sbitsOperator* input, uint8_t numCols, u
     return operator;
 }
 
-void initSelection(sbitsOperator* operator) {
+void initSelection(embedDBOperator* operator) {
     if (operator->input == NULL) {
 #ifdef PRINT_ERRORS
         printf("ERROR: Projection operator needs an input operator\n");
@@ -362,8 +362,8 @@ void initSelection(sbitsOperator* operator) {
     }
 }
 
-int8_t nextSelection(sbitsOperator* operator) {
-    sbitsSchema* schema = operator->input->schema;
+int8_t nextSelection(embedDBOperator* operator) {
+    embedDBSchema* schema = operator->input->schema;
 
     int8_t colNum = *(int8_t*)operator->state;
     uint16_t colPos = getColOffsetFromSchema(schema, colNum);
@@ -387,10 +387,10 @@ int8_t nextSelection(sbitsOperator* operator) {
     return 0;
 }
 
-void closeSelection(sbitsOperator* operator) {
+void closeSelection(embedDBOperator* operator) {
     operator->input->close(operator->input);
 
-    sbitsFreeSchema(&operator->schema);
+    embedDBFreeSchema(&operator->schema);
     free(operator->state);
     operator->state = NULL;
     free(operator->recordBuffer);
@@ -404,7 +404,7 @@ void closeSelection(sbitsOperator* operator) {
  * @param	operation	A constant representing which comparison operation to perform. (e.g. SELECT_GT, SELECT_EQ, etc)
  * @param	compVal		A pointer to the value to compare with. Make sure the size of this is the same number of bytes as is described in the schema
  */
-sbitsOperator* createSelectionOperator(sbitsOperator* input, int8_t colNum, int8_t operation, void* compVal) {
+embedDBOperator* createSelectionOperator(embedDBOperator* input, int8_t colNum, int8_t operation, void* compVal) {
     int8_t* state = malloc(2 + sizeof(void*));
     if (state == NULL) {
 #ifdef PRINT_ERRORS
@@ -416,7 +416,7 @@ sbitsOperator* createSelectionOperator(sbitsOperator* input, int8_t colNum, int8
     state[1] = operation;
     memcpy(state + 2, &compVal, sizeof(void*));
 
-    sbitsOperator* operator= malloc(sizeof(sbitsOperator));
+    embedDBOperator* operator= malloc(sizeof(embedDBOperator));
     if (operator== NULL) {
 #ifdef PRINT_ERRORS
         printf("ERROR: Failed to malloc while creating Selection operator\n");
@@ -439,14 +439,14 @@ sbitsOperator* createSelectionOperator(sbitsOperator* input, int8_t colNum, int8
  */
 struct aggregateInfo {
     int8_t (*groupfunc)(const void* lastRecord, const void* record);  // Function that determins if both records are in the same group
-    sbitsAggregateFunc* functions;                                    // An array of aggregate functions
+    embedDBAggregateFunc* functions;                                    // An array of aggregate functions
     uint32_t functionsLength;                                         // The length of the functions array
     void* lastRecordBuffer;                                           // Buffer for the last record read by input->next
     uint16_t bufferSize;                                              // Size of the input buffer (and lastRecordBuffer)
     int8_t isLastRecordUsable;                                        // Is the data in lastRecordBuffer usable for checking if the recently read record is in the same group? Is set to 0 at start, and also after the last record
 };
 
-void initAggregate(sbitsOperator* operator) {
+void initAggregate(embedDBOperator* operator) {
     if (operator->input == NULL) {
 #ifdef PRINT_ERRORS
         printf("ERROR: Aggregate operator needs an input operator\n");
@@ -462,7 +462,7 @@ void initAggregate(sbitsOperator* operator) {
 
     // Init output schema
     if (operator->schema == NULL) {
-        operator->schema = malloc(sizeof(sbitsSchema));
+        operator->schema = malloc(sizeof(embedDBSchema));
         if (operator->schema == NULL) {
 #ifdef PRINT_ERRORS
             printf("ERROR: Failed to malloc while initializing aggregate operator\n");
@@ -505,9 +505,9 @@ void initAggregate(sbitsOperator* operator) {
     }
 }
 
-int8_t nextAggregate(sbitsOperator* operator) {
+int8_t nextAggregate(embedDBOperator* operator) {
     struct aggregateInfo* state = operator->state;
-    sbitsOperator* input = operator->input;
+    embedDBOperator* input = operator->input;
 
     // Reset each operator
     for (int i = 0; i < state->functionsLength; i++) {
@@ -570,10 +570,10 @@ int8_t nextAggregate(sbitsOperator* operator) {
     return 1;
 }
 
-void closeAggregate(sbitsOperator* operator) {
+void closeAggregate(embedDBOperator* operator) {
     operator->input->close(operator->input);
     operator->input = NULL;
-    sbitsFreeSchema(&operator->schema);
+    embedDBFreeSchema(&operator->schema);
     free(((struct aggregateInfo*)operator->state)->lastRecordBuffer);
     free(operator->state);
     operator->state = NULL;
@@ -586,9 +586,9 @@ void closeAggregate(sbitsOperator* operator) {
  * @param	input			The operator that this operator can pull records from
  * @param	groupfunc		A function that returns whether or not the @c record is part of the same group as the @c lastRecord. Assumes that records in groups are always next to each other and sorted when read in (i.e. Groups need to be 1122333, not 13213213)
  * @param	functions		An array of aggregate functions, each of which will be updated with each record read from the iterator
- * @param	functionsLength			The number of sbitsAggregateFuncs in @c functions
+ * @param	functionsLength			The number of embedDBAggregateFuncs in @c functions
  */
-sbitsOperator* createAggregateOperator(sbitsOperator* input, int8_t (*groupfunc)(const void* lastRecord, const void* record), sbitsAggregateFunc* functions, uint32_t functionsLength) {
+embedDBOperator* createAggregateOperator(embedDBOperator* input, int8_t (*groupfunc)(const void* lastRecord, const void* record), embedDBAggregateFunc* functions, uint32_t functionsLength) {
     struct aggregateInfo* state = malloc(sizeof(struct aggregateInfo));
     if (state == NULL) {
 #ifdef PRINT_ERRORS
@@ -602,7 +602,7 @@ sbitsOperator* createAggregateOperator(sbitsOperator* input, int8_t (*groupfunc)
     state->functionsLength = functionsLength;
     state->lastRecordBuffer = NULL;
 
-    sbitsOperator* operator= malloc(sizeof(sbitsOperator));
+    embedDBOperator* operator= malloc(sizeof(embedDBOperator));
     if (operator== NULL) {
 #ifdef PRINT_ERRORS
         printf("ERROR: Failed to malloc while creating aggregate operator\n");
@@ -622,21 +622,21 @@ sbitsOperator* createAggregateOperator(sbitsOperator* input, int8_t (*groupfunc)
 }
 
 struct keyJoinInfo {
-    sbitsOperator* input2;
+    embedDBOperator* input2;
     int8_t firstCall;
 };
 
-void initKeyJoin(sbitsOperator* operator) {
+void initKeyJoin(embedDBOperator* operator) {
     struct keyJoinInfo* state = operator->state;
-    sbitsOperator* input1 = operator->input;
-    sbitsOperator* input2 = state->input2;
+    embedDBOperator* input1 = operator->input;
+    embedDBOperator* input2 = state->input2;
 
     // Init inputs
     input1->init(input1);
     input2->init(input2);
 
-    sbitsSchema* schema1 = input1->schema;
-    sbitsSchema* schema2 = input2->schema;
+    embedDBSchema* schema1 = input1->schema;
+    embedDBSchema* schema2 = input2->schema;
 
     // Check that join is compatible
     if (schema1->columnSizes[0] != schema2->columnSizes[0] || schema1->columnSizes[0] < 0 || schema2->columnSizes[0] < 0) {
@@ -648,7 +648,7 @@ void initKeyJoin(sbitsOperator* operator) {
 
     // Setup schema
     if (operator->schema == NULL) {
-        operator->schema = malloc(sizeof(sbitsSchema));
+        operator->schema = malloc(sizeof(embedDBSchema));
         if (operator->schema == NULL) {
 #ifdef PRINT_ERRORS
             printf("ERROR: Failed to malloc while initializing join operator\n");
@@ -679,12 +679,12 @@ void initKeyJoin(sbitsOperator* operator) {
     state->firstCall = 1;
 }
 
-int8_t nextKeyJoin(sbitsOperator* operator) {
+int8_t nextKeyJoin(embedDBOperator* operator) {
     struct keyJoinInfo* state = operator->state;
-    sbitsOperator* input1 = operator->input;
-    sbitsOperator* input2 = state->input2;
-    sbitsSchema* schema1 = input1->schema;
-    sbitsSchema* schema2 = input2->schema;
+    embedDBOperator* input1 = operator->input;
+    embedDBOperator* input2 = state->input2;
+    embedDBSchema* schema1 = input1->schema;
+    embedDBSchema* schema2 = input2->schema;
 
     // We've already used this match
     void* record1 = input1->recordBuffer;
@@ -739,17 +739,17 @@ int8_t nextKeyJoin(sbitsOperator* operator) {
     return 0;
 }
 
-void closeKeyJoin(sbitsOperator* operator) {
+void closeKeyJoin(embedDBOperator* operator) {
     struct keyJoinInfo* state = operator->state;
-    sbitsOperator* input1 = operator->input;
-    sbitsOperator* input2 = state->input2;
-    sbitsSchema* schema1 = input1->schema;
-    sbitsSchema* schema2 = input2->schema;
+    embedDBOperator* input1 = operator->input;
+    embedDBOperator* input2 = state->input2;
+    embedDBSchema* schema1 = input1->schema;
+    embedDBSchema* schema2 = input2->schema;
 
     input1->close(input1);
     input2->close(input2);
 
-    sbitsFreeSchema(&operator->schema);
+    embedDBFreeSchema(&operator->schema);
     free(operator->state);
     operator->state = NULL;
     free(operator->recordBuffer);
@@ -759,8 +759,8 @@ void closeKeyJoin(sbitsOperator* operator) {
 /**
  * @brief	Creates an operator for perfoming an equijoin on the keys (sorted and distinct) of two tables
  */
-sbitsOperator* createKeyJoinOperator(sbitsOperator* input1, sbitsOperator* input2) {
-    sbitsOperator* operator= malloc(sizeof(sbitsOperator));
+embedDBOperator* createKeyJoinOperator(embedDBOperator* input1, embedDBOperator* input2) {
+    embedDBOperator* operator= malloc(sizeof(embedDBOperator));
     if (operator== NULL) {
 #ifdef PRINT_ERRORS
         printf("ERROR: Failed to malloc while creating join operator\n");
@@ -788,24 +788,24 @@ sbitsOperator* createKeyJoinOperator(sbitsOperator* input1, sbitsOperator* input
     return operator;
 }
 
-void countReset(sbitsAggregateFunc* aggFunc, sbitsSchema* inputSchema) {
+void countReset(embedDBAggregateFunc* aggFunc, embedDBSchema* inputSchema) {
     *(uint32_t*)aggFunc->state = 0;
 }
 
-void countAdd(sbitsAggregateFunc* aggFunc, sbitsSchema* inputSchema, const void* recordBuffer) {
+void countAdd(embedDBAggregateFunc* aggFunc, embedDBSchema* inputSchema, const void* recordBuffer) {
     (*(uint32_t*)aggFunc->state)++;
 }
 
-void countCompute(sbitsAggregateFunc* aggFunc, sbitsSchema* outputSchema, void* recordBuffer, const void* lastRecord) {
+void countCompute(embedDBAggregateFunc* aggFunc, embedDBSchema* outputSchema, void* recordBuffer, const void* lastRecord) {
     // Put count in record
     memcpy((int8_t*)recordBuffer + getColOffsetFromSchema(outputSchema, aggFunc->colNum), aggFunc->state, sizeof(uint32_t));
 }
 
 /**
- * @brief	Creates an aggregate function to count the number of records in a group. To be used in combination with an sbitsOperator produced by createAggregateOperator
+ * @brief	Creates an aggregate function to count the number of records in a group. To be used in combination with an embedDBOperator produced by createAggregateOperator
  */
-sbitsAggregateFunc* createCountAggregate() {
-    sbitsAggregateFunc* aggFunc = malloc(sizeof(sbitsAggregateFunc));
+embedDBAggregateFunc* createCountAggregate() {
+    embedDBAggregateFunc* aggFunc = malloc(sizeof(embedDBAggregateFunc));
     aggFunc->reset = countReset;
     aggFunc->add = countAdd;
     aggFunc->compute = countCompute;
@@ -814,7 +814,7 @@ sbitsAggregateFunc* createCountAggregate() {
     return aggFunc;
 }
 
-void sumReset(sbitsAggregateFunc* aggFunc, sbitsSchema* inputSchema) {
+void sumReset(embedDBAggregateFunc* aggFunc, embedDBSchema* inputSchema) {
     if (abs(inputSchema->columnSizes[*((uint8_t*)aggFunc->state + sizeof(int64_t))]) > 8) {
 #ifdef PRINT_ERRORS
         printf("WARNING: Can't use this sum function for columns bigger than 8 bytes\n");
@@ -823,10 +823,10 @@ void sumReset(sbitsAggregateFunc* aggFunc, sbitsSchema* inputSchema) {
     *(int64_t*)aggFunc->state = 0;
 }
 
-void sumAdd(sbitsAggregateFunc* aggFunc, sbitsSchema* inputSchema, const void* recordBuffer) {
+void sumAdd(embedDBAggregateFunc* aggFunc, embedDBSchema* inputSchema, const void* recordBuffer) {
     uint8_t colNum = *((uint8_t*)aggFunc->state + sizeof(int64_t));
     int8_t colSize = inputSchema->columnSizes[colNum];
-    int8_t isSigned = SBITS_IS_COL_SIGNED(colSize);
+    int8_t isSigned = embedDB_IS_COL_SIGNED(colSize);
     colSize = min(abs(colSize), sizeof(int64_t));
     void* colPos = (int8_t*)recordBuffer + getColOffsetFromSchema(inputSchema, colNum);
     if (isSigned) {
@@ -846,17 +846,17 @@ void sumAdd(sbitsAggregateFunc* aggFunc, sbitsSchema* inputSchema, const void* r
     }
 }
 
-void sumCompute(sbitsAggregateFunc* aggFunc, sbitsSchema* outputSchema, void* recordBuffer, const void* lastRecord) {
+void sumCompute(embedDBAggregateFunc* aggFunc, embedDBSchema* outputSchema, void* recordBuffer, const void* lastRecord) {
     // Put count in record
     memcpy((int8_t*)recordBuffer + getColOffsetFromSchema(outputSchema, aggFunc->colNum), aggFunc->state, sizeof(int64_t));
 }
 
 /**
- * @brief	Creates an aggregate function to sum a column over a group. To be used in combination with an sbitsOperator produced by createAggregateOperator. Column must be no bigger than 8 bytes.
+ * @brief	Creates an aggregate function to sum a column over a group. To be used in combination with an embedDBOperator produced by createAggregateOperator. Column must be no bigger than 8 bytes.
  * @param	colNum	The index (zero-indexed) of the column which you want to sum. Column must be <= 8 bytes
  */
-sbitsAggregateFunc* createSumAggregate(uint8_t colNum) {
-    sbitsAggregateFunc* aggFunc = malloc(sizeof(sbitsAggregateFunc));
+embedDBAggregateFunc* createSumAggregate(uint8_t colNum) {
+    embedDBAggregateFunc* aggFunc = malloc(sizeof(embedDBAggregateFunc));
     aggFunc->reset = sumReset;
     aggFunc->add = sumAdd;
     aggFunc->compute = sumCompute;
@@ -871,7 +871,7 @@ struct minMaxState {
     void* current;   // The value currently regarded as the min/max
 };
 
-void minReset(sbitsAggregateFunc* aggFunc, sbitsSchema* inputSchema) {
+void minReset(embedDBAggregateFunc* aggFunc, embedDBSchema* inputSchema) {
     struct minMaxState* state = aggFunc->state;
     int8_t colSize = inputSchema->columnSizes[state->colNum];
     if (aggFunc->colSize != colSize) {
@@ -879,7 +879,7 @@ void minReset(sbitsAggregateFunc* aggFunc, sbitsSchema* inputSchema) {
         printf("WARNING: Your provided column size for min aggregate function doesn't match the column size in the input schema\n");
 #endif
     }
-    int8_t isSigned = SBITS_IS_COL_SIGNED(colSize);
+    int8_t isSigned = embedDB_IS_COL_SIGNED(colSize);
     colSize = abs(colSize);
     memset(state->current, 0xff, colSize);
     if (isSigned) {
@@ -888,10 +888,10 @@ void minReset(sbitsAggregateFunc* aggFunc, sbitsSchema* inputSchema) {
     }
 }
 
-void minAdd(sbitsAggregateFunc* aggFunc, sbitsSchema* inputSchema, const void* record) {
+void minAdd(embedDBAggregateFunc* aggFunc, embedDBSchema* inputSchema, const void* record) {
     struct minMaxState* state = aggFunc->state;
     int8_t colSize = inputSchema->columnSizes[state->colNum];
-    int8_t isSigned = SBITS_IS_COL_SIGNED(colSize);
+    int8_t isSigned = embedDB_IS_COL_SIGNED(colSize);
     colSize = abs(colSize);
     void* newValue = (int8_t*)record + getColOffsetFromSchema(inputSchema, state->colNum);
     if (compare(newValue, SELECT_LT, state->current, isSigned, colSize)) {
@@ -899,7 +899,7 @@ void minAdd(sbitsAggregateFunc* aggFunc, sbitsSchema* inputSchema, const void* r
     }
 }
 
-void minMaxCompute(sbitsAggregateFunc* aggFunc, sbitsSchema* outputSchema, void* recordBuffer, const void* lastRecord) {
+void minMaxCompute(embedDBAggregateFunc* aggFunc, embedDBSchema* outputSchema, void* recordBuffer, const void* lastRecord) {
     // Put count in record
     memcpy((int8_t*)recordBuffer + getColOffsetFromSchema(outputSchema, aggFunc->colNum), ((struct minMaxState*)aggFunc->state)->current, abs(outputSchema->columnSizes[aggFunc->colNum]));
 }
@@ -909,8 +909,8 @@ void minMaxCompute(sbitsAggregateFunc* aggFunc, sbitsSchema* outputSchema, void*
  * @param	colNum	The zero-indexed column to find the min of
  * @param	colSize	The size, in bytes, of the column to find the min of. Negative number represents a signed number, positive is unsigned.
  */
-sbitsAggregateFunc* createMinAggregate(uint8_t colNum, int8_t colSize) {
-    sbitsAggregateFunc* aggFunc = malloc(sizeof(sbitsAggregateFunc));
+embedDBAggregateFunc* createMinAggregate(uint8_t colNum, int8_t colSize) {
+    embedDBAggregateFunc* aggFunc = malloc(sizeof(embedDBAggregateFunc));
     if (aggFunc == NULL) {
 #ifdef PRINT_ERRORS
         printf("ERROR: Failed to allocate while creating min aggregate function\n");
@@ -941,7 +941,7 @@ sbitsAggregateFunc* createMinAggregate(uint8_t colNum, int8_t colSize) {
     return aggFunc;
 }
 
-void maxReset(sbitsAggregateFunc* aggFunc, sbitsSchema* inputSchema) {
+void maxReset(embedDBAggregateFunc* aggFunc, embedDBSchema* inputSchema) {
     struct minMaxState* state = aggFunc->state;
     int8_t colSize = inputSchema->columnSizes[state->colNum];
     if (aggFunc->colSize != colSize) {
@@ -949,7 +949,7 @@ void maxReset(sbitsAggregateFunc* aggFunc, sbitsSchema* inputSchema) {
         printf("WARNING: Your provided column size for max aggregate function doesn't match the column size in the input schema\n");
 #endif
     }
-    int8_t isSigned = SBITS_IS_COL_SIGNED(colSize);
+    int8_t isSigned = embedDB_IS_COL_SIGNED(colSize);
     colSize = abs(colSize);
     memset(state->current, 0, colSize);
     if (isSigned) {
@@ -958,10 +958,10 @@ void maxReset(sbitsAggregateFunc* aggFunc, sbitsSchema* inputSchema) {
     }
 }
 
-void maxAdd(sbitsAggregateFunc* aggFunc, sbitsSchema* inputSchema, const void* record) {
+void maxAdd(embedDBAggregateFunc* aggFunc, embedDBSchema* inputSchema, const void* record) {
     struct minMaxState* state = aggFunc->state;
     int8_t colSize = inputSchema->columnSizes[state->colNum];
-    int8_t isSigned = SBITS_IS_COL_SIGNED(colSize);
+    int8_t isSigned = embedDB_IS_COL_SIGNED(colSize);
     colSize = abs(colSize);
     void* newValue = (int8_t*)record + getColOffsetFromSchema(inputSchema, state->colNum);
     if (compare(newValue, SELECT_GT, state->current, isSigned, colSize)) {
@@ -974,8 +974,8 @@ void maxAdd(sbitsAggregateFunc* aggFunc, sbitsSchema* inputSchema, const void* r
  * @param	colNum	The zero-indexed column to find the max of
  * @param	colSize	The size, in bytes, of the column to find the max of. Negative number represents a signed number, positive is unsigned.
  */
-sbitsAggregateFunc* createMaxAggregate(uint8_t colNum, int8_t colSize) {
-    sbitsAggregateFunc* aggFunc = malloc(sizeof(sbitsAggregateFunc));
+embedDBAggregateFunc* createMaxAggregate(uint8_t colNum, int8_t colSize) {
+    embedDBAggregateFunc* aggFunc = malloc(sizeof(embedDBAggregateFunc));
     if (aggFunc == NULL) {
 #ifdef PRINT_ERRORS
         printf("ERROR: Failed to allocate while creating max aggregate function\n");
@@ -1013,7 +1013,7 @@ struct avgState {
     int64_t sum;      // Sum of records seen in group so far
 };
 
-void avgReset(struct sbitsAggregateFunc* aggFunc, sbitsSchema* inputSchema) {
+void avgReset(struct embedDBAggregateFunc* aggFunc, embedDBSchema* inputSchema) {
     struct avgState* state = aggFunc->state;
     if (abs(inputSchema->columnSizes[state->colNum]) > 8) {
 #ifdef PRINT_ERRORS
@@ -1022,14 +1022,14 @@ void avgReset(struct sbitsAggregateFunc* aggFunc, sbitsSchema* inputSchema) {
     }
     state->count = 0;
     state->sum = 0;
-    state->isSigned = SBITS_IS_COL_SIGNED(inputSchema->columnSizes[state->colNum]);
+    state->isSigned = embedDB_IS_COL_SIGNED(inputSchema->columnSizes[state->colNum]);
 }
 
-void avgAdd(struct sbitsAggregateFunc* aggFunc, sbitsSchema* inputSchema, const void* record) {
+void avgAdd(struct embedDBAggregateFunc* aggFunc, embedDBSchema* inputSchema, const void* record) {
     struct avgState* state = aggFunc->state;
     uint8_t colNum = state->colNum;
     int8_t colSize = inputSchema->columnSizes[colNum];
-    int8_t isSigned = SBITS_IS_COL_SIGNED(colSize);
+    int8_t isSigned = embedDB_IS_COL_SIGNED(colSize);
     colSize = min(abs(colSize), sizeof(int64_t));
     void* colPos = (int8_t*)record + getColOffsetFromSchema(inputSchema, colNum);
     if (isSigned) {
@@ -1051,7 +1051,7 @@ void avgAdd(struct sbitsAggregateFunc* aggFunc, sbitsSchema* inputSchema, const 
     state->count++;
 }
 
-void avgCompute(struct sbitsAggregateFunc* aggFunc, sbitsSchema* outputSchema, void* recordBuffer, const void* lastRecord) {
+void avgCompute(struct embedDBAggregateFunc* aggFunc, embedDBSchema* outputSchema, void* recordBuffer, const void* lastRecord) {
     struct avgState* state = aggFunc->state;
     if (aggFunc->colSize == 8) {
         double avg = state->sum / (double)state->count;
@@ -1077,8 +1077,8 @@ void avgCompute(struct sbitsAggregateFunc* aggFunc, sbitsSchema* outputSchema, v
  * @param	colNum			Zero-indexed column to take average of
  * @param	outputFloatSize	Size of float to output. Must be either 4 (float) or 8 (double)
  */
-sbitsAggregateFunc* createAvgAggregate(uint8_t colNum, int8_t outputFloatSize) {
-    sbitsAggregateFunc* aggFunc = malloc(sizeof(sbitsAggregateFunc));
+embedDBAggregateFunc* createAvgAggregate(uint8_t colNum, int8_t outputFloatSize) {
+    embedDBAggregateFunc* aggFunc = malloc(sizeof(embedDBAggregateFunc));
     if (aggFunc == NULL) {
 #ifdef PRINT_ERRORS
         printf("ERROR: Failed to allocate while creating avg aggregate function\n");
@@ -1117,16 +1117,16 @@ sbitsAggregateFunc* createAvgAggregate(uint8_t colNum, int8_t outputFloatSize) {
 /**
  * @brief	Completely free a chain of functions recursively after it's already been closed.
  */
-void sbitsFreeOperatorRecursive(sbitsOperator** operator) {
+void embedDBFreeOperatorRecursive(embedDBOperator** operator) {
     if ((*operator)->input != NULL) {
-        sbitsFreeOperatorRecursive(&(*operator)->input);
+        embedDBFreeOperatorRecursive(&(*operator)->input);
     }
     if ((*operator)->state != NULL) {
         free((*operator)->state);
         (*operator)->state = NULL;
     }
     if ((*operator)->schema != NULL) {
-        sbitsFreeSchema(&(*operator)->schema);
+        embedDBFreeSchema(&(*operator)->schema);
     }
     if ((*operator)->recordBuffer != NULL) {
         free((*operator)->recordBuffer);

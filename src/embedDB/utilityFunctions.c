@@ -1,7 +1,7 @@
 /**
  * @file utilityFunctions.h
  * @author Ramon Lawernce
- * @brief This file contains some utility functions to be used with sbits.
+ * @brief This file contains some utility functions to be used with embedDB.
  * These include functions required to use the bitmap option, and a
  * comparator for comparing keys. They can be modified or implemented
  * differently depending on the application.
@@ -105,7 +105,7 @@ int8_t inBitmapInt16(void *data, void *bm) {
 
 /**
  * @brief	Builds 16-bit bitmap from (min, max) range.
- * @param	state	SBITS state structure
+ * @param	state	embedDB state structure
  * @param	min		minimum value (may be NULL)
  * @param	max		maximum value (may be NULL)
  * @param	bm		bitmap created
@@ -170,7 +170,7 @@ int8_t inBitmapInt64(void *data, void *bm) {
 
 /**
  * @brief	Builds 64-bit bitmap from (min, max) range.
- * @param	state	SBITS state structure
+ * @param	state	embedDB state structure
  * @param	min		minimum value (may be NULL)
  * @param	max		maximum value (may be NULL)
  * @param	bm		bitmap created
@@ -273,9 +273,9 @@ int8_t FILE_FLUSH(void *file) {
 int8_t FILE_OPEN(void *file, uint8_t mode) {
     FILE_INFO *fileInfo = (FILE_INFO *)file;
 
-    if (mode == SBITS_FILE_MODE_W_PLUS_B) {
+    if (mode == embedDB_FILE_MODE_W_PLUS_B) {
         fileInfo->file = fopen(fileInfo->filename, "w+b");
-    } else if (mode == SBITS_FILE_MODE_R_PLUS_B) {
+    } else if (mode == embedDB_FILE_MODE_R_PLUS_B) {
         fileInfo->file = fopen(fileInfo->filename, "r+b");
     } else {
         return 0;
@@ -288,8 +288,8 @@ int8_t FILE_OPEN(void *file, uint8_t mode) {
     }
 }
 
-sbitsFileInterface *getFileInterface() {
-    sbitsFileInterface *fileInterface = malloc(sizeof(sbitsFileInterface));
+embedDBFileInterface *getFileInterface() {
+    embedDBFileInterface *fileInterface = malloc(sizeof(embedDBFileInterface));
     fileInterface->close = FILE_CLOSE;
     fileInterface->read = FILE_READ;
     fileInterface->write = FILE_WRITE;

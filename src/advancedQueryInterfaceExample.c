@@ -2,8 +2,8 @@
 #include <stdlib.h>
 
 #include "query-interface/advancedQueries.h"
-#include "sbits/sbits.h"
-#include "sbits/utilityFunctions.h"
+#include "embedDB/embedDB.h"
+#include "embedDB/utilityFunctions.h"
 
 uint32_t dayGroup(const void* record) {
     // find the epoch day
@@ -14,19 +14,19 @@ int8_t sameDayGroup(const void* lastRecord, const void* record) {
     return dayGroup(lastRecord) == dayGroup(record);
 }
 
-void writeDayGroup(sbitsAggregateFunc* aggFunc, sbitsSchema* schema, void* recordBuffer, const void* lastRecord) {
+void writeDayGroup(embedDBAggregateFunc* aggFunc, embedDBSchema* schema, void* recordBuffer, const void* lastRecord) {
     // Put day in record
     uint32_t day = dayGroup(lastRecord);
     memcpy((int8_t*)recordBuffer + getColOffsetFromSchema(schema, aggFunc->colNum), &day, sizeof(uint32_t));
 }
 
-void customShiftInit(sbitsOperator* operator) {
+void customShiftInit(embedDBOperator* operator) {
     operator->input->init(operator->input);
     operator->schema = copySchema(operator->input->schema);
     operator->recordBuffer = malloc(16);
 }
 
-int8_t customShiftNext(sbitsOperator* operator) {
+int8_t customShiftNext(embedDBOperator* operator) {
     if (operator->input->next(operator->input)) {
         memcpy(operator->recordBuffer, operator->input->recordBuffer, 16);
         *(uint32_t*)operator->recordBuffer += 473385600;  // Add the number of seconds between 2000 and 2015
@@ -35,17 +35,17 @@ int8_t customShiftNext(sbitsOperator* operator) {
     return 0;
 }
 
-void customShiftClose(sbitsOperator* operator) {
+void customShiftClose(embedDBOperator* operator) {
     operator->input->close(operator->input);
-    sbitsFreeSchema(&operator->schema);
+    embedDBFreeSchema(&operator->schema);
     free(operator->recordBuffer);
     operator->recordBuffer = NULL;
 }
 
-void insertData(sbitsState* state, char* filename);
+void insertData(embedDBState* state, char* filename);
 
 int main() {
-    sbitsState* stateUWA = calloc(1, sizeof(sbitsState));
+    embedDBState* stateUWA = calloc(1, sizeof(embedDBState));
     stateUWA->keySize = 4;
     stateUWA->dataSize = 12;
     stateUWA->compareKey = int32Comparator;
@@ -61,16 +61,16 @@ int main() {
     stateUWA->indexFile = setupFile(indexPath);
     stateUWA->bufferSizeInBlocks = 4;
     stateUWA->buffer = malloc(stateUWA->bufferSizeInBlocks * stateUWA->pageSize);
-    stateUWA->parameters = SBITS_USE_BMAP | SBITS_USE_INDEX | SBITS_RESET_DATA;
+    stateUWA->parameters = embedDB_USE_BMAP | embedDB_USE_INDEX | embedDB_RESET_DATA;
     stateUWA->bitmapSize = 2;
     stateUWA->inBitmap = inBitmapInt16;
     stateUWA->updateBitmap = updateBitmapInt16;
     stateUWA->buildBitmapFromRange = buildBitmapInt16FromRange;
-    sbitsInit(stateUWA, 1);
+    embedDBInit(stateUWA, 1);
 
     int8_t colSizes[] = {4, 4, 4, 4};
-    int8_t colSignedness[] = {SBITS_COLUMN_UNSIGNED, SBITS_COLUMN_SIGNED, SBITS_COLUMN_SIGNED, SBITS_COLUMN_SIGNED};
-    sbitsSchema* baseSchema = sbitsCreateSchema(4, colSizes, colSignedness);
+    int8_t colSignedness[] = {embedDB_COLUMN_UNSIGNED, embedDB_COLUMN_SIGNED, embedDB_COLUMN_SIGNED, embedDB_COLUMN_SIGNED};
+    embedDBSchema* baseSchema = embedDBCreateSchema(4, colSizes, colSignedness);
 
     // Insert data
     insertData(stateUWA, "data/uwa500K.bin");
@@ -83,16 +83,16 @@ int main() {
      *	Say we only want the air temp and wind speed columns to save memory in further processing. Right now the air pressure field is inbetween the two values we want, so we can simplify the process of extracting the desired colums using exec()
      */
 
-    sbitsIterator it;
+    embedDBIterator it;
     it.minKey = NULL;
     it.maxKey = NULL;
     it.minData = NULL;
     it.maxData = NULL;
-    sbitsInitIterator(stateUWA, &it);
+    embedDBInitIterator(stateUWA, &it);
 
-    sbitsOperator* scanOp1 = createTableScanOperator(stateUWA, &it, baseSchema);
+    embedDBOperator* scanOp1 = createTableScanOperator(stateUWA, &it, baseSchema);
     uint8_t projCols[] = {0, 1, 3};
-    sbitsOperator* projOp1 = createProjectionOperator(scanOp1, 3, projCols);
+    embedDBOperator* projOp1 = createProjectionOperator(scanOp1, 3, projCols);
     projOp1->init(projOp1);
 
     int printLimit = 20;
@@ -112,7 +112,7 @@ int main() {
     }
 
     projOp1->close(projOp1);
-    sbitsFreeOperatorRecursive(&projOp1);
+    embedDBFreeOperatorRecursive(&projOp1);
 
     /**	Selection:
      *	Say we want to answer the question "Return records where the temperature is less than or equal to 40 degrees and the wind speed is greater than or equal to 20". The iterator is only indexing the data on temperature, so we need to apply an extra layer of selection to its return. We can then apply the projection on top of that output
@@ -122,12 +122,12 @@ int main() {
     it.maxKey = NULL;
     it.minData = NULL;
     it.maxData = &maxTemp;
-    sbitsInitIterator(stateUWA, &it);
+    embedDBInitIterator(stateUWA, &it);
 
-    sbitsOperator* scanOp2 = createTableScanOperator(stateUWA, &it, baseSchema);
+    embedDBOperator* scanOp2 = createTableScanOperator(stateUWA, &it, baseSchema);
     int32_t selVal = 200;
-    sbitsOperator* selectOp2 = createSelectionOperator(scanOp2, 3, SELECT_GTE, &selVal);
-    sbitsOperator* projOp2 = createProjectionOperator(selectOp2, 3, projCols);
+    embedDBOperator* selectOp2 = createSelectionOperator(scanOp2, 3, SELECT_GTE, &selVal);
+    embedDBOperator* projOp2 = createProjectionOperator(selectOp2, 3, projCols);
     projOp2->init(projOp2);
 
     recordsReturned = 0;
@@ -146,7 +146,7 @@ int main() {
     }
 
     projOp2->close(projOp2);
-    sbitsFreeOperatorRecursive(&projOp2);
+    embedDBFreeOperatorRecursive(&projOp2);
 
     /**	Aggregate Count:
      * 	Get days in which there were at least 50 minutes of wind measurements over 15
@@ -155,22 +155,22 @@ int main() {
     it.maxKey = NULL;
     it.minData = NULL;
     it.maxData = NULL;
-    sbitsInitIterator(stateUWA, &it);
+    embedDBInitIterator(stateUWA, &it);
 
-    sbitsOperator* scanOp3 = createTableScanOperator(stateUWA, &it, baseSchema);
+    embedDBOperator* scanOp3 = createTableScanOperator(stateUWA, &it, baseSchema);
     selVal = 150;
-    sbitsOperator* selectOp3 = createSelectionOperator(scanOp3, 3, SELECT_GTE, &selVal);
-    sbitsAggregateFunc groupName = {NULL, NULL, writeDayGroup, NULL, 4};
-    sbitsAggregateFunc* counter = createCountAggregate();
-    sbitsAggregateFunc* maxWind = createMaxAggregate(3, -4);
-    sbitsAggregateFunc* avgWind = createAvgAggregate(3, 4);
-    sbitsAggregateFunc* sum = createSumAggregate(2);
-    sbitsAggregateFunc* minTemp = createMinAggregate(1, -4);
-    sbitsAggregateFunc aggFunctions[] = {groupName, *counter, *maxWind, *avgWind, *sum, *minTemp};
+    embedDBOperator* selectOp3 = createSelectionOperator(scanOp3, 3, SELECT_GTE, &selVal);
+    embedDBAggregateFunc groupName = {NULL, NULL, writeDayGroup, NULL, 4};
+    embedDBAggregateFunc* counter = createCountAggregate();
+    embedDBAggregateFunc* maxWind = createMaxAggregate(3, -4);
+    embedDBAggregateFunc* avgWind = createAvgAggregate(3, 4);
+    embedDBAggregateFunc* sum = createSumAggregate(2);
+    embedDBAggregateFunc* minTemp = createMinAggregate(1, -4);
+    embedDBAggregateFunc aggFunctions[] = {groupName, *counter, *maxWind, *avgWind, *sum, *minTemp};
     uint32_t functionsLength = 6;
-    sbitsOperator* aggOp3 = createAggregateOperator(selectOp3, sameDayGroup, aggFunctions, functionsLength);
+    embedDBOperator* aggOp3 = createAggregateOperator(selectOp3, sameDayGroup, aggFunctions, functionsLength);
     uint32_t minWindCount = 50;
-    sbitsOperator* countSelect3 = createSelectionOperator(aggOp3, 1, SELECT_GT, &minWindCount);
+    embedDBOperator* countSelect3 = createSelectionOperator(aggOp3, 1, SELECT_GT, &minWindCount);
     countSelect3->init(countSelect3);
 
     recordsReturned = 0;
@@ -197,7 +197,7 @@ int main() {
     }
 
     countSelect3->close(countSelect3);
-    sbitsFreeOperatorRecursive(&countSelect3);
+    embedDBFreeOperatorRecursive(&countSelect3);
 
     /** Create another table to demonstrate a proper join example
      *	Schema:
@@ -206,7 +206,7 @@ int main() {
      *		- airPres	int32
      *		- windSpeed	int32
      */
-    sbitsState* stateSEA = malloc(sizeof(sbitsState));
+    embedDBState* stateSEA = malloc(sizeof(embedDBState));
     stateSEA->keySize = 4;
     stateSEA->dataSize = 12;
     stateSEA->compareKey = int32Comparator;
@@ -221,12 +221,12 @@ int main() {
     stateSEA->indexFile = setupFile(indexPath2);
     stateSEA->bufferSizeInBlocks = 4;
     stateSEA->buffer = malloc(stateSEA->bufferSizeInBlocks * stateSEA->pageSize);
-    stateSEA->parameters = SBITS_USE_BMAP | SBITS_USE_INDEX | SBITS_RESET_DATA;
+    stateSEA->parameters = embedDB_USE_BMAP | embedDB_USE_INDEX | embedDB_RESET_DATA;
     stateSEA->bitmapSize = 2;
     stateSEA->inBitmap = inBitmapInt16;
     stateSEA->updateBitmap = updateBitmapInt16;
     stateSEA->buildBitmapFromRange = buildBitmapInt16FromRange;
-    sbitsInit(stateSEA, 1);
+    embedDBInit(stateSEA, 1);
 
     // Insert records
     insertData(stateSEA, "data/sea100K.bin");
@@ -234,34 +234,34 @@ int main() {
     /** Join
      *	uwa dataset has data from every minute, for the year 2000. sea dataset has samples every hour from 2011 to 2020. Let's compare the temperatures measured in 2000 in the uwa dataset and 2015 in the sea dataset
      */
-    sbitsInitIterator(stateUWA, &it);  // Iterator on uwa
-    sbitsIterator it2;
+    embedDBInitIterator(stateUWA, &it);  // Iterator on uwa
+    embedDBIterator it2;
     uint32_t year2015 = 1420099200;      // 2015-01-01
     uint32_t year2016 = 1451635200 - 1;  // 2016-01-01
     it2.minKey = &year2015;
     it2.maxKey = &year2016;
     it2.minData = NULL;
     it2.maxData = NULL;
-    sbitsInitIterator(stateSEA, &it2);  // Iterator on sea
+    embedDBInitIterator(stateSEA, &it2);  // Iterator on sea
 
     // Prepare uwa table
-    sbitsOperator* scan4_1 = createTableScanOperator(stateUWA, &it, baseSchema);
-    sbitsOperator* shift4_1 = malloc(sizeof(sbitsOperator));  // Custom operator to shift the year 2000 to 2015 to make the join work
+    embedDBOperator* scan4_1 = createTableScanOperator(stateUWA, &it, baseSchema);
+    embedDBOperator* shift4_1 = malloc(sizeof(embedDBOperator));  // Custom operator to shift the year 2000 to 2015 to make the join work
     shift4_1->input = scan4_1;
     shift4_1->init = customShiftInit;
     shift4_1->next = customShiftNext;
     shift4_1->close = customShiftClose;
 
     // Prepare sea table
-    sbitsOperator* scan4_2 = createTableScanOperator(stateSEA, &it2, baseSchema);
+    embedDBOperator* scan4_2 = createTableScanOperator(stateSEA, &it2, baseSchema);
     scan4_2->init(scan4_2);
 
     // Join tables
-    sbitsOperator* join4 = createKeyJoinOperator(shift4_1, scan4_2);
+    embedDBOperator* join4 = createKeyJoinOperator(shift4_1, scan4_2);
 
     // Project the timestamp and the two temp columns
     uint8_t projCols2[] = {0, 1, 5};
-    sbitsOperator* proj4 = createProjectionOperator(join4, 3, projCols2);
+    embedDBOperator* proj4 = createProjectionOperator(join4, 3, projCols2);
 
     proj4->init(proj4);
 
@@ -288,36 +288,36 @@ int main() {
     free(join4);
     free(proj4);
 
-    // Close sbits
-    sbitsClose(stateUWA);
+    // Close embedDB
+    embedDBClose(stateUWA);
     tearDownFile(stateUWA->dataFile);
     tearDownFile(stateUWA->indexFile);
     free(stateUWA->fileInterface);
     free(stateUWA->buffer);
     free(stateUWA);
-    sbitsClose(stateSEA);
+    embedDBClose(stateSEA);
     tearDownFile(stateSEA->dataFile);
     tearDownFile(stateSEA->indexFile);
     free(stateSEA->fileInterface);
     free(stateSEA->buffer);
     free(stateSEA);
-    sbitsFreeSchema(&baseSchema);
+    embedDBFreeSchema(&baseSchema);
     return 0;
 }
 
-void insertData(sbitsState* state, char* filename) {
+void insertData(embedDBState* state, char* filename) {
     FILE* fp = fopen(filename, "rb");
     char fileBuffer[512];
     int numRecords = 0;
     while (fread(fileBuffer, state->pageSize, 1, fp)) {
-        uint16_t count = SBITS_GET_COUNT(fileBuffer);
+        uint16_t count = embedDB_GET_COUNT(fileBuffer);
         for (int i = 1; i <= count; i++) {
-            sbitsPut(state, fileBuffer + i * state->recordSize, fileBuffer + i * state->recordSize + state->keySize);
+            embedDBPut(state, fileBuffer + i * state->recordSize, fileBuffer + i * state->recordSize + state->keySize);
             numRecords++;
         }
     }
     fclose(fp);
-    sbitsFlush(state);
+    embedDBFlush(state);
 
     printf("\nInserted %d Records\n", numRecords);
 }

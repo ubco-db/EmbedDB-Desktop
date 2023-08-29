@@ -1,53 +1,53 @@
-#ifndef SBITS_SCHEMA_H_
-#define SBITS_SCHEMA_H_
+#ifndef embedDB_SCHEMA_H_
+#define embedDB_SCHEMA_H_
 
 #include <stdint.h>
 
-#define SBITS_COLUMN_SIGNED 0
-#define SBITS_COLUMN_UNSIGNED 1
-#define SBITS_IS_COL_SIGNED(colSize) (colSize < 0 ? 1 : 0)
+#define embedDB_COLUMN_SIGNED 0
+#define embedDB_COLUMN_UNSIGNED 1
+#define embedDB_IS_COL_SIGNED(colSize) (colSize < 0 ? 1 : 0)
 
 /**
- * @brief	A struct to desribe the number and sizes of attributes contained in the data of a sbits table
+ * @brief	A struct to desribe the number and sizes of attributes contained in the data of a embedDB table
  */
 typedef struct {
     uint8_t numCols;      // The number of columns in the table
     int8_t* columnSizes;  // A list of the sizes, in bytes, of each column. Negative numbers indicate signed columns while positive indicate an unsigned column
-} sbitsSchema;
+} embedDBSchema;
 
 /**
- * @brief	Create an sbitsSchema from a list of column sizes including both key and data
+ * @brief	Create an embedDBSchema from a list of column sizes including both key and data
  * @param	numCols			The total number of key & data columns in table
  * @param	colSizes		An array with the size of each column. Max size is 127
- * @param	colSignedness	An array describing if the data in the column is signed or unsigned. Use the defined constants SBITS_COLUMNN_SIGNED or SBITS_COLUMN_UNSIGNED
+ * @param	colSignedness	An array describing if the data in the column is signed or unsigned. Use the defined constants embedDB_COLUMNN_SIGNED or embedDB_COLUMN_UNSIGNED
  */
-sbitsSchema* sbitsCreateSchema(uint8_t numCols, int8_t* colSizes, int8_t* colSignedness);
+embedDBSchema* embedDBCreateSchema(uint8_t numCols, int8_t* colSizes, int8_t* colSignedness);
 
 /**
  * @brief	Free a schema. Sets the schema pointer to NULL.
  */
-void sbitsFreeSchema(sbitsSchema** schema);
+void embedDBFreeSchema(embedDBSchema** schema);
 
 /**
  * @brief	Uses schema to determine the length of buffer to allocate and callocs that space
  */
-void* createBufferFromSchema(sbitsSchema* schema);
+void* createBufferFromSchema(embedDBSchema* schema);
 
 /**
  * @brief	Deep copy schema and return a pointer to the copy
  */
-sbitsSchema* copySchema(const sbitsSchema* schema);
+embedDBSchema* copySchema(const embedDBSchema* schema);
 
 /**
  * @brief	Finds byte offset of the column from the beginning of the record
  */
-uint16_t getColOffsetFromSchema(sbitsSchema* schema, uint8_t colNum);
+uint16_t getColOffsetFromSchema(embedDBSchema* schema, uint8_t colNum);
 
 /**
  * @brief	Calculates record size from schema
  */
-uint16_t getRecordSizeFromSchema(sbitsSchema* schema);
+uint16_t getRecordSizeFromSchema(embedDBSchema* schema);
 
-void printSchema(sbitsSchema* schema);
+void printSchema(embedDBSchema* schema);
 
 #endif
