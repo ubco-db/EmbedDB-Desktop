@@ -45,7 +45,6 @@ void customShiftClose(sbitsOperator* operator) {
 void insertData(sbitsState* state, char* filename);
 
 int main() {
-    printf("HOLA\n");
     sbitsState* stateUWA = calloc(1, sizeof(sbitsState));
     stateUWA->keySize = 4;
     stateUWA->dataSize = 12;

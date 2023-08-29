@@ -21,7 +21,9 @@ sbitsSchema* sbitsCreateSchema(uint8_t numCols, int8_t* colSizes, int8_t* colSig
         uint8_t colSize = colSizes[i];
         totalSize += colSize;
         if (colSize <= 0) {
+#ifdef PRINT_ERRORS
             printf("ERROR: Column size must be greater than zero\n");
+#endif
             return NULL;
         }
         if (sign == SBITS_COLUMN_SIGNED) {
@@ -29,7 +31,9 @@ sbitsSchema* sbitsCreateSchema(uint8_t numCols, int8_t* colSizes, int8_t* colSig
         } else if (sign == SBITS_COLUMN_UNSIGNED) {
             schema->columnSizes[i] = colSizes[i];
         } else {
+#ifdef PRINT_ERRORS
             printf("ERROR: Must only use SBITS_COLUMN_SIGNED or SBITS_COLUMN_UNSIGNED to describe column signedness\n");
+#endif
             return NULL;
         }
     }
@@ -64,13 +68,17 @@ void* createBufferFromSchema(sbitsSchema* schema) {
 sbitsSchema* copySchema(const sbitsSchema* schema) {
     sbitsSchema* copy = malloc(sizeof(sbitsSchema));
     if (copy == NULL) {
+#ifdef PRINT_ERRORS
         printf("ERROR: malloc failed while copying schema\n");
+#endif
         return NULL;
     }
     copy->numCols = schema->numCols;
     copy->columnSizes = malloc(schema->numCols * sizeof(int8_t));
     if (copy->columnSizes == NULL) {
+#ifdef PRINT_ERRORS
         printf("ERROR: malloc failed while copying schema\n");
+#endif
         return NULL;
     }
     memcpy(copy->columnSizes, schema->columnSizes, schema->numCols * sizeof(int8_t));
