@@ -174,6 +174,7 @@ int main() {
             return 1;
         } else {
             printf("Initialization success.\n");
+            sbitsPrintInit(state);
         }
 
         // Initialize Buffer
