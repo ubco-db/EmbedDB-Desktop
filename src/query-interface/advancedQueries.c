@@ -182,9 +182,9 @@ sbitsOperator* createTableScanOperator(sbitsState* state, sbitsIterator* it, sbi
 
     operator->state = malloc(2 * sizeof(void*));
     if (operator->state == NULL) {
-        #ifdef PRINT_ERRORS
+#ifdef PRINT_ERRORS
         printf("ERROR: malloc failed while creating TableScan operator\n");
-        #endif
+#endif
         return NULL;
     }
     memcpy(operator->state, &state, sizeof(void*));
@@ -203,9 +203,9 @@ sbitsOperator* createTableScanOperator(sbitsState* state, sbitsIterator* it, sbi
 
 void initProjection(sbitsOperator* operator) {
     if (operator->input == NULL) {
-        #ifdef PRINT_ERRORS
+#ifdef PRINT_ERRORS
         printf("ERROR: Projection operator needs an input operator\n");
-        #endif
+#endif
         return;
     }
 
@@ -221,17 +221,17 @@ void initProjection(sbitsOperator* operator) {
     if (operator->schema == NULL) {
         operator->schema = malloc(sizeof(sbitsSchema));
         if (operator->schema == NULL) {
-            #ifdef PRINT_ERRORS
+#ifdef PRINT_ERRORS
             printf("ERROR: Failed to allocate space for projection schema\n");
-            #endif
+#endif
             return;
         }
         operator->schema->numCols = numCols;
         operator->schema->columnSizes = malloc(numCols * sizeof(int8_t));
         if (operator->schema->columnSizes == NULL) {
-            #ifdef PRINT_ERRORS
+#ifdef PRINT_ERRORS
             printf("ERROR: Failed to allocate space for projection while building schema\n");
-            #endif
+#endif
             return;
         }
         for (uint8_t i = 0; i < numCols; i++) {
@@ -243,9 +243,9 @@ void initProjection(sbitsOperator* operator) {
     if (operator->recordBuffer == NULL) {
         operator->recordBuffer = createBufferFromSchema(operator->schema);
         if (operator->recordBuffer == NULL) {
-            #ifdef PRINT_ERRORS
+#ifdef PRINT_ERRORS
             printf("ERROR: Failed to allocate buffer for TableScan operator\n");
-            #endif
+#endif
             return;
         }
     }
@@ -297,9 +297,9 @@ sbitsOperator* createProjectionOperator(sbitsOperator* input, uint8_t numCols, u
     uint8_t lastCol = cols[0];
     for (uint8_t i = 1; i < numCols; i++) {
         if (cols[i] <= lastCol) {
-            #ifdef PRINT_ERRORS
+#ifdef PRINT_ERRORS
             printf("ERROR: Columns in a projection must be strictly ascending for performance reasons");
-            #endif
+#endif
             return NULL;
         }
         lastCol = cols[i];
@@ -307,9 +307,9 @@ sbitsOperator* createProjectionOperator(sbitsOperator* input, uint8_t numCols, u
     // Create state
     uint8_t* state = malloc(numCols + 1);
     if (state == NULL) {
-        #ifdef PRINT_ERRORS
+#ifdef PRINT_ERRORS
         printf("ERROR: malloc failed while creating Projection operator\n");
-        #endif
+#endif
         return NULL;
     }
     state[0] = numCols;
@@ -317,9 +317,9 @@ sbitsOperator* createProjectionOperator(sbitsOperator* input, uint8_t numCols, u
 
     sbitsOperator* operator= malloc(sizeof(sbitsOperator));
     if (operator== NULL) {
-        #ifdef PRINT_ERRORS
+#ifdef PRINT_ERRORS
         printf("ERROR: malloc failed while creating Projection operator\n");
-        #endif
+#endif
         return NULL;
     }
 
@@ -336,9 +336,9 @@ sbitsOperator* createProjectionOperator(sbitsOperator* input, uint8_t numCols, u
 
 void initSelection(sbitsOperator* operator) {
     if (operator->input == NULL) {
-        #ifdef PRINT_ERRORS
+#ifdef PRINT_ERRORS
         printf("ERROR: Projection operator needs an input operator\n");
-        #endif
+#endif
         return;
     }
 
@@ -354,9 +354,9 @@ void initSelection(sbitsOperator* operator) {
     if (operator->recordBuffer == NULL) {
         operator->recordBuffer = createBufferFromSchema(operator->schema);
         if (operator->recordBuffer == NULL) {
-            #ifdef PRINT_ERRORS
+#ifdef PRINT_ERRORS
             printf("ERROR: Failed to allocate buffer for TableScan operator\n");
-            #endif
+#endif
             return;
         }
     }
@@ -407,9 +407,9 @@ void closeSelection(sbitsOperator* operator) {
 sbitsOperator* createSelectionOperator(sbitsOperator* input, int8_t colNum, int8_t operation, void* compVal) {
     int8_t* state = malloc(2 + sizeof(void*));
     if (state == NULL) {
-        #ifdef PRINT_ERRORS
+#ifdef PRINT_ERRORS
         printf("ERROR: Failed to malloc while creating Selection operator\n");
-        #endif
+#endif
         return NULL;
     }
     state[0] = colNum;
@@ -418,9 +418,9 @@ sbitsOperator* createSelectionOperator(sbitsOperator* input, int8_t colNum, int8
 
     sbitsOperator* operator= malloc(sizeof(sbitsOperator));
     if (operator== NULL) {
-        #ifdef PRINT_ERRORS
+#ifdef PRINT_ERRORS
         printf("ERROR: Failed to malloc while creating Selection operator\n");
-        #endif
+#endif
         return NULL;
     }
     operator->state = state;
@@ -448,9 +448,9 @@ struct aggregateInfo {
 
 void initAggregate(sbitsOperator* operator) {
     if (operator->input == NULL) {
-        #ifdef PRINT_ERRORS
+#ifdef PRINT_ERRORS
         printf("ERROR: Aggregate operator needs an input operator\n");
-        #endif
+#endif
         return;
     }
 
@@ -464,17 +464,17 @@ void initAggregate(sbitsOperator* operator) {
     if (operator->schema == NULL) {
         operator->schema = malloc(sizeof(sbitsSchema));
         if (operator->schema == NULL) {
-            #ifdef PRINT_ERRORS
+#ifdef PRINT_ERRORS
             printf("ERROR: Failed to malloc while initializing aggregate operator\n");
-            #endif
+#endif
             return;
         }
         operator->schema->numCols = state->functionsLength;
         operator->schema->columnSizes = malloc(state->functionsLength);
         if (operator->schema->columnSizes == NULL) {
-            #ifdef PRINT_ERRORS
+#ifdef PRINT_ERRORS
             printf("ERROR: Failed to malloc while initializing aggregate operator\n");
-            #endif
+#endif
             return;
         }
         for (uint8_t i = 0; i < state->functionsLength; i++) {
@@ -488,18 +488,18 @@ void initAggregate(sbitsOperator* operator) {
     if (operator->recordBuffer == NULL) {
         operator->recordBuffer = createBufferFromSchema(operator->schema);
         if (operator->recordBuffer == NULL) {
-            #ifdef PRINT_ERRORS
+#ifdef PRINT_ERRORS
             printf("ERROR: Failed to malloc while initializing aggregate operator\n");
-            #endif
+#endif
             return;
         }
     }
     if (state->lastRecordBuffer == NULL) {
         state->lastRecordBuffer = malloc(state->bufferSize);
         if (state->lastRecordBuffer == NULL) {
-            #ifdef PRINT_ERRORS
+#ifdef PRINT_ERRORS
             printf("ERROR: Failed to malloc while initializing aggregate operator\n");
-            #endif
+#endif
             return;
         }
     }
@@ -591,9 +591,9 @@ void closeAggregate(sbitsOperator* operator) {
 sbitsOperator* createAggregateOperator(sbitsOperator* input, int8_t (*groupfunc)(const void* lastRecord, const void* record), sbitsAggregateFunc* functions, uint32_t functionsLength) {
     struct aggregateInfo* state = malloc(sizeof(struct aggregateInfo));
     if (state == NULL) {
-        #ifdef PRINT_ERRORS
+#ifdef PRINT_ERRORS
         printf("ERROR: Failed to malloc while creating aggregate operator\n");
-        #endif
+#endif
         return NULL;
     }
 
@@ -604,9 +604,9 @@ sbitsOperator* createAggregateOperator(sbitsOperator* input, int8_t (*groupfunc)
 
     sbitsOperator* operator= malloc(sizeof(sbitsOperator));
     if (operator== NULL) {
-        #ifdef PRINT_ERRORS
+#ifdef PRINT_ERRORS
         printf("ERROR: Failed to malloc while creating aggregate operator\n");
-        #endif
+#endif
         return NULL;
     }
 
@@ -640,9 +640,9 @@ void initKeyJoin(sbitsOperator* operator) {
 
     // Check that join is compatible
     if (schema1->columnSizes[0] != schema2->columnSizes[0] || schema1->columnSizes[0] < 0 || schema2->columnSizes[0] < 0) {
-        #ifdef PRINT_ERRORS
+#ifdef PRINT_ERRORS
         printf("ERROR: The first columns of the two tables must be the key and must be the same size. Make sure you haven't projected them out.\n");
-        #endif
+#endif
         return;
     }
 
@@ -650,17 +650,17 @@ void initKeyJoin(sbitsOperator* operator) {
     if (operator->schema == NULL) {
         operator->schema = malloc(sizeof(sbitsSchema));
         if (operator->schema == NULL) {
-            #ifdef PRINT_ERRORS
+#ifdef PRINT_ERRORS
             printf("ERROR: Failed to malloc while initializing join operator\n");
-            #endif
+#endif
             return;
         }
         operator->schema->numCols = schema1->numCols + schema2->numCols;
         operator->schema->columnSizes = malloc(operator->schema->numCols * sizeof(int8_t));
         if (operator->schema->columnSizes == NULL) {
-            #ifdef PRINT_ERRORS
+#ifdef PRINT_ERRORS
             printf("ERROR: Failed to malloc while initializing join operator\n");
-            #endif
+#endif
             return;
         }
         memcpy(operator->schema->columnSizes, schema1->columnSizes, schema1->numCols);
@@ -670,9 +670,9 @@ void initKeyJoin(sbitsOperator* operator) {
     // Allocate recordBuffer
     operator->recordBuffer = malloc(getRecordSizeFromSchema(operator->schema));
     if (operator->recordBuffer == NULL) {
-        #ifdef PRINT_ERRORS
+#ifdef PRINT_ERRORS
         printf("ERROR: Failed to malloc while initializing join operator\n");
-        #endif
+#endif
         return;
     }
 
@@ -762,13 +762,17 @@ void closeKeyJoin(sbitsOperator* operator) {
 sbitsOperator* createKeyJoinOperator(sbitsOperator* input1, sbitsOperator* input2) {
     sbitsOperator* operator= malloc(sizeof(sbitsOperator));
     if (operator== NULL) {
+#ifdef PRINT_ERRORS
         printf("ERROR: Failed to malloc while creating join operator\n");
+#endif
         return NULL;
     }
 
     struct keyJoinInfo* state = malloc(sizeof(struct keyJoinInfo));
     if (state == NULL) {
+#ifdef PRINT_ERRORS
         printf("ERROR: Failed to malloc while creating join operator\n");
+#endif
         return NULL;
     }
     state->input2 = input2;
@@ -812,7 +816,9 @@ sbitsAggregateFunc* createCountAggregate() {
 
 void sumReset(sbitsAggregateFunc* aggFunc, sbitsSchema* inputSchema) {
     if (abs(inputSchema->columnSizes[*((uint8_t*)aggFunc->state + sizeof(int64_t))]) > 8) {
+#ifdef PRINT_ERRORS
         printf("WARNING: Can't use this sum function for columns bigger than 8 bytes\n");
+#endif
     }
     *(int64_t*)aggFunc->state = 0;
 }
@@ -869,7 +875,9 @@ void minReset(sbitsAggregateFunc* aggFunc, sbitsSchema* inputSchema) {
     struct minMaxState* state = aggFunc->state;
     int8_t colSize = inputSchema->columnSizes[state->colNum];
     if (aggFunc->colSize != colSize) {
+#ifdef PRINT_ERRORS
         printf("WARNING: Your provided column size for min aggregate function doesn't match the column size in the input schema\n");
+#endif
     }
     int8_t isSigned = SBITS_IS_COL_SIGNED(colSize);
     colSize = abs(colSize);
@@ -904,18 +912,24 @@ void minMaxCompute(sbitsAggregateFunc* aggFunc, sbitsSchema* outputSchema, void*
 sbitsAggregateFunc* createMinAggregate(uint8_t colNum, int8_t colSize) {
     sbitsAggregateFunc* aggFunc = malloc(sizeof(sbitsAggregateFunc));
     if (aggFunc == NULL) {
+#ifdef PRINT_ERRORS
         printf("ERROR: Failed to allocate while creating min aggregate function\n");
+#endif
         return NULL;
     }
     struct minMaxState* state = malloc(sizeof(struct minMaxState));
     if (state == NULL) {
+#ifdef PRINT_ERRORS
         printf("ERROR: Failed to allocate while creating min aggregate function\n");
+#endif
         return NULL;
     }
     state->colNum = colNum;
     state->current = malloc(abs(colSize));
     if (state->current == NULL) {
+#ifdef PRINT_ERRORS
         printf("ERROR: Failed to allocate while creating min aggregate function\n");
+#endif
         return NULL;
     }
     aggFunc->state = state;
@@ -931,7 +945,9 @@ void maxReset(sbitsAggregateFunc* aggFunc, sbitsSchema* inputSchema) {
     struct minMaxState* state = aggFunc->state;
     int8_t colSize = inputSchema->columnSizes[state->colNum];
     if (aggFunc->colSize != colSize) {
+#ifdef PRINT_ERRORS
         printf("WARNING: Your provided column size for max aggregate function doesn't match the column size in the input schema\n");
+#endif
     }
     int8_t isSigned = SBITS_IS_COL_SIGNED(colSize);
     colSize = abs(colSize);
@@ -961,18 +977,24 @@ void maxAdd(sbitsAggregateFunc* aggFunc, sbitsSchema* inputSchema, const void* r
 sbitsAggregateFunc* createMaxAggregate(uint8_t colNum, int8_t colSize) {
     sbitsAggregateFunc* aggFunc = malloc(sizeof(sbitsAggregateFunc));
     if (aggFunc == NULL) {
+#ifdef PRINT_ERRORS
         printf("ERROR: Failed to allocate while creating max aggregate function\n");
+#endif
         return NULL;
     }
     struct minMaxState* state = malloc(sizeof(struct minMaxState));
     if (state == NULL) {
+#ifdef PRINT_ERRORS
         printf("ERROR: Failed to allocate while creating max aggregate function\n");
+#endif
         return NULL;
     }
     state->colNum = colNum;
     state->current = malloc(abs(colSize));
     if (state->current == NULL) {
+#ifdef PRINT_ERRORS
         printf("ERROR: Failed to allocate while creating max aggregate function\n");
+#endif
         return NULL;
     }
     aggFunc->state = state;
@@ -994,7 +1016,9 @@ struct avgState {
 void avgReset(struct sbitsAggregateFunc* aggFunc, sbitsSchema* inputSchema) {
     struct avgState* state = aggFunc->state;
     if (abs(inputSchema->columnSizes[state->colNum]) > 8) {
+#ifdef PRINT_ERRORS
         printf("WARNING: Can't use this sum function for columns bigger than 8 bytes\n");
+#endif
     }
     state->count = 0;
     state->sum = 0;
@@ -1056,21 +1080,29 @@ void avgCompute(struct sbitsAggregateFunc* aggFunc, sbitsSchema* outputSchema, v
 sbitsAggregateFunc* createAvgAggregate(uint8_t colNum, int8_t outputFloatSize) {
     sbitsAggregateFunc* aggFunc = malloc(sizeof(sbitsAggregateFunc));
     if (aggFunc == NULL) {
+#ifdef PRINT_ERRORS
         printf("ERROR: Failed to allocate while creating avg aggregate function\n");
+#endif
         return NULL;
     }
     struct avgState* state = malloc(sizeof(struct avgState));
     if (state == NULL) {
+#ifdef PRINT_ERRORS
         printf("ERROR: Failed to allocate while creating avg aggregate function\n");
+#endif
         return NULL;
     }
     state->colNum = colNum;
     aggFunc->state = state;
     if (outputFloatSize > 8 || (outputFloatSize < 8 && outputFloatSize > 4)) {
+#ifdef PRINT_ERRORS
         printf("WARNING: The size of the output float for AVG must be exactly 4 or 8. Defaulting to 8.");
+#endif
         aggFunc->colSize = 8;
     } else if (outputFloatSize < 4) {
+#ifdef PRINT_ERRORS
         printf("WARNING: The size of the output float for AVG must be exactly 4 or 8. Defaulting to 4.");
+#endif
         aggFunc->colSize = 4;
     } else {
         aggFunc->colSize = outputFloatSize;

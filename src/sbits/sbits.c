@@ -76,12 +76,10 @@ int8_t sbitsSetupVarDataStream(sbitsState *state, void *key, sbitsVarDataStream 
 uint32_t cleanSpline(sbitsState *state, void *key);
 
 void printBitmap(char *bm) {
-#ifdef PRINT_ERRORS
     for (int8_t i = 0; i <= 7; i++) {
         printf(" " BYTE_TO_BINARY_PATTERN "", BYTE_TO_BINARY(*(bm + i)));
     }
     printf("\n");
-#endif
 }
 
 /**
