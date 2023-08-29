@@ -256,7 +256,7 @@ int8_t sbitsInit(sbitsState *state, size_t indexMaxError) {
     int8_t varDataInitResult = 0;
     if (SBITS_USING_VDATA(state->parameters)) {
         if (state->bufferSizeInBlocks < 4 + (SBITS_USING_INDEX(state->parameters) ? 2 : 0)) {
-#ifdef PRINT_ERRORS            printf("ERROR: SBITS using variable records requires at least 4 page buffers if there is no index and 6 if there is.\n");
+#ifdef PRINT_ERRORS printf("ERROR: SBITS using variable records requires at least 4 page buffers if there is no index and 6 if there is.\n");
 #endif
             return -1;
         } else {
@@ -280,7 +280,7 @@ int8_t sbitsInitData(sbitsState *state) {
     state->minDataPageId = 0;
 
     if (state->dataFile == NULL) {
-#ifdef PRINT_ERRORS        printf("ERROR: No data file provided!\n");
+#ifdef PRINT_ERRORS printf("ERROR: No data file provided!\n");
 #endif
         return -1;
     }
@@ -295,7 +295,7 @@ int8_t sbitsInitData(sbitsState *state) {
 
     int8_t openStatus = state->fileInterface->open(state->dataFile, SBITS_FILE_MODE_W_PLUS_B);
     if (!openStatus) {
-#ifdef PRINT_ERRORS        printf("Error: Can't open data file!\n");
+#ifdef PRINT_ERRORS printf("Error: Can't open data file!\n");
 #endif
         return -1;
     }
@@ -396,19 +396,19 @@ int8_t sbitsInitIndex(sbitsState *state) {
     state->minIndexPageId = 0;
 
     if (state->numIndexPages < state->eraseSizeInPages * 2) {
-#ifdef PRINT_ERRORS        printf("ERROR: Minimum index space is two erase blocks\n");
+#ifdef PRINT_ERRORS printf("ERROR: Minimum index space is two erase blocks\n");
 #endif
         return -1;
     }
 
     if (state->numIndexPages % state->eraseSizeInPages != 0) {
-#ifdef PRINT_ERRORS        printf("ERROR: Ensure index space is a multiple of erase block size\n");
+#ifdef PRINT_ERRORS printf("ERROR: Ensure index space is a multiple of erase block size\n");
 #endif
         return -1;
     }
 
     if (state->indexFile == NULL) {
-#ifdef PRINT_ERRORS        printf("ERROR: No index file provided!\n");
+#ifdef PRINT_ERRORS printf("ERROR: No index file provided!\n");
 #endif
         return -1;
     }
@@ -422,7 +422,7 @@ int8_t sbitsInitIndex(sbitsState *state) {
 
     int8_t openStatus = state->fileInterface->open(state->indexFile, SBITS_FILE_MODE_W_PLUS_B);
     if (!openStatus) {
-#ifdef PRINT_ERRORS        printf("Error: Can't open index file!\n");
+#ifdef PRINT_ERRORS printf("Error: Can't open index file!\n");
 #endif
         return -1;
     }
@@ -489,7 +489,7 @@ int8_t sbitsInitVarData(sbitsState *state) {
 
     int8_t openResult = state->fileInterface->open(state->varFile, SBITS_FILE_MODE_W_PLUS_B);
     if (!openResult) {
-#ifdef PRINT_ERRORS        printf("Error: Can't open variable data file!\n");
+#ifdef PRINT_ERRORS printf("Error: Can't open variable data file!\n");
 #endif
         return -1;
     }
@@ -699,7 +699,7 @@ int8_t sbitsPut(sbitsState *state, void *key, void *data) {
             previousKey = (int8_t *)state->buffer + (state->recordSize * (count - 1)) + state->headerSize;
         }
         if (state->compareKey(key, previousKey) != 1) {
-#ifdef PRINT_ERRORS            printf("Keys must be strictly ascending order. Insert Failed.\n");
+#ifdef PRINT_ERRORS printf("Keys must be strictly ascending order. Insert Failed.\n");
 #endif
             return 1;
         }
@@ -838,7 +838,7 @@ void updateAverageKeyDifference(sbitsState *state, void *buffer) {
  */
 int8_t sbitsPutVar(sbitsState *state, void *key, void *data, void *variableData, uint32_t length) {
     if (!SBITS_USING_VDATA(state->parameters)) {
-#ifdef PRINT_ERRORS        printf("Error: Can't insert variable data because it is not enabled\n");
+#ifdef PRINT_ERRORS printf("Error: Can't insert variable data because it is not enabled\n");
 #endif
         return -1;
     }
@@ -1028,7 +1028,7 @@ int8_t linearSearch(sbitsState *state, int16_t *numReads, void *buf, void *key, 
  */
 int8_t sbitsGet(sbitsState *state, void *key, void *data) {
     if (state->nextDataPageId == 0) {
-#ifdef PRINT_ERRORS        printf("ERROR: No data in database.\n");
+#ifdef PRINT_ERRORS printf("ERROR: No data in database.\n");
 #endif
         return -1;
     }
@@ -1159,7 +1159,7 @@ int8_t sbitsGet(sbitsState *state, void *key, void *data) {
  */
 int8_t sbitsGetVar(sbitsState *state, void *key, void *data, sbitsVarDataStream **varData) {
     if (!SBITS_USING_VDATA(state->parameters)) {
-#ifdef PRINT_ERRORS        printf("ERROR: sbitsNextVar called when not using variable data\n");
+#ifdef PRINT_ERRORS printf("ERROR: sbitsNextVar called when not using variable data\n");
 #endif
         return 0;
     }
@@ -1205,29 +1205,30 @@ void sbitsInitIterator(sbitsState *state, sbitsIterator *it) {
         }
     }
 
-#ifdef PRINT_ERRORS    if (!SBITS_USING_BMAP(state->parameters)) {
-        printf("WARN: Iterator not using index. If this is not intended, ensure that the sbitsState is using a bitmap and was initialized with an index file\n");
-    } else if (!SBITS_USING_INDEX(state->parameters)) {
-        printf("WARN: Iterator not using index to full extent. If this is not intended, ensure that the sbitsState was initialized with an index file\n");
-    }
+#ifdef PRINT_ERRORS if (!SBITS_USING_BMAP(state->parameters)) {
+    printf("WARN: Iterator not using index. If this is not intended, ensure that the sbitsState is using a bitmap and was initialized with an index file\n");
+}
+else if (!SBITS_USING_INDEX(state->parameters)) {
+    printf("WARN: Iterator not using index to full extent. If this is not intended, ensure that the sbitsState was initialized with an index file\n");
+}
 #endif
 
-    // Determine which data page should be the first examined if there is a min key
-    if (it->minKey != NULL && SEARCH_METHOD == 2) {
-        /* Spline search */
-        uint32_t location, lowbound, highbound;
-        if (RADIX_BITS > 0) {
-            radixsplineFind(state->rdix, it->minKey, state->compareKey, &location, &lowbound, &highbound);
-        } else {
-            splineFind(state->spl, it->minKey, state->compareKey, &location, &lowbound, &highbound);
-        }
-
-        // Use the low bound as the start for our search
-        it->nextDataPage = max(lowbound, state->minDataPageId);
+// Determine which data page should be the first examined if there is a min key
+if (it->minKey != NULL && SEARCH_METHOD == 2) {
+    /* Spline search */
+    uint32_t location, lowbound, highbound;
+    if (RADIX_BITS > 0) {
+        radixsplineFind(state->rdix, it->minKey, state->compareKey, &location, &lowbound, &highbound);
     } else {
-        it->nextDataPage = state->minDataPageId;
+        splineFind(state->spl, it->minKey, state->compareKey, &location, &lowbound, &highbound);
     }
-    it->nextDataRec = 0;
+
+    // Use the low bound as the start for our search
+    it->nextDataPage = max(lowbound, state->minDataPageId);
+} else {
+    it->nextDataPage = state->minDataPageId;
+}
+it->nextDataRec = 0;
 }
 
 /**
@@ -1302,7 +1303,7 @@ int8_t sbitsNext(sbitsState *state, sbitsIterator *it, void *key, void *data) {
                 // If the index page that contains this data page exists, else we must read the data page regardless cause we don't have the index saved for it
 
                 if (readIndexPage(state, indexPage % state->numIndexPages) != 0) {
-#ifdef PRINT_ERRORS                    printf("ERROR: Failed to read index page %i (%i)\n", indexPage, indexPage % state->numIndexPages);
+#ifdef PRINT_ERRORS printf("ERROR: Failed to read index page %i (%i)\n", indexPage, indexPage % state->numIndexPages);
 #endif
                     return 0;
                 }
@@ -1320,7 +1321,7 @@ int8_t sbitsNext(sbitsState *state, sbitsIterator *it, void *key, void *data) {
         }
 
         if (readPage(state, it->nextDataPage % state->numDataPages) != 0) {
-#ifdef PRINT_ERRORS            printf("ERROR: Failed to read data page %i (%i)\n", it->nextDataPage, it->nextDataPage % state->numDataPages);
+#ifdef PRINT_ERRORS printf("ERROR: Failed to read data page %i (%i)\n", it->nextDataPage, it->nextDataPage % state->numDataPages);
 #endif
             return 0;
         }
@@ -1367,7 +1368,7 @@ int8_t sbitsNext(sbitsState *state, sbitsIterator *it, void *key, void *data) {
  */
 int8_t sbitsNextVar(sbitsState *state, sbitsIterator *it, void *key, void *data, sbitsVarDataStream **varData) {
     if (!SBITS_USING_VDATA(state->parameters)) {
-#ifdef PRINT_ERRORS        printf("ERROR: sbitsNextVar called when not using variable data\n");
+#ifdef PRINT_ERRORS printf("ERROR: sbitsNextVar called when not using variable data\n");
 #endif
         return 0;
     }
@@ -1420,7 +1421,7 @@ int8_t sbitsSetupVarDataStream(sbitsState *state, void *key, sbitsVarDataStream 
 
     // Read in page
     if (readVariablePage(state, pageNum) != 0) {
-#ifdef PRINT_ERRORS        printf("ERROR: sbits failed to read variable page\n");
+#ifdef PRINT_ERRORS printf("ERROR: sbits failed to read variable page\n");
 #endif
         return 2;
     }
@@ -1443,7 +1444,7 @@ int8_t sbitsSetupVarDataStream(sbitsState *state, void *key, sbitsVarDataStream 
     // Create varDataStream
     sbitsVarDataStream *varDataStream = malloc(sizeof(sbitsVarDataStream));
     if (varDataStream == NULL) {
-#ifdef PRINT_ERRORS        printf("ERROR: Failed to alloc memory for sbitsVarDataStream\n");
+#ifdef PRINT_ERRORS printf("ERROR: Failed to alloc memory for sbitsVarDataStream\n");
 #endif
         return 3;
     }
@@ -1467,7 +1468,7 @@ int8_t sbitsSetupVarDataStream(sbitsState *state, void *key, sbitsVarDataStream 
  */
 uint32_t sbitsVarDataStreamRead(sbitsState *state, sbitsVarDataStream *stream, void *buffer, uint32_t length) {
     if (buffer == NULL) {
-#ifdef PRINT_ERRORS        printf("ERROR: Cannot pass null buffer to sbitsVarDataStreamRead\n");
+#ifdef PRINT_ERRORS printf("ERROR: Cannot pass null buffer to sbitsVarDataStreamRead\n");
 #endif
         return 0;
     }
@@ -1475,7 +1476,7 @@ uint32_t sbitsVarDataStreamRead(sbitsState *state, sbitsVarDataStream *stream, v
     // Read in var page containing the data to read
     uint32_t pageNum = (stream->fileOffset / state->pageSize) % state->numVarPages;
     if (readVariablePage(state, pageNum) != 0) {
-#ifdef PRINT_ERRORS        printf("ERROR: Couldn't read variable data page %d\n", pageNum);
+#ifdef PRINT_ERRORS printf("ERROR: Couldn't read variable data page %d\n", pageNum);
 #endif
         return 0;
     }
@@ -1495,7 +1496,7 @@ uint32_t sbitsVarDataStreamRead(sbitsState *state, sbitsVarDataStream *stream, v
         if (amtRead < length && stream->bytesRead < stream->totalBytes) {
             pageNum = (pageNum + 1) % state->numVarPages;
             if (readVariablePage(state, pageNum) != 0) {
-#ifdef PRINT_ERRORS                printf("ERROR: Couldn't read variable data page %d\n", pageNum);
+#ifdef PRINT_ERRORS printf("ERROR: Couldn't read variable data page %d\n", pageNum);
 #endif
                 return 0;
             }
@@ -1558,7 +1559,7 @@ id_t writePage(sbitsState *state, void *buffer) {
     /* Seek to page location in file */
     int32_t val = state->fileInterface->write(buffer, pageNum % state->numDataPages, state->pageSize, state->dataFile);
     if (val == 0) {
-#ifdef PRINT_ERRORS        printf("Failed to write data page: %i (%i)\n", pageNum, pageNum % state->numDataPages);
+#ifdef PRINT_ERRORS printf("Failed to write data page: %i (%i)\n", pageNum, pageNum % state->numDataPages);
 #endif
         return -1;
     }
@@ -1617,7 +1618,7 @@ id_t writeIndexPage(sbitsState *state, void *buffer) {
     /* Seek to page location in file */
     int32_t val = state->fileInterface->write(buffer, pageNum % state->numIndexPages, state->pageSize, state->indexFile);
     if (val == 0) {
-#ifdef PRINT_ERRORS        printf("Failed to write index page: %i (%i)\n", pageNum, pageNum % state->numIndexPages);
+#ifdef PRINT_ERRORS printf("Failed to write index page: %i (%i)\n", pageNum, pageNum % state->numIndexPages);
 #endif
         return -1;
     }
