@@ -267,7 +267,7 @@ int8_t embedDBInit(embedDBState *state, size_t indexMaxError) {
         state->numVarPages = 0;
     }
 
-    resetStats(state);
+    embedDBResetStats(state);
     return 0;
 }
 
@@ -548,7 +548,7 @@ int8_t embedDBInitVarDataFromFile(embedDBState *state) {
  * @param   state   embedDB state structure
  */
 void embedDBPrintInit(embedDBState *state) {
-    printf("embedDB State Initialization Stats.\n");
+    printf("EmbedDB State Initialization Stats:\n");
     printf("Buffer size: %d  Page size: %d\n", state->bufferSizeInBlocks, state->pageSize);
     printf("Key size: %d Data size: %d %sRecord size: %d\n", state->keySize, state->dataSize, embedDB_USING_VDATA(state->parameters) ? "Variable data pointer size: 4 " : "", state->recordSize);
     printf("Use index: %d  Max/min: %d Sum: %d Bmap: %d\n", embedDB_USING_INDEX(state->parameters), embedDB_USING_MAX_MIN(state->parameters), embedDB_USING_SUM(state->parameters), embedDB_USING_BMAP(state->parameters));
@@ -1530,7 +1530,7 @@ uint32_t embedDBVarDataStreamRead(embedDBState *state, embedDBVarDataStream *str
  * @brief	Prints statistics.
  * @param	state	embedDB state structure
  */
-void printStats(embedDBState *state) {
+void embedDBPrintStats(embedDBState *state) {
     printf("Num reads: %d\n", state->numReads);
     printf("Buffer hits: %d\n", state->bufferHits);
     printf("Num writes: %d\n", state->numWrites);
@@ -1779,7 +1779,7 @@ int8_t readVariablePage(embedDBState *state, id_t pageNum) {
  * @brief	Resets statistics.
  * @param	state	embedDB state structure
  */
-void resetStats(embedDBState *state) {
+void embedDBResetStats(embedDBState *state) {
     state->numReads = 0;
     state->numWrites = 0;
     state->bufferHits = 0;

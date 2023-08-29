@@ -1,6 +1,6 @@
 /******************************************************************************/
 /**
- * @file		test_embedDB.c
+ * @file		embedDBExample.c
  * @author		Ramon Lawrence
  * @brief		This file does performance/correctness testing of sequential
  * bitmap indexing for time series (embedDB).
@@ -59,7 +59,7 @@
  * Runs all tests and collects benchmarks
  */
 void runalltests_embedDB() {
-    printf("\nSTARTING embedDB TESTS.\n");
+    printf("\n EmbedDB Example: \n");
     int8_t M = 4;
     int32_t numRecords = 1000;     // default values
     int32_t testRecords = 500000;  // default values
@@ -285,8 +285,8 @@ void runalltests_embedDB() {
         printf("Elapsed Time: %lu ms\n", times[l][r]);
         printf("Records inserted: %lu\n", numRecords);
 
-        printStats(state);
-        resetStats(state);
+        embedDBPrintStats(state);
+        embedDBResetStats(state);
 
         printf("\n\nQUERY TEST:\n");
         /* Verify that all values can be found and test query performance */
@@ -477,11 +477,11 @@ void runalltests_embedDB() {
         printf("Elapsed Time: %lu ms\n", rtimes[l][r]);
         printf("Records queried: %lu\n", i);
 
-        printStats(state);
+        embedDBPrintStats(state);
 
         // Optional: Test iterator
         // testIterator(state);
-        // printStats(state);
+        // embedDBPrintStats(state);
 
         free(recordBuffer);
         free(state->buffer);

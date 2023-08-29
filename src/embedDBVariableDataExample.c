@@ -199,7 +199,7 @@ int main() {
         /* Insert records into structure */
         uint32_t start = clock();
 
-        resetStats(state);
+        embedDBResetStats(state);
 
         int32_t i;
         char vardata[15] = "Testing 000...";
@@ -363,7 +363,7 @@ int main() {
         printf("Records with variable data: %lu\n", numVarData);
 
         printStats(state);
-        resetStats(state);
+        embedDBResetStats(state);
 
         printf("\n\nQUERY TEST:\n");
         /* Verify that all values can be found and test query performance */
@@ -694,7 +694,7 @@ int main() {
                     rec++;
                 }
                 printf("Read records: %d\n", rec);
-                // printStats(state);
+                // embedDBPrintStats(state);
                 printf("Num: %lu KEY: %lu Perc: %.1f Records: %d Reads: %d \n", i, mv, ((state->numReads - reads) * 1000 / (state->nextDataPageId - state->minDataPageId + state->nextVarPageId - state->minVarRecordId)) / 10.0, rec, (state->numReads - reads));
 
                 embedDBCloseIterator(&it);
@@ -716,13 +716,13 @@ int main() {
         printf("Vardata deleted: %lu\n", deleted);
         printf("Num records not found: %lu\n", notFound);
 
-        printStats(state);
+        embedDBPrintStats(state);
 
         printf("Done\n");
 
         // Optional: Test iterator
         // testIterator(state);
-        // printStats(state);
+        // embedDBPrintStats(state);
 
         // Free memory
         embedDBClose(state);

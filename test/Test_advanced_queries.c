@@ -1,9 +1,9 @@
 #include <math.h>
 #include <string.h>
 
-#include "../src/query-interface/advancedQueries.h"
 #include "../src/embedDB/embedDB.h"
 #include "../src/embedDB/utilityFunctions.h"
+#include "../src/query-interface/advancedQueries.h"
 #include "unity.h"
 
 typedef struct DataSource {

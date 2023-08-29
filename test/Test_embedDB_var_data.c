@@ -49,7 +49,7 @@ void initState(uint32_t dataSize) {
     state->buildBitmapFromRange = buildBitmapInt8FromRange;
     state->compareKey = int32Comparator;
     state->compareData = int32Comparator;
-    resetStats(state);
+    embedDBResetStats(state);
 }
 
 void resetState() {

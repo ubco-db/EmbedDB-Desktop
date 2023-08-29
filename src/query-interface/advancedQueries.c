@@ -439,7 +439,7 @@ embedDBOperator* createSelectionOperator(embedDBOperator* input, int8_t colNum, 
  */
 struct aggregateInfo {
     int8_t (*groupfunc)(const void* lastRecord, const void* record);  // Function that determins if both records are in the same group
-    embedDBAggregateFunc* functions;                                    // An array of aggregate functions
+    embedDBAggregateFunc* functions;                                  // An array of aggregate functions
     uint32_t functionsLength;                                         // The length of the functions array
     void* lastRecordBuffer;                                           // Buffer for the last record read by input->next
     uint16_t bufferSize;                                              // Size of the input buffer (and lastRecordBuffer)

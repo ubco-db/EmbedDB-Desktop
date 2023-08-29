@@ -179,7 +179,7 @@ typedef struct {
     void *dataFile;                                                       /* File for storing data records. */
     void *indexFile;                                                      /* File for storing index records. */
     void *varFile;                                                        /* File for storing variable length data. */
-    embedDBFileInterface *fileInterface;                                    /* Interface to the file storage */
+    embedDBFileInterface *fileInterface;                                  /* Interface to the file storage */
     uint32_t numDataPages;                                                /* The number of pages will use for storing fixed records*/
     uint32_t numIndexPages;                                               /* The number of pages will use for storing the data index */
     uint32_t numVarPages;                                                 /* The number of pages will use for storing variable data */
@@ -409,13 +409,13 @@ id_t writeVariablePage(embedDBState *state, void *buffer);
  * @brief	Prints statistics.
  * @param	state	embedDB state structure
  */
-void printStats(embedDBState *state);
+void embedDBPrintStats(embedDBState *state);
 
 /**
  * @brief	Resets statistics.
  * @param	state	embedDB state structure
  */
-void resetStats(embedDBState *state);
+void embedDBResetStats(embedDBState *state);
 
 /**
  * @brief	Closes structure and frees any dynamic space.

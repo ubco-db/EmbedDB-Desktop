@@ -28,7 +28,7 @@ void setUp(void) {
     state->compareKey = int32Comparator;
     state->compareData = int32Comparator;
     int8_t result = embedDBInit(state, 1);
-    resetStats(state);
+    embedDBResetStats(state);
     TEST_ASSERT_EQUAL_INT8_MESSAGE(0, result, "embedDB did not initialize correctly.");
 }
 
@@ -53,7 +53,7 @@ void initalizeembedDBFromFile(void) {
     state->compareKey = int32Comparator;
     state->compareData = int32Comparator;
     int8_t result = embedDBInit(state, 1);
-    resetStats(state);
+    embedDBResetStats(state);
     TEST_ASSERT_EQUAL_INT8_MESSAGE(0, result, "embedDB did not initialize correctly.");
 }
 

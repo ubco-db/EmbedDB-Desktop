@@ -1,9 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "query-interface/advancedQueries.h"
 #include "embedDB/embedDB.h"
 #include "embedDB/utilityFunctions.h"
+#include "query-interface/advancedQueries.h"
 
 uint32_t dayGroup(const void* record) {
     // find the epoch day
