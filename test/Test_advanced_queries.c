@@ -1,7 +1,7 @@
 #include <math.h>
 #include <string.h>
 
-#include "../src/sbits/advancedQueries.h"
+#include "../src/query-interface/advancedQueries.h"
 #include "../src/sbits/sbits.h"
 #include "../src/sbits/utilityFunctions.h"
 #include "unity.h"
