@@ -49,7 +49,10 @@
  */
 #define QUERY_TYPE 3
 
-/* Use sequential generated data or one of the data sets */
+/*
+ * 0: Use data from one of the data sets
+ * 1: Use sequentially generated data
+*/
 #define SEQUENTIAL_DATA 1
 
 /**
