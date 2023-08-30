@@ -24,7 +24,7 @@ void setUp(void) {
     state->eraseSizeInPages = 2;
     state->numIndexPages = 4;
     state->bitmapSize = 1;
-    state->parameters = embedDB_USE_INDEX | embedDB_RESET_DATA;
+    state->parameters = EMBEDDB_USE_INDEX | EMBEDDB_RESET_DATA;
     state->inBitmap = inBitmapInt8;
     state->updateBitmap = updateBitmapInt8;
     state->buildBitmapFromRange = buildBitmapInt8FromRange;
@@ -51,7 +51,7 @@ void initalizeembedDBFromFile() {
     state->numIndexPages = 4;
     state->eraseSizeInPages = 2;
     state->bitmapSize = 1;
-    state->parameters = embedDB_USE_INDEX;
+    state->parameters = EMBEDDB_USE_INDEX;
     state->inBitmap = inBitmapInt8;
     state->updateBitmap = updateBitmapInt8;
     state->buildBitmapFromRange = buildBitmapInt8FromRange;

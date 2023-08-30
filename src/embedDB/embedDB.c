@@ -103,17 +103,17 @@ void initBufferPage(embedDBState *state, int pageNum) {
         ((int8_t *)buf)[i] = 0;
     }
 
-    if (pageNum != embedDB_VAR_WRITE_BUFFER(state->parameters)) {
+    if (pageNum != EMBEDDB_VAR_WRITE_BUFFER(state->parameters)) {
         /* Initialize header key min. Max and sum is already set to zero by the
          * for-loop above */
-        void *min = embedDB_GET_MIN_KEY(buf);
+        void *min = EMBEDDB_GET_MIN_KEY(buf);
         /* Initialize min to all 1s */
         for (i = 0; i < state->keySize; i++) {
             ((int8_t *)min)[i] = 1;
         }
 
         /* Initialize data min. */
-        min = embedDB_GET_MIN_DATA(buf, state);
+        min = EMBEDDB_GET_MIN_DATA(buf, state);
         /* Initialize min to all 1s */
         for (i = 0; i < state->dataSize; i++) {
             ((int8_t *)min)[i] = 1;
@@ -154,7 +154,7 @@ void *embedDBGetMinKey(embedDBState *state, void *buffer) {
  * @param   buffer  In memory page buffer with node data
  */
 void *embedDBGetMaxKey(embedDBState *state, void *buffer) {
-    int16_t count = embedDB_GET_COUNT(buffer);
+    int16_t count = EMBEDDB_GET_COUNT(buffer);
     return (void *)((int8_t *)buffer + state->headerSize + (count - 1) * state->recordSize);
 }
 
@@ -173,7 +173,7 @@ int8_t embedDBInit(embedDBState *state, size_t indexMaxError) {
     }
 
     state->recordSize = state->keySize + state->dataSize;
-    if (embedDB_USING_VDATA(state->parameters)) {
+    if (EMBEDDB_USING_VDATA(state->parameters)) {
         state->recordSize += 4;
     }
 
@@ -183,10 +183,10 @@ int8_t embedDBInit(embedDBState *state, size_t indexMaxError) {
 
     /* Header size depends on bitmap size: 6 + X bytes: 4 byte id, 2 for record count, X for bitmap. */
     state->headerSize = 6;
-    if (embedDB_USING_INDEX(state->parameters))
+    if (EMBEDDB_USING_INDEX(state->parameters))
         state->headerSize += state->bitmapSize;
 
-    if (embedDB_USING_MAX_MIN(state->parameters))
+    if (EMBEDDB_USING_MAX_MIN(state->parameters))
         state->headerSize += state->keySize * 2 + state->dataSize * 2;
 
     /* Flags to show that these values have not been initalized with actual data yet */
@@ -204,7 +204,7 @@ int8_t embedDBInit(embedDBState *state, size_t indexMaxError) {
     /* Allocate first page of buffer as output page */
     initBufferPage(state, 0);
 
-    if (state->numDataPages < (embedDB_USING_INDEX(state->parameters) * 2 + 2) * state->eraseSizeInPages) {
+    if (state->numDataPages < (EMBEDDB_USING_INDEX(state->parameters) * 2 + 2) * state->eraseSizeInPages) {
 #ifdef PRINT_ERRORS
         printf("ERROR: Number of pages allocated must be at least twice erase block size for embedDB and four times when using indexing. Memory pages: %d\n", state->numDataPages);
 #endif
@@ -232,7 +232,7 @@ int8_t embedDBInit(embedDBState *state, size_t indexMaxError) {
 
     /* Allocate file and buffer for index */
     int8_t indexInitResult = 0;
-    if (embedDB_USING_INDEX(state->parameters)) {
+    if (EMBEDDB_USING_INDEX(state->parameters)) {
         if (state->bufferSizeInBlocks < 4) {
 #ifdef PRINT_ERRORS
             printf("ERROR: embedDB using index requires at least 4 page buffers.\n");
@@ -252,8 +252,8 @@ int8_t embedDBInit(embedDBState *state, size_t indexMaxError) {
 
     /* Allocate file and buffer for variable data */
     int8_t varDataInitResult = 0;
-    if (embedDB_USING_VDATA(state->parameters)) {
-        if (state->bufferSizeInBlocks < 4 + (embedDB_USING_INDEX(state->parameters) ? 2 : 0)) {
+    if (EMBEDDB_USING_VDATA(state->parameters)) {
+        if (state->bufferSizeInBlocks < 4 + (EMBEDDB_USING_INDEX(state->parameters) ? 2 : 0)) {
 #ifdef PRINT_ERRORS
             printf("ERROR: embedDB using variable records requires at least 4 page buffers if there is no index and 6 if there is.\n");
 #endif
@@ -286,14 +286,14 @@ int8_t embedDBInitData(embedDBState *state) {
     }
 
     /* Setup data file. */
-    if (!embedDB_RESETING_DATA(state->parameters)) {
-        int8_t openStatus = state->fileInterface->open(state->dataFile, embedDB_FILE_MODE_R_PLUS_B);
+    if (!EMBEDDB_RESETING_DATA(state->parameters)) {
+        int8_t openStatus = state->fileInterface->open(state->dataFile, EMBEDDB_FILE_MODE_R_PLUS_B);
         if (openStatus) {
             return embedDBInitDataFromFile(state);
         }
     }
 
-    int8_t openStatus = state->fileInterface->open(state->dataFile, embedDB_FILE_MODE_W_PLUS_B);
+    int8_t openStatus = state->fileInterface->open(state->dataFile, EMBEDDB_FILE_MODE_W_PLUS_B);
     if (!openStatus) {
 #ifdef PRINT_ERRORS
         printf("Error: Can't open data file!\n");
@@ -364,7 +364,7 @@ int8_t embedDBInitDataFromFile(embedDBState *state) {
 
 void embedDBInitSplineFromFile(embedDBState *state) {
     id_t pageNumberToRead = state->minDataPageId;
-    void *buffer = (int8_t *)state->buffer + state->pageSize * embedDB_DATA_READ_BUFFER;
+    void *buffer = (int8_t *)state->buffer + state->pageSize * EMBEDDB_DATA_READ_BUFFER;
     id_t pagesRead = 0;
     id_t numberOfPagesToRead = state->nextDataPageId - state->minDataPageId;
     while (pagesRead < numberOfPagesToRead) {
@@ -385,10 +385,10 @@ int8_t embedDBInitIndex(embedDBState *state) {
     state->maxIdxRecordsPerPage = (state->pageSize - 16) / state->bitmapSize;
 
     /* Allocate third page of buffer as index output page */
-    initBufferPage(state, embedDB_INDEX_WRITE_BUFFER);
+    initBufferPage(state, EMBEDDB_INDEX_WRITE_BUFFER);
 
     /* Add page id to minimum value spot in page */
-    void *buf = (int8_t *)state->buffer + state->pageSize * (embedDB_INDEX_WRITE_BUFFER);
+    void *buf = (int8_t *)state->buffer + state->pageSize * (EMBEDDB_INDEX_WRITE_BUFFER);
     id_t *ptr = ((id_t *)((int8_t *)buf + 8));
     *ptr = state->nextDataPageId;
 
@@ -417,14 +417,14 @@ int8_t embedDBInitIndex(embedDBState *state) {
         return -1;
     }
 
-    if (!embedDB_RESETING_DATA(state->parameters)) {
-        int8_t openStatus = state->fileInterface->open(state->indexFile, embedDB_FILE_MODE_R_PLUS_B);
+    if (!EMBEDDB_RESETING_DATA(state->parameters)) {
+        int8_t openStatus = state->fileInterface->open(state->indexFile, EMBEDDB_FILE_MODE_R_PLUS_B);
         if (openStatus) {
             return embedDBInitIndexFromFile(state);
         }
     }
 
-    int8_t openStatus = state->fileInterface->open(state->indexFile, embedDB_FILE_MODE_W_PLUS_B);
+    int8_t openStatus = state->fileInterface->open(state->indexFile, EMBEDDB_FILE_MODE_W_PLUS_B);
     if (!openStatus) {
 #ifdef PRINT_ERRORS
         printf("Error: Can't open index file!\n");
@@ -445,7 +445,7 @@ int8_t embedDBInitIndexFromFile(embedDBState *state) {
 
     bool haveWrappedInMemory = false;
     int count = 0;
-    void *buffer = (int8_t *)state->buffer + state->pageSize * embedDB_INDEX_READ_BUFFER;
+    void *buffer = (int8_t *)state->buffer + state->pageSize * EMBEDDB_INDEX_READ_BUFFER;
 
     while (moreToRead && count < state->numIndexPages) {
         memcpy(&logicalIndexPageId, buffer, sizeof(id_t));
@@ -477,7 +477,7 @@ int8_t embedDBInitIndexFromFile(embedDBState *state) {
 
 int8_t embedDBInitVarData(embedDBState *state) {
     // Initialize variable data outpt buffer
-    initBufferPage(state, embedDB_VAR_WRITE_BUFFER(state->parameters));
+    initBufferPage(state, EMBEDDB_VAR_WRITE_BUFFER(state->parameters));
 
     state->variableDataHeaderSize = state->keySize + sizeof(id_t);
     state->currentVarLoc = state->variableDataHeaderSize;
@@ -485,14 +485,14 @@ int8_t embedDBInitVarData(embedDBState *state) {
     state->numAvailVarPages = state->numVarPages;
     state->nextVarPageId = 0;
 
-    if (!embedDB_RESETING_DATA(state->parameters)) {
-        int8_t openResult = state->fileInterface->open(state->varFile, embedDB_FILE_MODE_R_PLUS_B);
+    if (!EMBEDDB_RESETING_DATA(state->parameters)) {
+        int8_t openResult = state->fileInterface->open(state->varFile, EMBEDDB_FILE_MODE_R_PLUS_B);
         if (openResult) {
             return embedDBInitVarDataFromFile(state);
         }
     }
 
-    int8_t openResult = state->fileInterface->open(state->varFile, embedDB_FILE_MODE_W_PLUS_B);
+    int8_t openResult = state->fileInterface->open(state->varFile, EMBEDDB_FILE_MODE_W_PLUS_B);
     if (!openResult) {
 #ifdef PRINT_ERRORS
         printf("Error: Can't open variable data file!\n");
@@ -504,7 +504,7 @@ int8_t embedDBInitVarData(embedDBState *state) {
 }
 
 int8_t embedDBInitVarDataFromFile(embedDBState *state) {
-    void *buffer = (int8_t *)state->buffer + state->pageSize * embedDB_VAR_READ_BUFFER(state->parameters);
+    void *buffer = (int8_t *)state->buffer + state->pageSize * EMBEDDB_VAR_READ_BUFFER(state->parameters);
     id_t logicalVariablePageId = 0;
     id_t maxLogicalVariablePageId = 0;
     id_t physicalVariablePageId = 0;
@@ -550,8 +550,8 @@ int8_t embedDBInitVarDataFromFile(embedDBState *state) {
 void embedDBPrintInit(embedDBState *state) {
     printf("EmbedDB State Initialization Stats:\n");
     printf("Buffer size: %d  Page size: %d\n", state->bufferSizeInBlocks, state->pageSize);
-    printf("Key size: %d Data size: %d %sRecord size: %d\n", state->keySize, state->dataSize, embedDB_USING_VDATA(state->parameters) ? "Variable data pointer size: 4 " : "", state->recordSize);
-    printf("Use index: %d  Max/min: %d Sum: %d Bmap: %d\n", embedDB_USING_INDEX(state->parameters), embedDB_USING_MAX_MIN(state->parameters), embedDB_USING_SUM(state->parameters), embedDB_USING_BMAP(state->parameters));
+    printf("Key size: %d Data size: %d %sRecord size: %d\n", state->keySize, state->dataSize, EMBEDDB_USING_VDATA(state->parameters) ? "Variable data pointer size: 4 " : "", state->recordSize);
+    printf("Use index: %d  Max/min: %d Sum: %d Bmap: %d\n", EMBEDDB_USING_INDEX(state->parameters), EMBEDDB_USING_MAX_MIN(state->parameters), EMBEDDB_USING_SUM(state->parameters), EMBEDDB_USING_BMAP(state->parameters));
     printf("Header size: %d  Records per page: %d\n", state->headerSize, state->maxRecordsPerPage);
 }
 
@@ -566,7 +566,7 @@ float embedDBCalculateSlope(embedDBState *state, void *buffer) {
 
     uint32_t slopeX1, slopeX2;
     slopeX1 = 0;
-    slopeX2 = embedDB_GET_COUNT(buffer) - 1;
+    slopeX2 = EMBEDDB_GET_COUNT(buffer) - 1;
 
     if (state->keySize <= 4) {
         uint32_t slopeY1 = 0, slopeY2 = 0;
@@ -694,12 +694,12 @@ void indexPage(embedDBState *state, uint32_t pageNumber) {
 int8_t embedDBPut(embedDBState *state, void *key, void *data) {
     /* Copy record into block */
 
-    count_t count = embedDB_GET_COUNT(state->buffer);
+    count_t count = EMBEDDB_GET_COUNT(state->buffer);
     if (state->minKey != UINT32_MAX) {
         void *previousKey = NULL;
         if (count == 0) {
             readPage(state, (state->nextDataPageId - 1) % state->numDataPages);
-            previousKey = ((int8_t *)state->buffer + state->pageSize * embedDB_DATA_READ_BUFFER) +
+            previousKey = ((int8_t *)state->buffer + state->pageSize * EMBEDDB_DATA_READ_BUFFER) +
                           (state->recordSize * (state->maxRecordsPerPage - 1)) + state->headerSize;
         } else {
             previousKey = (int8_t *)state->buffer + (state->recordSize * (count - 1)) + state->headerSize;
@@ -721,25 +721,25 @@ int8_t embedDBPut(embedDBState *state, void *key, void *data) {
 
         /* Save record in index file */
         if (state->indexFile != NULL) {
-            void *buf = (int8_t *)state->buffer + state->pageSize * (embedDB_INDEX_WRITE_BUFFER);
-            count_t idxcount = embedDB_GET_COUNT(buf);
+            void *buf = (int8_t *)state->buffer + state->pageSize * (EMBEDDB_INDEX_WRITE_BUFFER);
+            count_t idxcount = EMBEDDB_GET_COUNT(buf);
             if (idxcount >= state->maxIdxRecordsPerPage) {
                 /* Save index page */
                 writeIndexPage(state, buf);
 
                 idxcount = 0;
-                initBufferPage(state, embedDB_INDEX_WRITE_BUFFER);
+                initBufferPage(state, EMBEDDB_INDEX_WRITE_BUFFER);
 
                 /* Add page id to minimum value spot in page */
                 id_t *ptr = (id_t *)((int8_t *)buf + 8);
                 *ptr = pageNum;
             }
 
-            embedDB_INC_COUNT(buf);
+            EMBEDDB_INC_COUNT(buf);
 
             /* Copy record onto index page */
-            void *bm = embedDB_GET_BITMAP(state->buffer);
-            memcpy((void *)((int8_t *)buf + embedDB_IDX_HEADER_SIZE + state->bitmapSize * idxcount), bm, state->bitmapSize);
+            void *bm = EMBEDDB_GET_BITMAP(state->buffer);
+            memcpy((void *)((int8_t *)buf + EMBEDDB_IDX_HEADER_SIZE + state->bitmapSize * idxcount), bm, state->bitmapSize);
         }
 
         updateAverageKeyDifference(state, state->buffer);
@@ -754,55 +754,55 @@ int8_t embedDBPut(embedDBState *state, void *key, void *data) {
     memcpy((int8_t *)state->buffer + (state->recordSize * count) + state->headerSize + state->keySize, data, state->dataSize);
 
     /* Copy variable data offset if using variable data*/
-    if (embedDB_USING_VDATA(state->parameters)) {
+    if (EMBEDDB_USING_VDATA(state->parameters)) {
         uint32_t dataLocation;
         if (state->recordHasVarData) {
             dataLocation = state->currentVarLoc % (state->numVarPages * state->pageSize);
         } else {
-            dataLocation = embedDB_NO_VAR_DATA;
+            dataLocation = EMBEDDB_NO_VAR_DATA;
         }
         memcpy((int8_t *)state->buffer + (state->recordSize * count) + state->headerSize + state->keySize + state->dataSize, &dataLocation, sizeof(uint32_t));
     }
 
     /* Update count */
-    embedDB_INC_COUNT(state->buffer);
+    EMBEDDB_INC_COUNT(state->buffer);
 
     /* Set minimum key for first record insert */
     if (state->minKey == UINT32_MAX)
         memcpy(&state->minKey, key, state->keySize);
 
-    if (embedDB_USING_MAX_MIN(state->parameters)) {
+    if (EMBEDDB_USING_MAX_MIN(state->parameters)) {
         /* Update MIN/MAX */
         void *ptr;
         if (count != 0) {
             /* Since keys are inserted in ascending order, every insert will
              * update max. Min will never change after first record. */
-            ptr = embedDB_GET_MAX_KEY(state->buffer, state);
+            ptr = EMBEDDB_GET_MAX_KEY(state->buffer, state);
             memcpy(ptr, key, state->keySize);
 
-            ptr = embedDB_GET_MIN_DATA(state->buffer, state);
+            ptr = EMBEDDB_GET_MIN_DATA(state->buffer, state);
             if (state->compareData(data, ptr) < 0)
                 memcpy(ptr, data, state->dataSize);
-            ptr = embedDB_GET_MAX_DATA(state->buffer, state);
+            ptr = EMBEDDB_GET_MAX_DATA(state->buffer, state);
             if (state->compareData(data, ptr) > 0)
                 memcpy(ptr, data, state->dataSize);
         } else {
             /* First record inserted */
-            ptr = embedDB_GET_MIN_KEY(state->buffer);
+            ptr = EMBEDDB_GET_MIN_KEY(state->buffer);
             memcpy(ptr, key, state->keySize);
-            ptr = embedDB_GET_MAX_KEY(state->buffer, state);
+            ptr = EMBEDDB_GET_MAX_KEY(state->buffer, state);
             memcpy(ptr, key, state->keySize);
 
-            ptr = embedDB_GET_MIN_DATA(state->buffer, state);
+            ptr = EMBEDDB_GET_MIN_DATA(state->buffer, state);
             memcpy(ptr, data, state->dataSize);
-            ptr = embedDB_GET_MAX_DATA(state->buffer, state);
+            ptr = EMBEDDB_GET_MAX_DATA(state->buffer, state);
             memcpy(ptr, data, state->dataSize);
         }
     }
 
-    if (embedDB_USING_BMAP(state->parameters)) {
+    if (EMBEDDB_USING_BMAP(state->parameters)) {
         /* Update bitmap */
-        char *bm = (char *)embedDB_GET_BITMAP(state->buffer);
+        char *bm = (char *)EMBEDDB_GET_BITMAP(state->buffer);
         state->updateBitmap(data, bm);
     }
 
@@ -844,7 +844,7 @@ void updateAverageKeyDifference(embedDBState *state, void *buffer) {
  * @return	Return 0 if success. Non-zero value if error.
  */
 int8_t embedDBPutVar(embedDBState *state, void *key, void *data, void *variableData, uint32_t length) {
-    if (!embedDB_USING_VDATA(state->parameters)) {
+    if (!EMBEDDB_USING_VDATA(state->parameters)) {
 #ifdef PRINT_ERRORS
         printf("Error: Can't insert variable data because it is not enabled\n");
 #endif
@@ -857,10 +857,10 @@ int8_t embedDBPutVar(embedDBState *state, void *key, void *data, void *variableD
      * Check that there is enough space remaining in this page to start the insert of the variable
      * data here and if the data page will be written in embedDBGet
      */
-    void *buf = (int8_t *)state->buffer + state->pageSize * (embedDB_VAR_WRITE_BUFFER(state->parameters));
-    if (state->currentVarLoc % state->pageSize > state->pageSize - 4 || embedDB_GET_COUNT(state->buffer) >= state->maxRecordsPerPage) {
+    void *buf = (int8_t *)state->buffer + state->pageSize * (EMBEDDB_VAR_WRITE_BUFFER(state->parameters));
+    if (state->currentVarLoc % state->pageSize > state->pageSize - 4 || EMBEDDB_GET_COUNT(state->buffer) >= state->maxRecordsPerPage) {
         writeVariablePage(state, buf);
-        initBufferPage(state, embedDB_VAR_WRITE_BUFFER(state->parameters));
+        initBufferPage(state, EMBEDDB_VAR_WRITE_BUFFER(state->parameters));
         // Move data writing location to the beginning of the next page, leaving the room for the header
         state->currentVarLoc += state->pageSize - state->currentVarLoc % state->pageSize + state->variableDataHeaderSize;
     }
@@ -888,7 +888,7 @@ int8_t embedDBPutVar(embedDBState *state, void *key, void *data, void *variableD
     // Check if we need to write after doing that
     if (state->currentVarLoc % state->pageSize == 0) {
         writeVariablePage(state, buf);
-        initBufferPage(state, embedDB_VAR_WRITE_BUFFER(state->parameters));
+        initBufferPage(state, EMBEDDB_VAR_WRITE_BUFFER(state->parameters));
 
         // Update the header to include the maximum key value stored on this page
         memcpy((int8_t *)buf + sizeof(id_t), key, state->keySize);
@@ -907,7 +907,7 @@ int8_t embedDBPutVar(embedDBState *state, void *key, void *data, void *variableD
         // If we need to write the buffer to file
         if (state->currentVarLoc % state->pageSize == 0) {
             writeVariablePage(state, buf);
-            initBufferPage(state, embedDB_VAR_WRITE_BUFFER(state->parameters));
+            initBufferPage(state, EMBEDDB_VAR_WRITE_BUFFER(state->parameters));
 
             // Update the header to include the maximum key value stored on this page and account for page number
             memcpy((int8_t *)buf + sizeof(id_t), key, state->keySize);
@@ -947,7 +947,7 @@ id_t embedDBSearchNode(embedDBState *state, void *buffer, void *key, int8_t rang
     int8_t compare;
     void *mkey;
 
-    count = embedDB_GET_COUNT(buffer);
+    count = EMBEDDB_GET_COUNT(buffer);
     middle = embedDBEstimateKeyLocation(state, buffer, key);
 
     // check that maxError was calculated and middle is valid (searches full node otherwise)
@@ -1167,7 +1167,7 @@ int8_t embedDBGet(embedDBState *state, void *key, void *data) {
  * 			1  : Variable data was deleted to make room for newer data
  */
 int8_t embedDBGetVar(embedDBState *state, void *key, void *data, embedDBVarDataStream **varData) {
-    if (!embedDB_USING_VDATA(state->parameters)) {
+    if (!EMBEDDB_USING_VDATA(state->parameters)) {
 #ifdef PRINT_ERRORS
         printf("ERROR: embedDBNextVar called when not using variable data\n");
 #endif
@@ -1207,7 +1207,7 @@ int8_t embedDBGetVar(embedDBState *state, void *key, void *data, embedDBVarDataS
 void embedDBInitIterator(embedDBState *state, embedDBIterator *it) {
     /* Build query bitmap (if used) */
     it->queryBitmap = NULL;
-    if (embedDB_USING_BMAP(state->parameters)) {
+    if (EMBEDDB_USING_BMAP(state->parameters)) {
         /* Verify that bitmap index is useful (must have set either min or max data value) */
         if (it->minData != NULL || it->maxData != NULL) {
             it->queryBitmap = calloc(1, state->bitmapSize);
@@ -1216,9 +1216,9 @@ void embedDBInitIterator(embedDBState *state, embedDBIterator *it) {
     }
 
 #ifdef PRINT_ERRORS
-    if (!embedDB_USING_BMAP(state->parameters)) {
+    if (!EMBEDDB_USING_BMAP(state->parameters)) {
         printf("WARN: Iterator not using index. If this is not intended, ensure that the embedDBState is using a bitmap and was initialized with an index file\n");
-    } else if (!embedDB_USING_INDEX(state->parameters)) {
+    } else if (!EMBEDDB_USING_INDEX(state->parameters)) {
         printf("WARN: Iterator not using index to full extent. If this is not intended, ensure that the embedDBState was initialized with an index file\n");
     }
 #endif
@@ -1257,33 +1257,33 @@ void embedDBCloseIterator(embedDBIterator *it) {
  */
 int8_t embedDBFlush(embedDBState *state) {
     // As the first buffer is the data write buffer, no address change is required
-    id_t pageNum = writePage(state, (int8_t *)state->buffer + embedDB_DATA_WRITE_BUFFER * state->pageSize);
+    id_t pageNum = writePage(state, (int8_t *)state->buffer + EMBEDDB_DATA_WRITE_BUFFER * state->pageSize);
     state->fileInterface->flush(state->dataFile);
 
     indexPage(state, pageNum);
 
-    if (embedDB_USING_INDEX(state->parameters)) {
-        void *buf = (int8_t *)state->buffer + state->pageSize * (embedDB_INDEX_WRITE_BUFFER);
-        count_t idxcount = embedDB_GET_COUNT(buf);
-        embedDB_INC_COUNT(buf);
+    if (EMBEDDB_USING_INDEX(state->parameters)) {
+        void *buf = (int8_t *)state->buffer + state->pageSize * (EMBEDDB_INDEX_WRITE_BUFFER);
+        count_t idxcount = EMBEDDB_GET_COUNT(buf);
+        EMBEDDB_INC_COUNT(buf);
 
         /* Copy record onto index page */
-        void *bm = embedDB_GET_BITMAP(state->buffer);
-        memcpy((void *)((int8_t *)buf + embedDB_IDX_HEADER_SIZE + state->bitmapSize * idxcount), bm, state->bitmapSize);
+        void *bm = EMBEDDB_GET_BITMAP(state->buffer);
+        memcpy((void *)((int8_t *)buf + EMBEDDB_IDX_HEADER_SIZE + state->bitmapSize * idxcount), bm, state->bitmapSize);
 
         writeIndexPage(state, buf);
         state->fileInterface->flush(state->indexFile);
 
         /* Reinitialize buffer */
-        initBufferPage(state, embedDB_INDEX_WRITE_BUFFER);
+        initBufferPage(state, EMBEDDB_INDEX_WRITE_BUFFER);
     }
 
     /* Reinitialize buffer */
-    initBufferPage(state, embedDB_DATA_WRITE_BUFFER);
+    initBufferPage(state, EMBEDDB_DATA_WRITE_BUFFER);
 
     // Flush var data page
-    if (embedDB_USING_VDATA(state->parameters)) {
-        writeVariablePage(state, (int8_t *)state->buffer + embedDB_VAR_WRITE_BUFFER(state->parameters) * state->pageSize);
+    if (EMBEDDB_USING_VDATA(state->parameters)) {
+        writeVariablePage(state, (int8_t *)state->buffer + EMBEDDB_VAR_WRITE_BUFFER(state->parameters) * state->pageSize);
         state->fileInterface->flush(state->varFile);
     }
     return 0;
@@ -1320,7 +1320,7 @@ int8_t embedDBNext(embedDBState *state, embedDBIterator *it, void *key, void *da
                 }
 
                 // Get bitmap for data page in question
-                void *indexBM = (int8_t *)state->buffer + embedDB_INDEX_READ_BUFFER * state->pageSize + embedDB_IDX_HEADER_SIZE + indexRec * state->bitmapSize;
+                void *indexBM = (int8_t *)state->buffer + EMBEDDB_INDEX_READ_BUFFER * state->pageSize + EMBEDDB_IDX_HEADER_SIZE + indexRec * state->bitmapSize;
 
                 // Determine if we should read the data page
                 if (!bitmapOverlap(it->queryBitmap, indexBM, state->bitmapSize)) {
@@ -1339,8 +1339,8 @@ int8_t embedDBNext(embedDBState *state, embedDBIterator *it, void *key, void *da
         }
 
         // Keep reading record until we find one that matches the query
-        int8_t *buf = (int8_t *)state->buffer + embedDB_DATA_READ_BUFFER * state->pageSize;
-        uint32_t pageRecordCount = embedDB_GET_COUNT(buf);
+        int8_t *buf = (int8_t *)state->buffer + EMBEDDB_DATA_READ_BUFFER * state->pageSize;
+        uint32_t pageRecordCount = EMBEDDB_GET_COUNT(buf);
         while (it->nextDataRec < pageRecordCount) {
             // Get record
             memcpy(key, buf + state->headerSize + it->nextDataRec * state->recordSize, state->keySize);
@@ -1379,7 +1379,7 @@ int8_t embedDBNext(embedDBState *state, embedDBIterator *it, void *key, void *da
  * @return	1 if successful, 0 if no more records
  */
 int8_t embedDBNextVar(embedDBState *state, embedDBIterator *it, void *key, void *data, embedDBVarDataStream **varData) {
-    if (!embedDB_USING_VDATA(state->parameters)) {
+    if (!EMBEDDB_USING_VDATA(state->parameters)) {
 #ifdef PRINT_ERRORS
         printf("ERROR: embedDBNextVar called when not using variable data\n");
 #endif
@@ -1414,12 +1414,12 @@ int8_t embedDBNextVar(embedDBState *state, embedDBIterator *it, void *key, void 
  * @return  Returns 0 if sucessfull or no variable data for the record, 1 if the records variable data was overwritten, 2 if the page failed to read, and 3 if the memorey failed to allocate.
  */
 int8_t embedDBSetupVarDataStream(embedDBState *state, void *key, embedDBVarDataStream **varData, id_t recordNumber) {
-    void *dataBuf = (int8_t *)state->buffer + state->pageSize * embedDB_DATA_READ_BUFFER;
+    void *dataBuf = (int8_t *)state->buffer + state->pageSize * EMBEDDB_DATA_READ_BUFFER;
     void *record = (int8_t *)dataBuf + state->headerSize + recordNumber * state->recordSize;
 
     uint32_t varDataAddr = 0;
     memcpy(&varDataAddr, (int8_t *)record + state->keySize + state->dataSize, sizeof(uint32_t));
-    if (varDataAddr == embedDB_NO_VAR_DATA) {
+    if (varDataAddr == EMBEDDB_NO_VAR_DATA) {
         *varData = NULL;
         return 0;
     }
@@ -1441,7 +1441,7 @@ int8_t embedDBSetupVarDataStream(embedDBState *state, void *key, embedDBVarDataS
     }
 
     // Get length of variable data
-    void *varBuf = (int8_t *)state->buffer + state->pageSize * embedDB_VAR_READ_BUFFER(state->parameters);
+    void *varBuf = (int8_t *)state->buffer + state->pageSize * EMBEDDB_VAR_READ_BUFFER(state->parameters);
     uint32_t pageOffset = varDataAddr % state->pageSize;
     uint32_t dataLen = 0;
     memcpy(&dataLen, (int8_t *)varBuf + pageOffset, sizeof(uint32_t));
@@ -1499,7 +1499,7 @@ uint32_t embedDBVarDataStreamRead(embedDBState *state, embedDBVarDataStream *str
     }
 
     // Keep reading in data until the buffer is full
-    void *varDataBuf = (int8_t *)state->buffer + state->pageSize * embedDB_VAR_READ_BUFFER(state->parameters);
+    void *varDataBuf = (int8_t *)state->buffer + state->pageSize * EMBEDDB_VAR_READ_BUFFER(state->parameters);
     uint32_t amtRead = 0;
     while (amtRead < length && stream->bytesRead < stream->totalBytes) {
         uint16_t pageOffset = stream->fileOffset % state->pageSize;
@@ -1673,13 +1673,13 @@ id_t writeVariablePage(embedDBState *state, void *buffer) {
         if (readVariablePage(state, pageNum) != 0) {
             return -1;
         }
-        void *buf = (int8_t *)state->buffer + state->pageSize * embedDB_VAR_READ_BUFFER(state->parameters) + sizeof(id_t);
+        void *buf = (int8_t *)state->buffer + state->pageSize * EMBEDDB_VAR_READ_BUFFER(state->parameters) + sizeof(id_t);
         memcpy(&state->minVarRecordId, buf, state->keySize);
         state->minVarRecordId += 1;  // Add one because the result from the last line is a record that is erased
     }
 
     // Add logical page number to data page
-    void *buf = (int8_t *)state->buffer + state->pageSize * embedDB_VAR_WRITE_BUFFER(state->parameters);
+    void *buf = (int8_t *)state->buffer + state->pageSize * EMBEDDB_VAR_WRITE_BUFFER(state->parameters);
     memcpy(buf, &state->nextVarPageId, sizeof(id_t));
 
     // Write to file
@@ -1736,7 +1736,7 @@ int8_t readIndexPage(embedDBState *state, id_t pageNum) {
         return 0;
     }
 
-    void *buf = (int8_t *)state->buffer + state->pageSize * embedDB_INDEX_READ_BUFFER;
+    void *buf = (int8_t *)state->buffer + state->pageSize * EMBEDDB_INDEX_READ_BUFFER;
 
     /* Page is not in buffer. Read from storage. */
     /* Read page into start of buffer */
@@ -1762,7 +1762,7 @@ int8_t readVariablePage(embedDBState *state, id_t pageNum) {
     }
 
     // Get buffer to read into
-    void *buf = (int8_t *)state->buffer + embedDB_VAR_READ_BUFFER(state->parameters) * state->pageSize;
+    void *buf = (int8_t *)state->buffer + EMBEDDB_VAR_READ_BUFFER(state->parameters) * state->pageSize;
 
     // Read in one page worth of data
     if (state->fileInterface->read(buf, pageNum, state->pageSize, state->varFile) == 0) {

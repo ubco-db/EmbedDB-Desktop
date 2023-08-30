@@ -16,7 +16,7 @@ void setUp(void) {
     state->numSplinePoints = 300;
     state->buffer = calloc(1, state->pageSize * state->bufferSizeInBlocks);
     state->numDataPages = 1000;
-    state->parameters = embedDB_RESET_DATA;
+    state->parameters = EMBEDDB_RESET_DATA;
     state->eraseSizeInPages = 4;
     state->fileInterface = getFileInterface();
     char dataPath[] = "build/artifacts/dataFile.bin", indexPath[] = "build/artifacts/indexFile.bin", varPath[] = "build/artifacts/varFile.bin";
@@ -51,7 +51,7 @@ void embedDB_put_inserts_single_record_correctly() {
     TEST_ASSERT_EQUAL_INT8_MESSAGE(0, result, "embedDBPut did not correctly insert data (returned non-zero code)");
     TEST_ASSERT_EQUAL_UINT64_MESSAGE(15648, state->minKey, "embedDBPut did not update minimim key on first insert.");
     TEST_ASSERT_EQUAL_UINT32_MESSAGE(0, state->nextDataPageId, "embedDBPut incremented next page to write and it should not have.");
-    TEST_ASSERT_EQUAL_UINT32_MESSAGE(1, embedDB_GET_COUNT(state->buffer), "embedDBPut did not increment count in buffer correctly.");
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(1, EMBEDDB_GET_COUNT(state->buffer), "embedDBPut did not increment count in buffer correctly.");
     int32_t *embedDBPutResultKey = malloc(sizeof(int32_t));
     int32_t *embedDBPutResultData = malloc(sizeof(int32_t));
     memcpy(embedDBPutResultKey, (int8_t *)state->buffer + 6, 4);
@@ -81,7 +81,7 @@ void embedDB_put_inserts_eleven_records_correctly() {
     }
     TEST_ASSERT_EQUAL_INT64_MESSAGE(16321, state->minKey, "embedDBPut did not update minimim key on first insert.");
     TEST_ASSERT_EQUAL_UINT32_MESSAGE(0, state->nextDataPageId, "embedDBPut incremented next page to write and it should not have.");
-    TEST_ASSERT_EQUAL_UINT32_MESSAGE(11, embedDB_GET_COUNT(state->buffer), "embedDBPut did not increment count in buffer correctly.");
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(11, EMBEDDB_GET_COUNT(state->buffer), "embedDBPut did not increment count in buffer correctly.");
     free(embedDBPutResultKey);
     free(embedDBPutResultData);
     free(data);
@@ -105,7 +105,7 @@ void embedDB_put_inserts_one_page_of_records_correctly() {
     }
     TEST_ASSERT_EQUAL_INT64_MESSAGE(100, state->minKey, "embedDBPut did not update minimim key on first insert.");
     TEST_ASSERT_EQUAL_UINT32_MESSAGE(0, state->nextDataPageId, "embedDBPut incremented next page to write and it should not have.");
-    TEST_ASSERT_EQUAL_UINT32_MESSAGE(63, embedDB_GET_COUNT(state->buffer), "embedDBPut did not increment count in buffer correctly.");
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(63, EMBEDDB_GET_COUNT(state->buffer), "embedDBPut did not increment count in buffer correctly.");
     free(embedDBPutResultKey);
     free(embedDBPutResultData);
     free(data);
@@ -125,7 +125,7 @@ void embedDB_put_inserts_one_more_than_one_page_of_records_correctly() {
     }
     TEST_ASSERT_EQUAL_INT64_MESSAGE(4444444, state->minKey, "embedDBPut did not update minimim key on first insert.");
     TEST_ASSERT_EQUAL_UINT32_MESSAGE(1, state->nextDataPageId, "embedDBPut did not move to next page after writing the first page of records.");
-    TEST_ASSERT_EQUAL_UINT32_MESSAGE(1, embedDB_GET_COUNT(state->buffer), "embedDBPut did not reset buffer count to correct value after writing the page");
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(1, EMBEDDB_GET_COUNT(state->buffer), "embedDBPut did not reset buffer count to correct value after writing the page");
     free(embedDBPutResultKey);
     free(embedDBPutResultData);
     free(data);

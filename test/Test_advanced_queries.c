@@ -43,7 +43,7 @@ void setUp(void) {
     stateUWA->indexFile = setupFile(indexPath);
     stateUWA->bufferSizeInBlocks = 4;
     stateUWA->buffer = malloc(stateUWA->bufferSizeInBlocks * stateUWA->pageSize);
-    stateUWA->parameters = embedDB_USE_BMAP | embedDB_USE_INDEX | embedDB_RESET_DATA;
+    stateUWA->parameters = EMBEDDB_USE_BMAP | EMBEDDB_USE_INDEX | EMBEDDB_RESET_DATA;
     stateUWA->bitmapSize = 2;
     stateUWA->inBitmap = inBitmapInt16;
     stateUWA->updateBitmap = updateBitmapInt16;
@@ -68,7 +68,7 @@ void setUp(void) {
     stateSEA->indexFile = setupFile(indexPath2);
     stateSEA->bufferSizeInBlocks = 4;
     stateSEA->buffer = malloc(stateSEA->bufferSizeInBlocks * stateSEA->pageSize);
-    stateSEA->parameters = embedDB_USE_BMAP | embedDB_USE_INDEX | embedDB_RESET_DATA;
+    stateSEA->parameters = EMBEDDB_USE_BMAP | EMBEDDB_USE_INDEX | EMBEDDB_RESET_DATA;
     stateSEA->bitmapSize = 2;
     stateSEA->inBitmap = inBitmapInt16;
     stateSEA->updateBitmap = updateBitmapInt16;
@@ -341,7 +341,7 @@ void insertData(embedDBState* state, char* filename) {
     char fileBuffer[512];
     int numRecords = 0;
     while (fread(fileBuffer, state->pageSize, 1, fp)) {
-        uint16_t count = embedDB_GET_COUNT(fileBuffer);
+        uint16_t count = EMBEDDB_GET_COUNT(fileBuffer);
         for (int i = 1; i <= count; i++) {
             embedDBPut(state, fileBuffer + i * state->recordSize, fileBuffer + i * state->recordSize + state->keySize);
             numRecords++;
@@ -352,7 +352,7 @@ void insertData(embedDBState* state, char* filename) {
 }
 
 void* nextRecord(DataSource* source) {
-    uint16_t count = embedDB_GET_COUNT(source->pageBuffer);
+    uint16_t count = EMBEDDB_GET_COUNT(source->pageBuffer);
     if (count <= source->pageRecord) {
         // Read next page
         if (!fread(source->pageBuffer, 512, 1, source->fp)) {

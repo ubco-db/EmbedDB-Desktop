@@ -162,9 +162,9 @@ int main() {
         state->indexFile = setupFile(indexPath);
         state->varFile = setupFile(varPath);
 
-        state->parameters = embedDB_USE_BMAP | embedDB_USE_INDEX | embedDB_USE_VDATA | embedDB_RESET_DATA;
+        state->parameters = EMBEDDB_USE_BMAP | EMBEDDB_USE_INDEX | EMBEDDB_USE_VDATA | EMBEDDB_RESET_DATA;
 
-        if (embedDB_USING_BMAP(state->parameters))
+        if (EMBEDDB_USING_BMAP(state->parameters))
             state->bitmapSize = 1;
 
         /* Setup for data and bitmap comparison functions */

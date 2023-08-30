@@ -24,7 +24,7 @@ void setUp(void) {
     state->fileInterface = getFileInterface();
     state->dataFile = setupFile(dataPath);
     state->varFile = setupFile(varPath);
-    state->parameters = embedDB_USE_VDATA | embedDB_RESET_DATA;
+    state->parameters = EMBEDDB_USE_VDATA | EMBEDDB_RESET_DATA;
     state->compareKey = int32Comparator;
     state->compareData = int32Comparator;
     int8_t result = embedDBInit(state, 1);
@@ -49,7 +49,7 @@ void initalizeembedDBFromFile(void) {
     state->fileInterface = getFileInterface();
     state->dataFile = setupFile(dataPath);
     state->varFile = setupFile(varPath);
-    state->parameters = embedDB_USE_VDATA;
+    state->parameters = EMBEDDB_USE_VDATA;
     state->compareKey = int32Comparator;
     state->compareData = int32Comparator;
     int8_t result = embedDBInit(state, 1);
@@ -88,7 +88,7 @@ void embedDB_variable_data_page_numbers_are_correct() {
     uint32_t numberOfPagesExpected = 69;
     TEST_ASSERT_EQUAL_UINT32_MESSAGE(numberOfPagesExpected - 1, state->nextVarPageId, "embedDB next variable data logical page number is incorrect.");
     uint32_t pageNumber;
-    void *buffer = (int8_t *)state->buffer + state->pageSize * embedDB_VAR_READ_BUFFER(state->parameters);
+    void *buffer = (int8_t *)state->buffer + state->pageSize * EMBEDDB_VAR_READ_BUFFER(state->parameters);
     for (uint32_t i = 0; i < numberOfPagesExpected - 1; i++) {
         readVariablePage(state, i);
         memcpy(&pageNumber, buffer, sizeof(id_t));

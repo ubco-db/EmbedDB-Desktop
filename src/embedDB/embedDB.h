@@ -53,52 +53,52 @@ typedef uint32_t id_t;
 /* Define type for page record count. */
 typedef uint16_t count_t;
 
-#define embedDB_USE_INDEX 1
-#define embedDB_USE_MAX_MIN 2
-#define embedDB_USE_SUM 4
-#define embedDB_USE_BMAP 8
-#define embedDB_USE_VDATA 16
-#define embedDB_RESET_DATA 32
+#define EMBEDDB_USE_INDEX 1
+#define EMBEDDB_USE_MAX_MIN 2
+#define EMBEDDB_USE_SUM 4
+#define EMBEDDB_USE_BMAP 8
+#define EMBEDDB_USE_VDATA 16
+#define EMBEDDB_RESET_DATA 32
 
-#define embedDB_USING_INDEX(x) ((x & embedDB_USE_INDEX) > 0 ? 1 : 0)
-#define embedDB_USING_MAX_MIN(x) ((x & embedDB_USE_MAX_MIN) > 0 ? 1 : 0)
-#define embedDB_USING_SUM(x) ((x & embedDB_USE_SUM) > 0 ? 1 : 0)
-#define embedDB_USING_BMAP(x) ((x & embedDB_USE_BMAP) > 0 ? 1 : 0)
-#define embedDB_USING_VDATA(x) ((x & embedDB_USE_VDATA) > 0 ? 1 : 0)
-#define embedDB_RESETING_DATA(x) ((x & embedDB_RESET_DATA) > 0 ? 1 : 0)
+#define EMBEDDB_USING_INDEX(x) ((x & EMBEDDB_USE_INDEX) > 0 ? 1 : 0)
+#define EMBEDDB_USING_MAX_MIN(x) ((x & EMBEDDB_USE_MAX_MIN) > 0 ? 1 : 0)
+#define EMBEDDB_USING_SUM(x) ((x & EMBEDDB_USE_SUM) > 0 ? 1 : 0)
+#define EMBEDDB_USING_BMAP(x) ((x & EMBEDDB_USE_BMAP) > 0 ? 1 : 0)
+#define EMBEDDB_USING_VDATA(x) ((x & EMBEDDB_USE_VDATA) > 0 ? 1 : 0)
+#define EMBEDDB_RESETING_DATA(x) ((x & EMBEDDB_RESET_DATA) > 0 ? 1 : 0)
 
 /* Offsets with header */
-#define embedDB_COUNT_OFFSET 4
-#define embedDB_BITMAP_OFFSET 6
-// #define embedDB_MIN_OFFSET		8
-#define embedDB_MIN_OFFSET 14
-#define embedDB_IDX_HEADER_SIZE 16
+#define EMBEDDB_COUNT_OFFSET 4
+#define EMBEDDB_BITMAP_OFFSET 6
+// #define EMBEDDB_MIN_OFFSET		8
+#define EMBEDDB_MIN_OFFSET 14
+#define EMBEDDB_IDX_HEADER_SIZE 16
 
-#define embedDB_NO_VAR_DATA UINT32_MAX
+#define EMBEDDB_NO_VAR_DATA UINT32_MAX
 
 #define max(a, b) ((a) > (b) ? (a) : (b))
 #define min(a, b) ((a) < (b) ? (a) : (b))
 
-#define embedDB_GET_COUNT(x) *((count_t *)((int8_t *)x + embedDB_COUNT_OFFSET))
-#define embedDB_INC_COUNT(x) *((count_t *)((int8_t *)x + embedDB_COUNT_OFFSET)) = *((count_t *)((int8_t *)x + embedDB_COUNT_OFFSET)) + 1
+#define EMBEDDB_GET_COUNT(x) *((count_t *)((int8_t *)x + EMBEDDB_COUNT_OFFSET))
+#define EMBEDDB_INC_COUNT(x) *((count_t *)((int8_t *)x + EMBEDDB_COUNT_OFFSET)) = *((count_t *)((int8_t *)x + EMBEDDB_COUNT_OFFSET)) + 1
 
-#define embedDB_GET_BITMAP(x) ((void *)((int8_t *)x + embedDB_BITMAP_OFFSET))
+#define EMBEDDB_GET_BITMAP(x) ((void *)((int8_t *)x + EMBEDDB_BITMAP_OFFSET))
 
-#define embedDB_GET_MIN_KEY(x) ((void *)((int8_t *)x + embedDB_MIN_OFFSET))
-#define embedDB_GET_MAX_KEY(x, y) ((void *)((int8_t *)x + embedDB_MIN_OFFSET + y->keySize))
+#define EMBEDDB_GET_MIN_KEY(x) ((void *)((int8_t *)x + EMBEDDB_MIN_OFFSET))
+#define EMBEDDB_GET_MAX_KEY(x, y) ((void *)((int8_t *)x + EMBEDDB_MIN_OFFSET + y->keySize))
 
-#define embedDB_GET_MIN_DATA(x, y) ((void *)((int8_t *)x + embedDB_MIN_OFFSET + y->keySize * 2))
-#define embedDB_GET_MAX_DATA(x, y) ((void *)((int8_t *)x + embedDB_MIN_OFFSET + y->keySize * 2 + y->dataSize))
+#define EMBEDDB_GET_MIN_DATA(x, y) ((void *)((int8_t *)x + EMBEDDB_MIN_OFFSET + y->keySize * 2))
+#define EMBEDDB_GET_MAX_DATA(x, y) ((void *)((int8_t *)x + EMBEDDB_MIN_OFFSET + y->keySize * 2 + y->dataSize))
 
-#define embedDB_DATA_WRITE_BUFFER 0
-#define embedDB_DATA_READ_BUFFER 1
-#define embedDB_INDEX_WRITE_BUFFER 2
-#define embedDB_INDEX_READ_BUFFER 3
-#define embedDB_VAR_WRITE_BUFFER(x) ((x & embedDB_USE_INDEX) ? 4 : 2)
-#define embedDB_VAR_READ_BUFFER(x) ((x & embedDB_USE_INDEX) ? 5 : 3)
+#define EMBEDDB_DATA_WRITE_BUFFER 0
+#define EMBEDDB_DATA_READ_BUFFER 1
+#define EMBEDDB_INDEX_WRITE_BUFFER 2
+#define EMBEDDB_INDEX_READ_BUFFER 3
+#define EMBEDDB_VAR_WRITE_BUFFER(x) ((x & EMBEDDB_USE_INDEX) ? 4 : 2)
+#define EMBEDDB_VAR_READ_BUFFER(x) ((x & EMBEDDB_USE_INDEX) ? 5 : 3)
 
-#define embedDB_FILE_MODE_W_PLUS_B 0  // Open file as read/write, creates file if doesn't exist, overwrites if it does. aka "w+b"
-#define embedDB_FILE_MODE_R_PLUS_B 1  // Open file as read/write, file must exist, keeps data if it does. aka "r+b"
+#define EMBEDDB_FILE_MODE_W_PLUS_B 0  // Open file as read/write, creates file if doesn't exist, overwrites if it does. aka "w+b"
+#define EMBEDDB_FILE_MODE_R_PLUS_B 1  // Open file as read/write, file must exist, keeps data if it does. aka "r+b"
 
 #define BYTE_TO_BINARY_PATTERN "%c%c%c%c%c%c%c%c"
 #define BYTE_TO_BINARY(byte)       \

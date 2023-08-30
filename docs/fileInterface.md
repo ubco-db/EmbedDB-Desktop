@@ -2,15 +2,15 @@
 
 ## What is it?
 
-SBITS uses an interface with basic file system functions like open, close, read, write, and flush. Reading and writing is only done at exactly one page per function call to simplify the interface implementation. The implementation of these functions is up to the user due to the wide array of storage technologies that can be found on embedded systems. This allows SBITS to support any storage device.
+EmbedDB uses an interface with basic file system functions like open, close, read, write, and flush. Reading and writing is only done at exactly one page per function call to simplify the interface implementation. The implementation of these functions is up to the user due to the wide array of storage technologies that can be found on embedded systems. This allows EmbedDB to support any storage device.
 
 ## How to use it
 
-The basic idea is to create a struct containing whatever file object you would normally use to interact with the file as well as any information necessary for opening the file. This struct is then given to SBITS. When SBITS needs to use the file it is able to make a call to open the file and read/write to it in the manner in which it requires.
+The basic idea is to create a struct containing whatever file object you would normally use to interact with the file as well as any information necessary for opening the file. This struct is then given to EmbedDB. When EmbedDB needs to use the file it is able to make a call to open the file and read/write to it in the manner in which it requires.
 
 ## Examples
 
-For a full code example see [sbits.h](../src/sbits/sbits.h) for the definition of `sbitsFileInterface` struct and [utilityFunctions.c](../src/sbits/utilityFunctions.c) for implementations of the interface.
+For a full code example see [embedDB.h](../src/embedDB/embedDB.h) for the definition of `embeddbFileInterface` struct and [utilityFunctions.c](../src/embedDB/utilityFunctions.c) for implementations of the interface.
 
 Below is a step-by-step for two differnet storage devices.
 
@@ -18,7 +18,7 @@ Below is a step-by-step for two differnet storage devices.
 
 This example is for using the sd card library used by this project.
 
-The first reccommended step is to define a struct that will be given to SBITS. For an sd card, this is simple. Just the filename, which we will need to implementing the `open` function, and the actual `SD_FILE` object.
+The first reccommended step is to define a struct that will be given to EmbedDB. For an sd card, this is simple. Just the filename, which we will need to implementing the `open` function, and the actual `SD_FILE` object.
 
 ```c
 typedef struct {
@@ -27,7 +27,7 @@ typedef struct {
 } SD_FILE_INFO;
 ```
 
-Next, we should create a function to quickly initialize a new file. The return of this function is to be put into SBITS with something like `state->dataFile = setupFile("filename.txt")`. This data is what will always provided to every function call in the `sbitsFileInterface` as `void *file`.
+Next, we should create a function to quickly initialize a new file. The return of this function is to be put into EmbedDB with something like `state->dataFile = setupFile("filename.txt")`. This data is what will always provided to every function call in the `embedDBFileInterface` as `void *file`.
 
 ```c
 void *setupSDFile(char *filename) {

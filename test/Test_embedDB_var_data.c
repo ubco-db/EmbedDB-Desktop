@@ -42,7 +42,7 @@ void initState(uint32_t dataSize) {
     state->dataFile = setupFile(dataPath);
     state->indexFile = setupFile(indexPath);
     state->varFile = setupFile(varPath);
-    state->parameters = embedDB_USE_BMAP | embedDB_USE_INDEX | embedDB_USE_VDATA | embedDB_RESET_DATA;
+    state->parameters = EMBEDDB_USE_BMAP | EMBEDDB_USE_INDEX | EMBEDDB_USE_VDATA | EMBEDDB_RESET_DATA;
     state->bitmapSize = 1;
     state->inBitmap = inBitmapInt8;
     state->updateBitmap = updateBitmapInt8;
@@ -101,10 +101,10 @@ void test_get_when_1() {
     uint64_t expectedData = 0;
     uint32_t expectedVarDataSize = 15;
     char expectedVarData[] = "Testing 000...";
-    void *key = (int8_t *)state->buffer + embedDB_DATA_WRITE_BUFFER * state->pageSize + state->headerSize;
+    void *key = (int8_t *)state->buffer + EMBEDDB_DATA_WRITE_BUFFER * state->pageSize + state->headerSize;
     void *data = (int8_t *)key + state->keySize;
-    uint32_t *varDataSize = (uint32_t *)((int8_t *)state->buffer + embedDB_VAR_WRITE_BUFFER(state->parameters) * state->pageSize + state->variableDataHeaderSize);
-    void *varData = (int8_t *)state->buffer + embedDB_VAR_WRITE_BUFFER(state->parameters) * state->pageSize + state->variableDataHeaderSize + sizeof(uint32_t);
+    uint32_t *varDataSize = (uint32_t *)((int8_t *)state->buffer + EMBEDDB_VAR_WRITE_BUFFER(state->parameters) * state->pageSize + state->variableDataHeaderSize);
+    void *varData = (int8_t *)state->buffer + EMBEDDB_VAR_WRITE_BUFFER(state->parameters) * state->pageSize + state->variableDataHeaderSize + sizeof(uint32_t);
 
     TEST_ASSERT_EQUAL_CHAR_ARRAY_MESSAGE(&expectedKey, key, state->keySize, "Key was not correct with 1 record inserted");
     TEST_ASSERT_EQUAL_CHAR_ARRAY_MESSAGE(&expectedData, data, state->dataSize, "Data was not correct with 1 record inserted");
@@ -116,7 +116,7 @@ void test_get_when_almost_almost_full_page() {
     // Check that page gasn't been written
     TEST_ASSERT_EQUAL_UINT32_MESSAGE(0, state->nextDataPageId, "embedDB should not have written a page yet");
     // Check that there is still space for another record
-    TEST_ASSERT_EACH_EQUAL_CHAR_MESSAGE(0, (int8_t *)state->buffer + embedDB_DATA_WRITE_BUFFER * state->pageSize + (state->pageSize - state->recordSize), state->recordSize, "There isn't space for another record in the buffer");
+    TEST_ASSERT_EACH_EQUAL_CHAR_MESSAGE(0, (int8_t *)state->buffer + EMBEDDB_DATA_WRITE_BUFFER * state->pageSize + (state->pageSize - state->recordSize), state->recordSize, "There isn't space for another record in the buffer");
 }
 
 void test_get_when_almost_full_page() {

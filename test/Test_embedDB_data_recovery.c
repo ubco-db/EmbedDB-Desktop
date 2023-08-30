@@ -20,7 +20,7 @@ void setUp(void) {
     state->dataFile = setupFile(dataPath);
     state->numDataPages = 93;
     state->eraseSizeInPages = 4;
-    state->parameters = embedDB_RESET_DATA;
+    state->parameters = EMBEDDB_RESET_DATA;
     state->compareKey = int32Comparator;
     state->compareData = int64Comparator;
     int8_t result = embedDBInit(state, 1);

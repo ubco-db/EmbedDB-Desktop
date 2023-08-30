@@ -16,7 +16,7 @@ void setupembedDBInstanceKeySize4DataSize4(embedDBState **stateArray, int number
     state->numSplinePoints = 300;
     state->buffer = calloc(1, state->pageSize * state->bufferSizeInBlocks);
     state->numDataPages = 2000;
-    state->parameters = embedDB_RESET_DATA;
+    state->parameters = EMBEDDB_RESET_DATA;
     state->eraseSizeInPages = 4;
     state->fileInterface = getFileInterface();
     char dataPath[40];
@@ -195,7 +195,7 @@ void setupembedDBInstanceKeySize4DataSize12(embedDBState **stateArray, int numbe
     state->buffer = calloc(1, state->pageSize * state->bufferSizeInBlocks);
     state->numDataPages = 20000;
     state->numIndexPages = 1000;
-    state->parameters = embedDB_RESET_DATA | embedDB_USE_INDEX;
+    state->parameters = EMBEDDB_RESET_DATA | EMBEDDB_USE_INDEX;
     state->eraseSizeInPages = 4;
     state->fileInterface = getFileInterface();
     char path[40];
@@ -225,7 +225,7 @@ void setupembedDBInstanceKeySize4DataSize12WithVarData(embedDBState **stateArray
     state->numDataPages = 22000;
     state->numIndexPages = 1000;
     state->numVarPages = 44000;
-    state->parameters = embedDB_RESET_DATA | embedDB_USE_INDEX | embedDB_USE_VDATA;
+    state->parameters = EMBEDDB_RESET_DATA | EMBEDDB_USE_INDEX | EMBEDDB_USE_VDATA;
     state->eraseSizeInPages = 4;
     state->fileInterface = getFileInterface();
     char path[40];

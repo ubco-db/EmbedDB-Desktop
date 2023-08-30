@@ -15,7 +15,7 @@ void setUp(void) {
     state->numSplinePoints = 5;
     state->buffer = calloc(1, state->pageSize * state->bufferSizeInBlocks);
     state->numDataPages = 500;
-    state->parameters = embedDB_RESET_DATA;
+    state->parameters = EMBEDDB_RESET_DATA;
     state->eraseSizeInPages = 4;
     state->fileInterface = getFileInterface();
     char dataPath[] = "build/artifacts/dataFile.bin";
