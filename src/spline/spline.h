@@ -48,7 +48,6 @@ typedef uint32_t id_t;
 
 typedef struct spline_s spline;
 
-#include "radixspline.h"
 struct spline_s {
     size_t count;            /* Number of points in spline */
     size_t size;             /* Maximum number of points */

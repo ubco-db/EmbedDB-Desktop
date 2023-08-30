@@ -1,6 +1,6 @@
 /******************************************************************************/
 /**
- * @file		embedDB.c
+ * @file		embedDB.h
  * @author		EmbedDB Team (See Authors.md)
  * @brief		Header file for EmbeDB.
  * @copyright	Copyright 2023

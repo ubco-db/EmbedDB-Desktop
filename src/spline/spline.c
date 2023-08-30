@@ -382,6 +382,7 @@ void splineClose(spline *spl) {
     free(spl->lastKey);
     free(spl->lower);
     free(spl->upper);
+    free(spl->firstSplinePoint);
 }
 
 /**
