@@ -2,8 +2,8 @@
 
 ## Table of Contents
 
--   [Configure SBITS State](#configure-records)
-    -   [Create an sbits state](#create-an-sbits-state)
+-   [Configure EmbedDB State](#configure-records)
+    -   [Create an EmbedDB state](#create-an-embedDB-state)
     -   [Size of records](#configure-size-of-records)
     -   [Comparator Functions](#comparator-functions)
     -   [Storage Addresses](#configure-storage-addresses)
@@ -17,14 +17,14 @@
     -   [Filter by key](#iterator-with-filter-on-keys)
     -   [Filter by data](#iterator-with-filter-on-data)
     -   [Iterate with vardata](#iterate-over-records-with-vardata)
--   [Disposing of sbits state](#disposing-of-sbits-state)
+-   [Disposing of EmbedDB state](#disposing-of-embedDB-state)
 
 ## Configure Records
 
-### Create an sbits state
+### Create an EmbedDB state
 
 ```c
-sbitsState* state = (sbitsState*) malloc(sizeof(sbitsState));
+embedDBState* state = (embedDBState*) malloc(sizeof(embedDBState));
 ```
 
 ### Configure size of records
@@ -38,7 +38,7 @@ state->dataSize = 12;  // No limit as long as at least one record can fit on a p
 
 ### Comparator functions
 
-There are example implementations of these in src/sbits/utilityFunctions.c \
+There are example implementations of these in src/embedDB/utilityFunctions.c \
 These can be customized for your own keys and data.
 
 ```c
@@ -64,7 +64,7 @@ state->numIndexPages = 48;
 state->numVarPages = 1000;
 ```
 
-Setup the file interface that allows SBITS to work with any storage device. More info on setting this up: [Setting up a file interface](fileInterface.md)
+Setup the file interface that allows EmbedDB to work with any storage device. More info on setting this up: [Setting up a file interface](fileInterface.md)
 
 ```c
 char dataPath[] = "dataFile.bin", indexPath[] = "indexFile.bin", varPath[] = "varFile.bin";
@@ -92,11 +92,11 @@ state->buffer = malloc((size_t) state->bufferSizeInBlocks * state->pageSize);
 ### Other parameters:
 
 ```c
-state->parameters = SBITS_USE_BMAP | SBITS_USE_INDEX | SBITS_USE_VDATA;
+state->parameters = EMBEDDB_USE_BMAP | EMBEDDB_USE_INDEX | EMBEDDB_USE_VDATA;
 ```
 
-`SBITS_USE_INDEX` - Writes the bitmap to a file for fast queries on the data (Usually used in conjuction with SBITS_USE_BMAP) \
-`SBITS_USE_BMAP` - Includes the bitmap in each page header so that it is easy to tell if a buffered page may contain a given key
+`EMBEDDB_USE_INDEX` - Writes the bitmap to a file for fast queries on the data (Usually used in conjuction with EMBEDDB_USE_BMAP) \
+`EMBEDDB_USE_BMAP` - Includes the bitmap in each page header so that it is easy to tell if a buffered page may contain a given key
 
 ```c
 state->bitmapSize = 8;
@@ -107,20 +107,20 @@ state->updateBitmap = updateBitmapInt64;
 state->buildBitmapFromRange = buildBitmapInt64FromRange;
 ```
 
-`SBITS_USE_MAX_MIN` - Includes the max and min records in each page header \
-`SBITS_USE_VDATA` - Enables including variable-sized data with each record
+`EMBEDDB_USE_MAX_MIN` - Includes the max and min records in each page header \
+`EMBEDDB_USE_VDATA` - Enables including variable-sized data with each record
 
 ### Final initilization
 
 ```c
 size_t splineMaxError = 1; // Modify this value to change spline error tolerance
-sbitsInit(state, splineMaxError);
+embedDBInit(state, splineMaxError);
 ```
 
 ## Setup Index Method and Optional Radix Table
 
 ```c
-// In sbits.c
+// In embedDB.c
 #define SEARCH_METHOD 2
 #define RADIX_BITS 0
 #define ALLOCATED_SPLINE_POINTS 300
@@ -135,7 +135,7 @@ The `SEARCH_METHOD` defines the method used for indexing physical data pages.
 The `RADIX_BITS` constant defines how many bits are indexed by the Radix table when using `SEARCH_METHOD 2`.
 Setting this constant to 0 will omit the Radix table, indexing will rely solely on the Spline structure.
 
-`ALLOCATED_SPLINE_POINTS` sets how many spline points will be allocated during initialization. This is a set amount and will not grow as points are added. The amount you need will depend on how much your key rate varies and what `maxSplineError` is set to during sbits initialization.
+`ALLOCATED_SPLINE_POINTS` sets how many spline points will be allocated during initialization. This is a set amount and will not grow as points are added. The amount you need will depend on how much your key rate varies and what `maxSplineError` is set to during embedDB initialization.
 
 ## Insert (put) items into table
 
@@ -145,19 +145,19 @@ Setting this constant to 0 will omit the Radix table, indexing will rely solely 
 uint32_t key = 123;
 void* dataPtr = calloc(1, state->dataSize);
 *((uint32_t*)data) = 12345678;
-sbitsPut(state, (void*) &key, dataPtr);
+embedDBPut(state, (void*) &key, dataPtr);
 ```
 
-Insert records when the `SBITS_USE_VDATA` parameter is used. `varPtr` points to `length` bytes of data that can be inserted alongside the regular record. If a record does not have any variable data, `varPtr = NULL` and `length = 0`
+Insert records when the `EMBEDDB_USE_VDATA` parameter is used. `varPtr` points to `length` bytes of data that can be inserted alongside the regular record. If a record does not have any variable data, `varPtr = NULL` and `length = 0`
 
 ```c
-sbitsPutVar(state, (void*) &key, (void*) dataPtr, (void*) varPtr, (uint32_t) length);
+embedDBPutVar(state, (void*) &key, (void*) dataPtr, (void*) varPtr, (uint32_t) length);
 ```
 
-Flush the sbits buffer to write the currently buffered page to storage. Not necessary unless you need to query anything that is still in buffer or you are done all inserts.
+Flush the EmbedDB buffer to write the currently buffered page to storage. Not necessary unless you need to query anything that is still in buffer or you are done all inserts.
 
 ```c
-sbitsFlush(state);
+embedDBFlush(state);
 ```
 
 ## Query (get) items from table
@@ -167,21 +167,21 @@ _For a simpler query interface, see [Simple Query Interface](advancedQueries.md)
 `keyPtr` points to key to search for. `dataPtr` must point to pre-allocated space to copy data into.
 
 ```c
-sbitsGet(state, (void*) keyPtr, (void*) dataPtr);
+embedDBGet(state, (void*) keyPtr, (void*) dataPtr);
 ```
 
-If the `SBITS_USE_VDATA` parameter is used, then `varStream` is an un-allocated `sbitsVarDataStrem` where the method can return a data stream if there is vardata. You can then read chunks of the vardata from the stream. `bytesRead` is the actual number of bytes read into the buffer and is <= `varBufSize`
+If the `EMBEDDB_USE_VDATA` parameter is used, then `varStream` is an un-allocated `embedDBVarDataStrem` where the method can return a data stream if there is vardata. You can then read chunks of the vardata from the stream. `bytesRead` is the actual number of bytes read into the buffer and is <= `varBufSize`
 
 ```c
-sbitsVarDataStream *varStream = NULL;
+embedDBVarDataStream *varStream = NULL;
 uint32_t varBufSize = 8;  // Choose any size
 void *varDataBuffer = malloc(varBufSize);
 
-sbitsGetVar(state, (void*) keyPtr, (void*) dataPtr, &varStream);
+embedDBGetVar(state, (void*) keyPtr, (void*) dataPtr, &varStream);
 
 if (varStream != NULL) {
 	uint32_t bytesRead;
-	while ((bytesRead = sbitsVarDataStreamRead(state, varStream, varDataBuf, varBufSize)) > 0) {
+	while ((bytesRead = embedDBVarDataStreamRead(state, varStream, varDataBuf, varBufSize)) > 0) {
 		// Process data in varDataBuf
 	}
 	free(varStream);
@@ -194,7 +194,7 @@ if (varStream != NULL) {
 ### Iterator with filter on keys
 
 ```c
-sbitsIterator it;
+embedDBIterator it;
 uint32_t *itKey, *itData;
 
 uint32_t minKey = 1, maxKey = 1000;
@@ -203,13 +203,13 @@ it.maxKey = &maxKey;
 it.minData = NULL;
 it.maxData = NULL;
 
-sbitsInitIterator(state, &it);
+embedDBInitIterator(state, &it);
 
-while (sbitsNext(state, &it, (void**) &itKey, (void**) &itData)) {
+while (embedDBNext(state, &it, (void**) &itKey, (void**) &itData)) {
 	/* Process record */
 }
 
-sbitsCloseIterator(&it);
+embedDBCloseIterator(&it);
 ```
 
 ### Iterator with filter on data
@@ -221,13 +221,13 @@ uint32_t minData = 90, maxData = 100;
 it.minData = &minData;
 it.maxData = &maxData;
 
-sbitsInitIterator(state, &it);
+embedDBInitIterator(state, &it);
 
-while (sbitsNext(state, &it, (void**) &itKey, (void**) &itData)) {
+while (embedDBNext(state, &it, (void**) &itKey, (void**) &itData)) {
 	/* Process record */
 }
 
-sbitsCloseIterator(&it);
+embedDBCloseIterator(&it);
 ```
 
 ### Iterate over records with vardata
@@ -239,19 +239,19 @@ it.maxKey = &maxKey;
 it.minData = NULL;
 it.maxData = NULL;
 
-sbitsVarDataStream *varStream = NULL;
+embedDBVarDataStream *varStream = NULL;
 uint32_t varBufSize = 8;  // Choose any size
 void *varDataBuffer = malloc(varBufSize);
 
-sbitsInitIterator(state, &it);
+embedDBInitIterator(state, &it);
 
-while (sbitsNextVar(state, &it, &itKey, itData, &varStream)) {
+while (embedDBNextVar(state, &it, &itKey, itData, &varStream)) {
 	/* Process fixed part of record */
 	...
 	/* Process vardata if this record has it */
 	if (varStream != NULL) {
 		uint32_t numBytesRead = 0;
-		while ((numBytesRead = sbitsVarDataStreamRead(state, varStream, varDataBuffer, varBufSize)) > 0) {
+		while ((numBytesRead = embedDBVarDataStreamRead(state, varStream, varDataBuffer, varBufSize)) > 0) {
 			/* Process the data read into the buffer */
 			for (uint32_t i = 0; i < numBytesRead; i++) {
 				printf("%02X ", (uint8_t*)varDataBuffer + i);
@@ -265,15 +265,15 @@ while (sbitsNextVar(state, &it, &itKey, itData, &varStream)) {
 }
 
 free(varDataBuffer);
-sbitsCloseIterator(&it);
+embedDBCloseIterator(&it);
 ```
 
-## Disposing of sbits state
+## Disposing of EmbedDB state
 
 **Be sure to flush buffers before closing, if needed.**
 
 ```c
-sbitsClose(state);
+embedDBClose(state);
 tearDownFile(state->dataFile);
 tearDownFile(state->indexFile);
 tearDownFile(state->varFile);
