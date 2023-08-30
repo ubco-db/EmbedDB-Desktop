@@ -1,11 +1,10 @@
 /******************************************************************************/
 /**
- * @file		embedDB.h
- * @author		Ramon Lawrence
- * @brief		This file is for sequential bitmap indexing for time series (embedDB).
- * @copyright	Copyright 2021
- * 			The University of British Columbia,
- * 			Ramon Lawrence
+ * @file		embedDB.c
+ * @author		EmbedDB Team (See Authors.md)
+ * @brief		Header file for EmbeDB.
+ * @copyright	Copyright 2023
+ * 			    EmbedDB Team
  * @par Redistribution and use in source and binary forms, with or without
  * 	modification, are permitted provided that the following conditions are met:
  *
@@ -33,6 +32,7 @@
  * 	POSSIBILITY OF SUCH DAMAGE.
  */
 /******************************************************************************/
+
 #ifndef embedDB_H_
 #define embedDB_H_
 
