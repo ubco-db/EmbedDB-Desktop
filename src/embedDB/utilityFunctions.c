@@ -1,11 +1,40 @@
+/******************************************************************************/
 /**
- * @file utilityFunctions.h
- * @author Ramon Lawernce
- * @brief This file contains some utility functions to be used with sbits.
+ * @file		utilityFunctions.c
+ * @author		EmbedDB Team (See Authors.md)
+ * @brief This file contains some utility functions to be used with EmbedDB.
  * These include functions required to use the bitmap option, and a
  * comparator for comparing keys. They can be modified or implemented
  * differently depending on the application.
+ * @copyright	Copyright 2023
+ * 			    EmbedDB Team
+ * @par Redistribution and use in source and binary forms, with or without
+ * 	modification, are permitted provided that the following conditions are met:
+ *
+ * @par 1.Redistributions of source code must retain the above copyright notice,
+ * 	this list of conditions and the following disclaimer.
+ *
+ * @par 2.Redistributions in binary form must reproduce the above copyright notice,
+ * 	this list of conditions and the following disclaimer in the documentation
+ * 	and/or other materials provided with the distribution.
+ *
+ * @par 3.Neither the name of the copyright holder nor the names of its contributors
+ * 	may be used to endorse or promote products derived from this software without
+ * 	specific prior written permission.
+ *
+ * @par THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * 	AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * 	IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * 	ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+ * 	LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * 	CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * 	SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * 	INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * 	CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * 	ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * 	POSSIBILITY OF SUCH DAMAGE.
  */
+/******************************************************************************/
 
 #include "utilityFunctions.h"
 
@@ -105,7 +134,7 @@ int8_t inBitmapInt16(void *data, void *bm) {
 
 /**
  * @brief	Builds 16-bit bitmap from (min, max) range.
- * @param	state	SBITS state structure
+ * @param	state	embedDB state structure
  * @param	min		minimum value (may be NULL)
  * @param	max		maximum value (may be NULL)
  * @param	bm		bitmap created
@@ -170,7 +199,7 @@ int8_t inBitmapInt64(void *data, void *bm) {
 
 /**
  * @brief	Builds 64-bit bitmap from (min, max) range.
- * @param	state	SBITS state structure
+ * @param	state	embedDB state structure
  * @param	min		minimum value (may be NULL)
  * @param	max		maximum value (may be NULL)
  * @param	bm		bitmap created
@@ -273,9 +302,9 @@ int8_t FILE_FLUSH(void *file) {
 int8_t FILE_OPEN(void *file, uint8_t mode) {
     FILE_INFO *fileInfo = (FILE_INFO *)file;
 
-    if (mode == SBITS_FILE_MODE_W_PLUS_B) {
+    if (mode == EMBEDDB_FILE_MODE_W_PLUS_B) {
         fileInfo->file = fopen(fileInfo->filename, "w+b");
-    } else if (mode == SBITS_FILE_MODE_R_PLUS_B) {
+    } else if (mode == EMBEDDB_FILE_MODE_R_PLUS_B) {
         fileInfo->file = fopen(fileInfo->filename, "r+b");
     } else {
         return 0;
@@ -288,8 +317,8 @@ int8_t FILE_OPEN(void *file, uint8_t mode) {
     }
 }
 
-sbitsFileInterface *getFileInterface() {
-    sbitsFileInterface *fileInterface = malloc(sizeof(sbitsFileInterface));
+embedDBFileInterface *getFileInterface() {
+    embedDBFileInterface *fileInterface = malloc(sizeof(embedDBFileInterface));
     fileInterface->close = FILE_CLOSE;
     fileInterface->read = FILE_READ;
     fileInterface->write = FILE_WRITE;

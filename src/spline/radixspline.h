@@ -1,15 +1,14 @@
 /******************************************************************************/
 /**
- * @file		radixspline.h
- * @author		Ramon Lawrence
- * @brief		Implementation of radix spline for embedded devices.
- * 			Based on "RadixSpline: a single-pass learned index" by
- * 			A. Kipf, R. Marcus, A. van Renen, M. Stoian, A. Kemper,
- * 			T. Kraska, and T. Neumann
+ * @file	    radixspline.h
+ * @author		EmbedDB Team (See Authors.md)
+ * @brief		Header file for implementation of radix spline for
+ * 			embedded devices. Based on "RadixSpline: a single-pass
+ *           learned index" by A. Kipf, R. Marcus, A. van Renen,
+ * 			M. Stoian, A. Kemper, T. Kraska, and T. Neumann
  * 			https://github.com/learnedsystems/RadixSpline
- * @copyright	Copyright 2021
- * 			The University of British Columbia,
- * 			Ramon Lawrence
+ * @copyright	Copyright 2023
+ * 			    EmbedDB Team
  * @par Redistribution and use in source and binary forms, with or without
  * 	modification, are permitted provided that the following conditions are met:
  *
@@ -37,6 +36,7 @@
  * 	POSSIBILITY OF SUCH DAMAGE.
  */
 /******************************************************************************/
+
 #pragma once
 #ifdef __cplusplus
 extern "C" {

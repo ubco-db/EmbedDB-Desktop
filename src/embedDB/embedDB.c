@@ -1,41 +1,39 @@
 /******************************************************************************/
 /**
- * @file		sbits.c
- * @author		Ramon Lawrence
- * @brief		This file is for sequential bitmap indexing for time series
- * (SBITS).
- * @copyright	Copyright 2021
- * 						The University of British Columbia,
- * 						Ramon Lawrence
+ * @file		embedDB.c
+ * @author		EmbedDB Team (See Authors.md)
+ * @brief		Source code for EmbeDB.
+ * @copyright	Copyright 2023
+ * 			    EmbedDB Team
  * @par Redistribution and use in source and binary forms, with or without
- * 		modification, are permitted provided that the following conditions are
- * met:
+ * 	modification, are permitted provided that the following conditions are met:
  *
  * @par 1.Redistributions of source code must retain the above copyright notice,
- * 		this list of conditions and the following disclaimer.
+ * 	this list of conditions and the following disclaimer.
  *
  * @par 2.Redistributions in binary form must reproduce the above copyright notice,
- * 		this list of conditions and the following disclaimer in the
- * documentation and/or other materials provided with the distribution.
+ * 	this list of conditions and the following disclaimer in the documentation
+ * 	and/or other materials provided with the distribution.
  *
- * @par 3.Neither the name of the copyright holder nor the names of its
- * contributors may be used to endorse or promote products derived from this
- * software without specific prior written permission.
+ * @par 3.Neither the name of the copyright holder nor the names of its contributors
+ * 	may be used to endorse or promote products derived from this software without
+ * 	specific prior written permission.
  *
  * @par THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * 		AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
- * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * 		ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS
- * BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * 		CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * 		SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * 		INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * 		CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * 		ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
- * THE POSSIBILITY OF SUCH DAMAGE.
+ * 	AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * 	IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * 	ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+ * 	LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * 	CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * 	SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * 	INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * 	CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * 	ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * 	POSSIBILITY OF SUCH DAMAGE.
  */
 /******************************************************************************/
-#include "sbits.h"
+
+#include "embedDB.h"
 
 #include <math.h>
 #include <stdbool.h>
@@ -62,18 +60,18 @@
 #define RADIX_BITS 0
 
 /* Helper Functions */
-int8_t sbitsInitData(sbitsState *state);
-int8_t sbitsInitDataFromFile(sbitsState *state);
-int8_t sbitsInitIndex(sbitsState *state);
-int8_t sbitsInitIndexFromFile(sbitsState *state);
-int8_t sbitsInitVarData(sbitsState *state);
-int8_t sbitsInitVarDataFromFile(sbitsState *state);
-void updateAverageKeyDifference(sbitsState *state, void *buffer);
-void sbitsInitSplineFromFile(sbitsState *state);
-int32_t getMaxError(sbitsState *state, void *buffer);
-void updateMaxiumError(sbitsState *state, void *buffer);
-int8_t sbitsSetupVarDataStream(sbitsState *state, void *key, sbitsVarDataStream **varData, id_t recordNumber);
-uint32_t cleanSpline(sbitsState *state, void *key);
+int8_t embedDBInitData(embedDBState *state);
+int8_t embedDBInitDataFromFile(embedDBState *state);
+int8_t embedDBInitIndex(embedDBState *state);
+int8_t embedDBInitIndexFromFile(embedDBState *state);
+int8_t embedDBInitVarData(embedDBState *state);
+int8_t embedDBInitVarDataFromFile(embedDBState *state);
+void updateAverageKeyDifference(embedDBState *state, void *buffer);
+void embedDBInitSplineFromFile(embedDBState *state);
+int32_t getMaxError(embedDBState *state, void *buffer);
+void updateMaxiumError(embedDBState *state, void *buffer);
+int8_t embedDBSetupVarDataStream(embedDBState *state, void *key, embedDBVarDataStream **varData, id_t recordNumber);
+uint32_t cleanSpline(embedDBState *state, void *key);
 
 void printBitmap(char *bm) {
     for (int8_t i = 0; i <= 7; i++) {
@@ -94,7 +92,7 @@ int8_t bitmapOverlap(uint8_t *bm1, uint8_t *bm2, int8_t size) {
     return 0;
 }
 
-void initBufferPage(sbitsState *state, int pageNum) {
+void initBufferPage(embedDBState *state, int pageNum) {
     /* Initialize page */
     uint16_t i = 0;
     void *buf = (char *)state->buffer + pageNum * state->pageSize;
@@ -103,17 +101,17 @@ void initBufferPage(sbitsState *state, int pageNum) {
         ((int8_t *)buf)[i] = 0;
     }
 
-    if (pageNum != SBITS_VAR_WRITE_BUFFER(state->parameters)) {
+    if (pageNum != EMBEDDB_VAR_WRITE_BUFFER(state->parameters)) {
         /* Initialize header key min. Max and sum is already set to zero by the
          * for-loop above */
-        void *min = SBITS_GET_MIN_KEY(buf);
+        void *min = EMBEDDB_GET_MIN_KEY(buf);
         /* Initialize min to all 1s */
         for (i = 0; i < state->keySize; i++) {
             ((int8_t *)min)[i] = 1;
         }
 
         /* Initialize data min. */
-        min = SBITS_GET_MIN_DATA(buf, state);
+        min = EMBEDDB_GET_MIN_DATA(buf, state);
         /* Initialize min to all 1s */
         for (i = 0; i < state->dataSize; i++) {
             ((int8_t *)min)[i] = 1;
@@ -123,12 +121,12 @@ void initBufferPage(sbitsState *state, int pageNum) {
 
 /**
  * @brief   Initializes the Radix Spline data structure and assigns it to state
- * @param   state       SBITS state structure
+ * @param   state       embedDB state structure
  * @param   size        Size data to load into data structure
  * @param   radixSize   number bits to be indexed by radix
  * @return  void
  */
-void initRadixSpline(sbitsState *state, size_t radixSize) {
+void initRadixSpline(embedDBState *state, size_t radixSize) {
     spline *spl = (spline *)malloc(sizeof(spline));
     state->spl = spl;
 
@@ -141,30 +139,30 @@ void initRadixSpline(sbitsState *state, size_t radixSize) {
 
 /**
  * @brief   Return the smallest key in the node
- * @param   state   SBITS algorithm state structure
+ * @param   state   embedDB algorithm state structure
  * @param   buffer  In memory page buffer with node data
  */
-void *sbitsGetMinKey(sbitsState *state, void *buffer) {
+void *embedDBGetMinKey(embedDBState *state, void *buffer) {
     return (void *)((int8_t *)buffer + state->headerSize);
 }
 
 /**
  * @brief   Return the largest key in the node
- * @param   state   SBITS algorithm state structure
+ * @param   state   embedDB algorithm state structure
  * @param   buffer  In memory page buffer with node data
  */
-void *sbitsGetMaxKey(sbitsState *state, void *buffer) {
-    int16_t count = SBITS_GET_COUNT(buffer);
+void *embedDBGetMaxKey(embedDBState *state, void *buffer) {
+    int16_t count = EMBEDDB_GET_COUNT(buffer);
     return (void *)((int8_t *)buffer + state->headerSize + (count - 1) * state->recordSize);
 }
 
 /**
- * @brief   Initialize SBITS structure.
- * @param   state           SBITS algorithm state structure
+ * @brief   Initialize embedDB structure.
+ * @param   state           embedDB algorithm state structure
  * @param   indexMaxError   max error of indexing structure (spline)
  * @return  Return 0 if success. Non-zero value if error.
  */
-int8_t sbitsInit(sbitsState *state, size_t indexMaxError) {
+int8_t embedDBInit(embedDBState *state, size_t indexMaxError) {
     if (state->keySize > 8) {
 #ifdef PRINT_ERRORS
         printf("ERROR: Key size is too large. Max key size is 8 bytes.\n");
@@ -173,7 +171,7 @@ int8_t sbitsInit(sbitsState *state, size_t indexMaxError) {
     }
 
     state->recordSize = state->keySize + state->dataSize;
-    if (SBITS_USING_VDATA(state->parameters)) {
+    if (EMBEDDB_USING_VDATA(state->parameters)) {
         state->recordSize += 4;
     }
 
@@ -183,10 +181,10 @@ int8_t sbitsInit(sbitsState *state, size_t indexMaxError) {
 
     /* Header size depends on bitmap size: 6 + X bytes: 4 byte id, 2 for record count, X for bitmap. */
     state->headerSize = 6;
-    if (SBITS_USING_INDEX(state->parameters))
+    if (EMBEDDB_USING_INDEX(state->parameters))
         state->headerSize += state->bitmapSize;
 
-    if (SBITS_USING_MAX_MIN(state->parameters))
+    if (EMBEDDB_USING_MAX_MIN(state->parameters))
         state->headerSize += state->keySize * 2 + state->dataSize * 2;
 
     /* Flags to show that these values have not been initalized with actual data yet */
@@ -204,9 +202,9 @@ int8_t sbitsInit(sbitsState *state, size_t indexMaxError) {
     /* Allocate first page of buffer as output page */
     initBufferPage(state, 0);
 
-    if (state->numDataPages < (SBITS_USING_INDEX(state->parameters) * 2 + 2) * state->eraseSizeInPages) {
+    if (state->numDataPages < (EMBEDDB_USING_INDEX(state->parameters) * 2 + 2) * state->eraseSizeInPages) {
 #ifdef PRINT_ERRORS
-        printf("ERROR: Number of pages allocated must be at least twice erase block size for SBITS and four times when using indexing. Memory pages: %d\n", state->numDataPages);
+        printf("ERROR: Number of pages allocated must be at least twice erase block size for embedDB and four times when using indexing. Memory pages: %d\n", state->numDataPages);
 #endif
         return -1;
     }
@@ -224,7 +222,7 @@ int8_t sbitsInit(sbitsState *state, size_t indexMaxError) {
 
     /* Allocate file for data*/
     int8_t dataInitResult = 0;
-    dataInitResult = sbitsInitData(state);
+    dataInitResult = embedDBInitData(state);
 
     if (dataInitResult != 0) {
         return dataInitResult;
@@ -232,14 +230,14 @@ int8_t sbitsInit(sbitsState *state, size_t indexMaxError) {
 
     /* Allocate file and buffer for index */
     int8_t indexInitResult = 0;
-    if (SBITS_USING_INDEX(state->parameters)) {
+    if (EMBEDDB_USING_INDEX(state->parameters)) {
         if (state->bufferSizeInBlocks < 4) {
 #ifdef PRINT_ERRORS
-            printf("ERROR: SBITS using index requires at least 4 page buffers.\n");
+            printf("ERROR: embedDB using index requires at least 4 page buffers.\n");
 #endif
             return -1;
         } else {
-            indexInitResult = sbitsInitIndex(state);
+            indexInitResult = embedDBInitIndex(state);
         }
     } else {
         state->indexFile = NULL;
@@ -252,14 +250,14 @@ int8_t sbitsInit(sbitsState *state, size_t indexMaxError) {
 
     /* Allocate file and buffer for variable data */
     int8_t varDataInitResult = 0;
-    if (SBITS_USING_VDATA(state->parameters)) {
-        if (state->bufferSizeInBlocks < 4 + (SBITS_USING_INDEX(state->parameters) ? 2 : 0)) {
+    if (EMBEDDB_USING_VDATA(state->parameters)) {
+        if (state->bufferSizeInBlocks < 4 + (EMBEDDB_USING_INDEX(state->parameters) ? 2 : 0)) {
 #ifdef PRINT_ERRORS
-            printf("ERROR: SBITS using variable records requires at least 4 page buffers if there is no index and 6 if there is.\n");
+            printf("ERROR: embedDB using variable records requires at least 4 page buffers if there is no index and 6 if there is.\n");
 #endif
             return -1;
         } else {
-            varDataInitResult = sbitsInitVarData(state);
+            varDataInitResult = embedDBInitVarData(state);
         }
         return varDataInitResult;
     } else {
@@ -267,11 +265,11 @@ int8_t sbitsInit(sbitsState *state, size_t indexMaxError) {
         state->numVarPages = 0;
     }
 
-    resetStats(state);
+    embedDBResetStats(state);
     return 0;
 }
 
-int8_t sbitsInitData(sbitsState *state) {
+int8_t embedDBInitData(embedDBState *state) {
     state->nextDataPageId = 0;
     state->avgKeyDiff = 1;
     state->nextDataPageId = 0;
@@ -286,14 +284,14 @@ int8_t sbitsInitData(sbitsState *state) {
     }
 
     /* Setup data file. */
-    if (!SBITS_RESETING_DATA(state->parameters)) {
-        int8_t openStatus = state->fileInterface->open(state->dataFile, SBITS_FILE_MODE_R_PLUS_B);
+    if (!EMBEDDB_RESETING_DATA(state->parameters)) {
+        int8_t openStatus = state->fileInterface->open(state->dataFile, EMBEDDB_FILE_MODE_R_PLUS_B);
         if (openStatus) {
-            return sbitsInitDataFromFile(state);
+            return embedDBInitDataFromFile(state);
         }
     }
 
-    int8_t openStatus = state->fileInterface->open(state->dataFile, SBITS_FILE_MODE_W_PLUS_B);
+    int8_t openStatus = state->fileInterface->open(state->dataFile, EMBEDDB_FILE_MODE_W_PLUS_B);
     if (!openStatus) {
 #ifdef PRINT_ERRORS
         printf("Error: Can't open data file!\n");
@@ -304,7 +302,7 @@ int8_t sbitsInitData(sbitsState *state) {
     return 0;
 }
 
-int8_t sbitsInitDataFromFile(sbitsState *state) {
+int8_t embedDBInitDataFromFile(embedDBState *state) {
     id_t logicalPageId = 0;
     id_t maxLogicalPageId = 0;
     id_t physicalPageId = 0;
@@ -343,11 +341,11 @@ int8_t sbitsInitDataFromFile(sbitsState *state) {
     state->numAvailDataPages = state->numDataPages + state->minDataPageId - maxLogicalPageId - 1;
     if (state->keySize <= 4) {
         uint32_t minKey = 0;
-        memcpy(&minKey, sbitsGetMinKey(state, buffer), state->keySize);
+        memcpy(&minKey, embedDBGetMinKey(state, buffer), state->keySize);
         state->minKey = minKey;
     } else {
         uint64_t minKey = 0;
-        memcpy(&minKey, sbitsGetMinKey(state, buffer), state->keySize);
+        memcpy(&minKey, embedDBGetMinKey(state, buffer), state->keySize);
         state->minKey = minKey;
     }
 
@@ -356,39 +354,39 @@ int8_t sbitsInitDataFromFile(sbitsState *state) {
 
     updateAverageKeyDifference(state, buffer);
     if (SEARCH_METHOD == 2) {
-        sbitsInitSplineFromFile(state);
+        embedDBInitSplineFromFile(state);
     }
 
     return 0;
 }
 
-void sbitsInitSplineFromFile(sbitsState *state) {
+void embedDBInitSplineFromFile(embedDBState *state) {
     id_t pageNumberToRead = state->minDataPageId;
-    void *buffer = (int8_t *)state->buffer + state->pageSize * SBITS_DATA_READ_BUFFER;
+    void *buffer = (int8_t *)state->buffer + state->pageSize * EMBEDDB_DATA_READ_BUFFER;
     id_t pagesRead = 0;
     id_t numberOfPagesToRead = state->nextDataPageId - state->minDataPageId;
     while (pagesRead < numberOfPagesToRead) {
         readPage(state, pageNumberToRead % state->numDataPages);
         if (RADIX_BITS > 0) {
-            radixsplineAddPoint(state->rdix, sbitsGetMinKey(state, buffer), pageNumberToRead++);
+            radixsplineAddPoint(state->rdix, embedDBGetMinKey(state, buffer), pageNumberToRead++);
         } else {
-            splineAdd(state->spl, sbitsGetMinKey(state, buffer), pageNumberToRead++);
+            splineAdd(state->spl, embedDBGetMinKey(state, buffer), pageNumberToRead++);
         }
         pagesRead++;
     }
 }
 
-int8_t sbitsInitIndex(sbitsState *state) {
+int8_t embedDBInitIndex(embedDBState *state) {
     /* Setup index file. */
 
     /* 4 for id, 2 for count, 2 unused, 4 for minKey (pageId), 4 for maxKey (pageId) */
     state->maxIdxRecordsPerPage = (state->pageSize - 16) / state->bitmapSize;
 
     /* Allocate third page of buffer as index output page */
-    initBufferPage(state, SBITS_INDEX_WRITE_BUFFER);
+    initBufferPage(state, EMBEDDB_INDEX_WRITE_BUFFER);
 
     /* Add page id to minimum value spot in page */
-    void *buf = (int8_t *)state->buffer + state->pageSize * (SBITS_INDEX_WRITE_BUFFER);
+    void *buf = (int8_t *)state->buffer + state->pageSize * (EMBEDDB_INDEX_WRITE_BUFFER);
     id_t *ptr = ((id_t *)((int8_t *)buf + 8));
     *ptr = state->nextDataPageId;
 
@@ -417,14 +415,14 @@ int8_t sbitsInitIndex(sbitsState *state) {
         return -1;
     }
 
-    if (!SBITS_RESETING_DATA(state->parameters)) {
-        int8_t openStatus = state->fileInterface->open(state->indexFile, SBITS_FILE_MODE_R_PLUS_B);
+    if (!EMBEDDB_RESETING_DATA(state->parameters)) {
+        int8_t openStatus = state->fileInterface->open(state->indexFile, EMBEDDB_FILE_MODE_R_PLUS_B);
         if (openStatus) {
-            return sbitsInitIndexFromFile(state);
+            return embedDBInitIndexFromFile(state);
         }
     }
 
-    int8_t openStatus = state->fileInterface->open(state->indexFile, SBITS_FILE_MODE_W_PLUS_B);
+    int8_t openStatus = state->fileInterface->open(state->indexFile, EMBEDDB_FILE_MODE_W_PLUS_B);
     if (!openStatus) {
 #ifdef PRINT_ERRORS
         printf("Error: Can't open index file!\n");
@@ -435,7 +433,7 @@ int8_t sbitsInitIndex(sbitsState *state) {
     return 0;
 }
 
-int8_t sbitsInitIndexFromFile(sbitsState *state) {
+int8_t embedDBInitIndexFromFile(embedDBState *state) {
     id_t logicalIndexPageId = 0;
     id_t maxLogicaIndexPageId = 0;
     id_t physicalIndexPageId = 0;
@@ -445,7 +443,7 @@ int8_t sbitsInitIndexFromFile(sbitsState *state) {
 
     bool haveWrappedInMemory = false;
     int count = 0;
-    void *buffer = (int8_t *)state->buffer + state->pageSize * SBITS_INDEX_READ_BUFFER;
+    void *buffer = (int8_t *)state->buffer + state->pageSize * EMBEDDB_INDEX_READ_BUFFER;
 
     while (moreToRead && count < state->numIndexPages) {
         memcpy(&logicalIndexPageId, buffer, sizeof(id_t));
@@ -475,9 +473,9 @@ int8_t sbitsInitIndexFromFile(sbitsState *state) {
     return 0;
 }
 
-int8_t sbitsInitVarData(sbitsState *state) {
+int8_t embedDBInitVarData(embedDBState *state) {
     // Initialize variable data outpt buffer
-    initBufferPage(state, SBITS_VAR_WRITE_BUFFER(state->parameters));
+    initBufferPage(state, EMBEDDB_VAR_WRITE_BUFFER(state->parameters));
 
     state->variableDataHeaderSize = state->keySize + sizeof(id_t);
     state->currentVarLoc = state->variableDataHeaderSize;
@@ -485,14 +483,14 @@ int8_t sbitsInitVarData(sbitsState *state) {
     state->numAvailVarPages = state->numVarPages;
     state->nextVarPageId = 0;
 
-    if (!SBITS_RESETING_DATA(state->parameters)) {
-        int8_t openResult = state->fileInterface->open(state->varFile, SBITS_FILE_MODE_R_PLUS_B);
+    if (!EMBEDDB_RESETING_DATA(state->parameters)) {
+        int8_t openResult = state->fileInterface->open(state->varFile, EMBEDDB_FILE_MODE_R_PLUS_B);
         if (openResult) {
-            return sbitsInitVarDataFromFile(state);
+            return embedDBInitVarDataFromFile(state);
         }
     }
 
-    int8_t openResult = state->fileInterface->open(state->varFile, SBITS_FILE_MODE_W_PLUS_B);
+    int8_t openResult = state->fileInterface->open(state->varFile, EMBEDDB_FILE_MODE_W_PLUS_B);
     if (!openResult) {
 #ifdef PRINT_ERRORS
         printf("Error: Can't open variable data file!\n");
@@ -503,8 +501,8 @@ int8_t sbitsInitVarData(sbitsState *state) {
     return 0;
 }
 
-int8_t sbitsInitVarDataFromFile(sbitsState *state) {
-    void *buffer = (int8_t *)state->buffer + state->pageSize * SBITS_VAR_READ_BUFFER(state->parameters);
+int8_t embedDBInitVarDataFromFile(embedDBState *state) {
+    void *buffer = (int8_t *)state->buffer + state->pageSize * EMBEDDB_VAR_READ_BUFFER(state->parameters);
     id_t logicalVariablePageId = 0;
     id_t maxLogicalVariablePageId = 0;
     id_t physicalVariablePageId = 0;
@@ -544,29 +542,29 @@ int8_t sbitsInitVarDataFromFile(sbitsState *state) {
 }
 
 /**
- * @brief   Prints the initialization stats of the given SBITS state
- * @param   state   SBITS state structure
+ * @brief   Prints the initialization stats of the given embedDB state
+ * @param   state   embedDB state structure
  */
-void sbitsPrintInit(sbitsState *state) {
-    printf("SBITS State Initialization Stats.\n");
+void embedDBPrintInit(embedDBState *state) {
+    printf("EmbedDB State Initialization Stats:\n");
     printf("Buffer size: %d  Page size: %d\n", state->bufferSizeInBlocks, state->pageSize);
-    printf("Key size: %d Data size: %d %sRecord size: %d\n", state->keySize, state->dataSize, SBITS_USING_VDATA(state->parameters) ? "Variable data pointer size: 4 " : "", state->recordSize);
-    printf("Use index: %d  Max/min: %d Sum: %d Bmap: %d\n", SBITS_USING_INDEX(state->parameters), SBITS_USING_MAX_MIN(state->parameters), SBITS_USING_SUM(state->parameters), SBITS_USING_BMAP(state->parameters));
+    printf("Key size: %d Data size: %d %sRecord size: %d\n", state->keySize, state->dataSize, EMBEDDB_USING_VDATA(state->parameters) ? "Variable data pointer size: 4 " : "", state->recordSize);
+    printf("Use index: %d  Max/min: %d Sum: %d Bmap: %d\n", EMBEDDB_USING_INDEX(state->parameters), EMBEDDB_USING_MAX_MIN(state->parameters), EMBEDDB_USING_SUM(state->parameters), EMBEDDB_USING_BMAP(state->parameters));
     printf("Header size: %d  Records per page: %d\n", state->headerSize, state->maxRecordsPerPage);
 }
 
 /**
  * @brief	Given a state, uses the first and last keys to estimate a slope of keys
- * @param	state	SBITS algorithm state structure
+ * @param	state	embedDB algorithm state structure
  * @param	buffer	Pointer to in-memory buffer holding node
  * @return	Returns slope estimate float
  */
-float sbitsCalculateSlope(sbitsState *state, void *buffer) {
+float embedDBCalculateSlope(embedDBState *state, void *buffer) {
     // simplistic slope calculation where the first two entries are used, should be improved
 
     uint32_t slopeX1, slopeX2;
     slopeX1 = 0;
-    slopeX2 = SBITS_GET_COUNT(buffer) - 1;
+    slopeX2 = EMBEDDB_GET_COUNT(buffer) - 1;
 
     if (state->keySize <= 4) {
         uint32_t slopeY1 = 0, slopeY2 = 0;
@@ -601,17 +599,17 @@ float sbitsCalculateSlope(sbitsState *state, void *buffer) {
 
 /**
  * @brief	Returns the maximum error for current page.
- * @param	state	SBITS algorithm state structure
+ * @param	state	embedDB algorithm state structure
  * @return	Returns max error integer.
  */
-int32_t getMaxError(sbitsState *state, void *buffer) {
+int32_t getMaxError(embedDBState *state, void *buffer) {
     if (state->keySize <= 4) {
         int32_t maxError = 0, currentError;
         uint32_t minKey = 0, currentKey = 0;
-        memcpy(&minKey, sbitsGetMinKey(state, buffer), state->keySize);
+        memcpy(&minKey, embedDBGetMinKey(state, buffer), state->keySize);
 
         // get slope of keys within page
-        float slope = sbitsCalculateSlope(state, buffer);
+        float slope = embedDBCalculateSlope(state, buffer);
 
         for (int i = 0; i < state->maxRecordsPerPage; i++) {
             // loop all keys in page
@@ -639,10 +637,10 @@ int32_t getMaxError(sbitsState *state, void *buffer) {
     } else {
         int32_t maxError = 0, currentError;
         uint64_t currentKey = 0, minKey = 0;
-        memcpy(&minKey, sbitsGetMinKey(state, buffer), state->keySize);
+        memcpy(&minKey, embedDBGetMinKey(state, buffer), state->keySize);
 
         // get slope of keys within page
-        float slope = sbitsCalculateSlope(state, state->buffer);  // this is incorrect, should be buffer. TODO: fix
+        float slope = embedDBCalculateSlope(state, state->buffer);  // this is incorrect, should be buffer. TODO: fix
 
         for (int i = 0; i < state->maxRecordsPerPage; i++) {
             // loop all keys in page
@@ -672,34 +670,34 @@ int32_t getMaxError(sbitsState *state, void *buffer) {
 
 /**
  * @brief	Adds an entry for the current page into the search structure
- * @param	state	SBITS algorithm state structure
+ * @param	state	embedDB algorithm state structure
  */
-void indexPage(sbitsState *state, uint32_t pageNumber) {
+void indexPage(embedDBState *state, uint32_t pageNumber) {
     if (SEARCH_METHOD == 2) {
         if (RADIX_BITS > 0) {
-            radixsplineAddPoint(state->rdix, sbitsGetMinKey(state, state->buffer), pageNumber);
+            radixsplineAddPoint(state->rdix, embedDBGetMinKey(state, state->buffer), pageNumber);
         } else {
-            splineAdd(state->spl, sbitsGetMinKey(state, state->buffer), pageNumber);
+            splineAdd(state->spl, embedDBGetMinKey(state, state->buffer), pageNumber);
         }
     }
 }
 
 /**
  * @brief	Puts a given key, data pair into structure.
- * @param	state	SBITS algorithm state structure
+ * @param	state	embedDB algorithm state structure
  * @param	key		Key for record
  * @param	data	Data for record
  * @return	Return 0 if success. Non-zero value if error.
  */
-int8_t sbitsPut(sbitsState *state, void *key, void *data) {
+int8_t embedDBPut(embedDBState *state, void *key, void *data) {
     /* Copy record into block */
 
-    count_t count = SBITS_GET_COUNT(state->buffer);
+    count_t count = EMBEDDB_GET_COUNT(state->buffer);
     if (state->minKey != UINT32_MAX) {
         void *previousKey = NULL;
         if (count == 0) {
             readPage(state, (state->nextDataPageId - 1) % state->numDataPages);
-            previousKey = ((int8_t *)state->buffer + state->pageSize * SBITS_DATA_READ_BUFFER) +
+            previousKey = ((int8_t *)state->buffer + state->pageSize * EMBEDDB_DATA_READ_BUFFER) +
                           (state->recordSize * (state->maxRecordsPerPage - 1)) + state->headerSize;
         } else {
             previousKey = (int8_t *)state->buffer + (state->recordSize * (count - 1)) + state->headerSize;
@@ -721,25 +719,25 @@ int8_t sbitsPut(sbitsState *state, void *key, void *data) {
 
         /* Save record in index file */
         if (state->indexFile != NULL) {
-            void *buf = (int8_t *)state->buffer + state->pageSize * (SBITS_INDEX_WRITE_BUFFER);
-            count_t idxcount = SBITS_GET_COUNT(buf);
+            void *buf = (int8_t *)state->buffer + state->pageSize * (EMBEDDB_INDEX_WRITE_BUFFER);
+            count_t idxcount = EMBEDDB_GET_COUNT(buf);
             if (idxcount >= state->maxIdxRecordsPerPage) {
                 /* Save index page */
                 writeIndexPage(state, buf);
 
                 idxcount = 0;
-                initBufferPage(state, SBITS_INDEX_WRITE_BUFFER);
+                initBufferPage(state, EMBEDDB_INDEX_WRITE_BUFFER);
 
                 /* Add page id to minimum value spot in page */
                 id_t *ptr = (id_t *)((int8_t *)buf + 8);
                 *ptr = pageNum;
             }
 
-            SBITS_INC_COUNT(buf);
+            EMBEDDB_INC_COUNT(buf);
 
             /* Copy record onto index page */
-            void *bm = SBITS_GET_BITMAP(state->buffer);
-            memcpy((void *)((int8_t *)buf + SBITS_IDX_HEADER_SIZE + state->bitmapSize * idxcount), bm, state->bitmapSize);
+            void *bm = EMBEDDB_GET_BITMAP(state->buffer);
+            memcpy((void *)((int8_t *)buf + EMBEDDB_IDX_HEADER_SIZE + state->bitmapSize * idxcount), bm, state->bitmapSize);
         }
 
         updateAverageKeyDifference(state, state->buffer);
@@ -754,62 +752,62 @@ int8_t sbitsPut(sbitsState *state, void *key, void *data) {
     memcpy((int8_t *)state->buffer + (state->recordSize * count) + state->headerSize + state->keySize, data, state->dataSize);
 
     /* Copy variable data offset if using variable data*/
-    if (SBITS_USING_VDATA(state->parameters)) {
+    if (EMBEDDB_USING_VDATA(state->parameters)) {
         uint32_t dataLocation;
         if (state->recordHasVarData) {
             dataLocation = state->currentVarLoc % (state->numVarPages * state->pageSize);
         } else {
-            dataLocation = SBITS_NO_VAR_DATA;
+            dataLocation = EMBEDDB_NO_VAR_DATA;
         }
         memcpy((int8_t *)state->buffer + (state->recordSize * count) + state->headerSize + state->keySize + state->dataSize, &dataLocation, sizeof(uint32_t));
     }
 
     /* Update count */
-    SBITS_INC_COUNT(state->buffer);
+    EMBEDDB_INC_COUNT(state->buffer);
 
     /* Set minimum key for first record insert */
     if (state->minKey == UINT32_MAX)
         memcpy(&state->minKey, key, state->keySize);
 
-    if (SBITS_USING_MAX_MIN(state->parameters)) {
+    if (EMBEDDB_USING_MAX_MIN(state->parameters)) {
         /* Update MIN/MAX */
         void *ptr;
         if (count != 0) {
             /* Since keys are inserted in ascending order, every insert will
              * update max. Min will never change after first record. */
-            ptr = SBITS_GET_MAX_KEY(state->buffer, state);
+            ptr = EMBEDDB_GET_MAX_KEY(state->buffer, state);
             memcpy(ptr, key, state->keySize);
 
-            ptr = SBITS_GET_MIN_DATA(state->buffer, state);
+            ptr = EMBEDDB_GET_MIN_DATA(state->buffer, state);
             if (state->compareData(data, ptr) < 0)
                 memcpy(ptr, data, state->dataSize);
-            ptr = SBITS_GET_MAX_DATA(state->buffer, state);
+            ptr = EMBEDDB_GET_MAX_DATA(state->buffer, state);
             if (state->compareData(data, ptr) > 0)
                 memcpy(ptr, data, state->dataSize);
         } else {
             /* First record inserted */
-            ptr = SBITS_GET_MIN_KEY(state->buffer);
+            ptr = EMBEDDB_GET_MIN_KEY(state->buffer);
             memcpy(ptr, key, state->keySize);
-            ptr = SBITS_GET_MAX_KEY(state->buffer, state);
+            ptr = EMBEDDB_GET_MAX_KEY(state->buffer, state);
             memcpy(ptr, key, state->keySize);
 
-            ptr = SBITS_GET_MIN_DATA(state->buffer, state);
+            ptr = EMBEDDB_GET_MIN_DATA(state->buffer, state);
             memcpy(ptr, data, state->dataSize);
-            ptr = SBITS_GET_MAX_DATA(state->buffer, state);
+            ptr = EMBEDDB_GET_MAX_DATA(state->buffer, state);
             memcpy(ptr, data, state->dataSize);
         }
     }
 
-    if (SBITS_USING_BMAP(state->parameters)) {
+    if (EMBEDDB_USING_BMAP(state->parameters)) {
         /* Update bitmap */
-        char *bm = (char *)SBITS_GET_BITMAP(state->buffer);
+        char *bm = (char *)EMBEDDB_GET_BITMAP(state->buffer);
         state->updateBitmap(data, bm);
     }
 
     return 0;
 }
 
-void updateMaxiumError(sbitsState *state, void *buffer) {
+void updateMaxiumError(embedDBState *state, void *buffer) {
     // Calculate error within the page
     int32_t maxError = getMaxError(state, buffer);
     if (state->maxError < maxError) {
@@ -817,7 +815,7 @@ void updateMaxiumError(sbitsState *state, void *buffer) {
     }
 }
 
-void updateAverageKeyDifference(sbitsState *state, void *buffer) {
+void updateAverageKeyDifference(embedDBState *state, void *buffer) {
     /* Update estimate of average key difference. */
     int32_t numBlocks = state->numDataPages - state->numAvailDataPages;
     if (numBlocks == 0)
@@ -825,26 +823,26 @@ void updateAverageKeyDifference(sbitsState *state, void *buffer) {
 
     if (state->keySize <= 4) {
         uint32_t maxKey = 0;
-        memcpy(&maxKey, sbitsGetMaxKey(state, buffer), state->keySize);
+        memcpy(&maxKey, embedDBGetMaxKey(state, buffer), state->keySize);
         state->avgKeyDiff = (maxKey - state->minKey) / numBlocks / state->maxRecordsPerPage;
     } else {
         uint64_t maxKey = 0;
-        memcpy(&maxKey, sbitsGetMaxKey(state, buffer), state->keySize);
+        memcpy(&maxKey, embedDBGetMaxKey(state, buffer), state->keySize);
         state->avgKeyDiff = (maxKey - state->minKey) / numBlocks / state->maxRecordsPerPage;
     }
 }
 
 /**
  * @brief	Puts the given key, data, and variable length data into the structure.
- * @param	state			SBITS algorithm state structure
+ * @param	state			embedDB algorithm state structure
  * @param	key				Key for record
  * @param	data			Data for record
  * @param	variableData	Variable length data for record
  * @param	length			Length of the variable length data in bytes
  * @return	Return 0 if success. Non-zero value if error.
  */
-int8_t sbitsPutVar(sbitsState *state, void *key, void *data, void *variableData, uint32_t length) {
-    if (!SBITS_USING_VDATA(state->parameters)) {
+int8_t embedDBPutVar(embedDBState *state, void *key, void *data, void *variableData, uint32_t length) {
+    if (!EMBEDDB_USING_VDATA(state->parameters)) {
 #ifdef PRINT_ERRORS
         printf("Error: Can't insert variable data because it is not enabled\n");
 #endif
@@ -855,12 +853,12 @@ int8_t sbitsPutVar(sbitsState *state, void *key, void *data, void *variableData,
 
     /*
      * Check that there is enough space remaining in this page to start the insert of the variable
-     * data here and if the data page will be written in sbitsGet
+     * data here and if the data page will be written in embedDBGet
      */
-    void *buf = (int8_t *)state->buffer + state->pageSize * (SBITS_VAR_WRITE_BUFFER(state->parameters));
-    if (state->currentVarLoc % state->pageSize > state->pageSize - 4 || SBITS_GET_COUNT(state->buffer) >= state->maxRecordsPerPage) {
+    void *buf = (int8_t *)state->buffer + state->pageSize * (EMBEDDB_VAR_WRITE_BUFFER(state->parameters));
+    if (state->currentVarLoc % state->pageSize > state->pageSize - 4 || EMBEDDB_GET_COUNT(state->buffer) >= state->maxRecordsPerPage) {
         writeVariablePage(state, buf);
-        initBufferPage(state, SBITS_VAR_WRITE_BUFFER(state->parameters));
+        initBufferPage(state, EMBEDDB_VAR_WRITE_BUFFER(state->parameters));
         // Move data writing location to the beginning of the next page, leaving the room for the header
         state->currentVarLoc += state->pageSize - state->currentVarLoc % state->pageSize + state->variableDataHeaderSize;
     }
@@ -868,13 +866,13 @@ int8_t sbitsPutVar(sbitsState *state, void *key, void *data, void *variableData,
     if (variableData == NULL) {
         // Var data enabled, but not provided
         state->recordHasVarData = 0;
-        return sbitsPut(state, key, data);
+        return embedDBPut(state, key, data);
     }
 
     // Perform the regular insert
     state->recordHasVarData = 1;
     int8_t r;
-    if ((r = sbitsPut(state, key, data)) != 0) {
+    if ((r = embedDBPut(state, key, data)) != 0) {
         return r;
     }
 
@@ -888,7 +886,7 @@ int8_t sbitsPutVar(sbitsState *state, void *key, void *data, void *variableData,
     // Check if we need to write after doing that
     if (state->currentVarLoc % state->pageSize == 0) {
         writeVariablePage(state, buf);
-        initBufferPage(state, SBITS_VAR_WRITE_BUFFER(state->parameters));
+        initBufferPage(state, EMBEDDB_VAR_WRITE_BUFFER(state->parameters));
 
         // Update the header to include the maximum key value stored on this page
         memcpy((int8_t *)buf + sizeof(id_t), key, state->keySize);
@@ -907,7 +905,7 @@ int8_t sbitsPutVar(sbitsState *state, void *key, void *data, void *variableData,
         // If we need to write the buffer to file
         if (state->currentVarLoc % state->pageSize == 0) {
             writeVariablePage(state, buf);
-            initBufferPage(state, SBITS_VAR_WRITE_BUFFER(state->parameters));
+            initBufferPage(state, EMBEDDB_VAR_WRITE_BUFFER(state->parameters));
 
             // Update the header to include the maximum key value stored on this page and account for page number
             memcpy((int8_t *)buf + sizeof(id_t), key, state->keySize);
@@ -919,17 +917,17 @@ int8_t sbitsPutVar(sbitsState *state, void *key, void *data, void *variableData,
 
 /**
  * @brief	Given a key, estimates the location of the key within the node.
- * @param	state	SBITS algorithm state structure
+ * @param	state	embedDB algorithm state structure
  * @param	buffer	Pointer to in-memory buffer holding node
  * @param	key		Key for record
  */
-int16_t sbitsEstimateKeyLocation(sbitsState *state, void *buffer, void *key) {
+int16_t embedDBEstimateKeyLocation(embedDBState *state, void *buffer, void *key) {
     // get slope to use for linear estimation of key location
     // return estimated location of the key
-    float slope = sbitsCalculateSlope(state, buffer);
+    float slope = embedDBCalculateSlope(state, buffer);
 
     uint64_t minKey = 0, thisKey = 0;
-    memcpy(&minKey, sbitsGetMinKey(state, buffer), state->keySize);
+    memcpy(&minKey, embedDBGetMinKey(state, buffer), state->keySize);
     memcpy(&thisKey, key, state->keySize);
 
     return (thisKey - minKey) / slope;
@@ -937,18 +935,18 @@ int16_t sbitsEstimateKeyLocation(sbitsState *state, void *buffer, void *key) {
 
 /**
  * @brief	Given a key, searches the node for the key. If interior node, returns child record number containing next page id to follow. If leaf node, returns if of first record with that key or (<= key). Returns -1 if key is not found.
- * @param	state	SBITS algorithm state structure
+ * @param	state	embedDB algorithm state structure
  * @param	buffer	Pointer to in-memory buffer holding node
  * @param	key		Key for record
  * @param	range	1 if range query so return pointer to first record <= key, 0 if exact query so much return first exact match record
  */
-id_t sbitsSearchNode(sbitsState *state, void *buffer, void *key, int8_t range) {
+id_t embedDBSearchNode(embedDBState *state, void *buffer, void *key, int8_t range) {
     int16_t first, last, middle, count;
     int8_t compare;
     void *mkey;
 
-    count = SBITS_GET_COUNT(buffer);
-    middle = sbitsEstimateKeyLocation(state, buffer, key);
+    count = EMBEDDB_GET_COUNT(buffer);
+    middle = embedDBEstimateKeyLocation(state, buffer, key);
 
     // check that maxError was calculated and middle is valid (searches full node otherwise)
     if (state->maxError == -1 || middle >= count || middle <= 0) {
@@ -985,7 +983,7 @@ id_t sbitsSearchNode(sbitsState *state, void *buffer, void *key, int8_t range) {
  * @brief	Linear search function to be used with an approximate range of pages.
  * 			If the desired key is found, the page containing that record is loaded
  * 			into the passed buffer pointer.
- * @param	state		SBITS algorithm state structure
+ * @param	state		embedDB algorithm state structure
  * @param 	numReads	Tracks total number of reads for statistics
  * @param	buf			buffer to store page with desired record
  * @param	key			Key for the record to search for
@@ -994,7 +992,7 @@ id_t sbitsSearchNode(sbitsState *state, void *buffer, void *key, int8_t range) {
  * @param 	high		Uper bound for the page the record could be found on
  * @return	Return 0 if success. Non-zero value if error.
  */
-int8_t linearSearch(sbitsState *state, int16_t *numReads, void *buf, void *key, int32_t pageId, int32_t low, int32_t high) {
+int8_t linearSearch(embedDBState *state, int16_t *numReads, void *buf, void *key, int32_t pageId, int32_t low, int32_t high) {
     int32_t pageError = 0;
     int32_t physPageId;
     while (1) {
@@ -1012,10 +1010,10 @@ int8_t linearSearch(sbitsState *state, int16_t *numReads, void *buf, void *key, 
         }
         *numReads += state->numReads - start;
 
-        if (state->compareKey(key, sbitsGetMinKey(state, buf)) < 0) { /* Key is less than smallest record in block. */
+        if (state->compareKey(key, embedDBGetMinKey(state, buf)) < 0) { /* Key is less than smallest record in block. */
             high = --pageId;
             pageError++;
-        } else if (state->compareKey(key, sbitsGetMaxKey(state, buf)) > 0) { /* Key is larger than largest record in block. */
+        } else if (state->compareKey(key, embedDBGetMaxKey(state, buf)) > 0) { /* Key is larger than largest record in block. */
             low = ++pageId;
             pageError++;
         } else {
@@ -1029,12 +1027,12 @@ int8_t linearSearch(sbitsState *state, int16_t *numReads, void *buf, void *key, 
  * @brief	Given a key, returns data associated with key.
  * 			Note: Space for data must be already allocated.
  * 			Data is copied from database into data buffer.
- * @param	state	SBITS algorithm state structure
+ * @param	state	embedDB algorithm state structure
  * @param	key		Key for record
  * @param	data	Pre-allocated memory to copy data for record
  * @return	Return 0 if success. Non-zero value if error.
  */
-int8_t sbitsGet(sbitsState *state, void *key, void *data) {
+int8_t embedDBGet(embedDBState *state, void *key, void *data) {
     if (state->nextDataPageId == 0) {
 #ifdef PRINT_ERRORS
         printf("ERROR: No data in database.\n");
@@ -1073,21 +1071,21 @@ int8_t sbitsGet(sbitsState *state, void *key, void *data) {
         if (first >= last)
             break;
 
-        if (state->compareKey(key, sbitsGetMinKey(state, buf)) < 0) {
+        if (state->compareKey(key, embedDBGetMinKey(state, buf)) < 0) {
             /* Key is less than smallest record in block. */
             last = pageId - 1;
             uint64_t minKey = 0;
-            memcpy(&minKey, sbitsGetMinKey(state, buf), state->keySize);
+            memcpy(&minKey, embedDBGetMinKey(state, buf), state->keySize);
             offset = (thisKey - minKey) / (state->maxRecordsPerPage * state->avgKeyDiff) - 1;
             if (pageId + offset < first)
                 offset = first - pageId;
             pageId += offset;
 
-        } else if (state->compareKey(key, sbitsGetMaxKey(state, buf)) > 0) {
+        } else if (state->compareKey(key, embedDBGetMaxKey(state, buf)) > 0) {
             /* Key is larger than largest record in block. */
             first = pageId + 1;
             uint64_t maxKey = 0;
-            memcpy(&maxKey, sbitsGetMaxKey(state, buf), state->keySize);
+            memcpy(&maxKey, embedDBGetMaxKey(state, buf), state->keySize);
             offset = (thisKey - maxKey) / (state->maxRecordsPerPage * state->avgKeyDiff) + 1;
             if (pageId + offset > last)
                 offset = last - pageId;
@@ -1110,11 +1108,11 @@ int8_t sbitsGet(sbitsState *state, void *key, void *data) {
         if (first >= last)
             break;
 
-        if (state->compareKey(key, sbitsGetMinKey(state, buf)) < 0) {
+        if (state->compareKey(key, embedDBGetMinKey(state, buf)) < 0) {
             /* Key is less than smallest record in block. */
             last = pageId - 1;
             pageId = (first + last) / 2;
-        } else if (state->compareKey(key, sbitsGetMaxKey(state, buf)) > 0) {
+        } else if (state->compareKey(key, embedDBGetMaxKey(state, buf)) > 0) {
             /* Key is larger than largest record in block. */
             first = pageId + 1;
             pageId = (first + last) / 2;
@@ -1135,15 +1133,15 @@ int8_t sbitsGet(sbitsState *state, void *key, void *data) {
     // Check if the currently buffered page is the correct one
     if (!(lowbound <= state->bufferedPageId &&
           highbound >= state->bufferedPageId &&
-          state->compareKey(sbitsGetMinKey(state, buf), key) <= 0 &&
-          state->compareKey(sbitsGetMaxKey(state, buf), key) >= 0)) {
+          state->compareKey(embedDBGetMinKey(state, buf), key) <= 0 &&
+          state->compareKey(embedDBGetMaxKey(state, buf), key) >= 0)) {
         if (linearSearch(state, &numReads, buf, key, location, lowbound, highbound) == -1) {
             return -1;
         }
     }
 
 #endif
-    id_t nextId = sbitsSearchNode(state, buf, key, 0);
+    id_t nextId = embedDBSearchNode(state, buf, key, 0);
 
     if (nextId != -1) {
         /* Key found */
@@ -1158,32 +1156,32 @@ int8_t sbitsGet(sbitsState *state, void *key, void *data) {
 /**
  * @brief	Given a key, returns data associated with key.
  * 			Data is copied from database into data buffer.
- * @param	state	SBITS algorithm state structure
+ * @param	state	embedDB algorithm state structure
  * @param	key		Key for record
  * @param	data	Pre-allocated memory to copy data for record
- * @param	varData	Return variable for variable data as a sbitsVarDataStream (Unallocated). Returns NULL if no variable data. **Be sure to free the stream after you are done with it**
+ * @param	varData	Return variable for variable data as a embedDBVarDataStream (Unallocated). Returns NULL if no variable data. **Be sure to free the stream after you are done with it**
  * @return	Return 0 if success. Non-zero value if error.
  * 			-1 : Error reading file or failed memory allocation
  * 			1  : Variable data was deleted to make room for newer data
  */
-int8_t sbitsGetVar(sbitsState *state, void *key, void *data, sbitsVarDataStream **varData) {
-    if (!SBITS_USING_VDATA(state->parameters)) {
+int8_t embedDBGetVar(embedDBState *state, void *key, void *data, embedDBVarDataStream **varData) {
+    if (!EMBEDDB_USING_VDATA(state->parameters)) {
 #ifdef PRINT_ERRORS
-        printf("ERROR: sbitsNextVar called when not using variable data\n");
+        printf("ERROR: embedDBNextVar called when not using variable data\n");
 #endif
         return 0;
     }
 
     // Get the fixed data
-    int8_t r = sbitsGet(state, key, data);
+    int8_t r = embedDBGet(state, key, data);
     if (r != 0) {
         return r;
     }
 
     // Now the input buffer contains the record, so we can use that to find the variable data
     void *buf = (int8_t *)state->buffer + state->pageSize;
-    id_t recordNum = sbitsSearchNode(state, buf, key, 0);
-    int8_t setupResult = sbitsSetupVarDataStream(state, key, varData, recordNum);
+    id_t recordNum = embedDBSearchNode(state, buf, key, 0);
+    int8_t setupResult = embedDBSetupVarDataStream(state, key, varData, recordNum);
 
     switch (setupResult) {
         case 0:
@@ -1200,14 +1198,14 @@ int8_t sbitsGetVar(sbitsState *state, void *key, void *data, sbitsVarDataStream 
 }
 
 /**
- * @brief	Initialize iterator on sbits structure.
- * @param	state	SBITS algorithm state structure
- * @param	it		SBITS iterator state structure
+ * @brief	Initialize iterator on embedDB structure.
+ * @param	state	embedDB algorithm state structure
+ * @param	it		embedDB iterator state structure
  */
-void sbitsInitIterator(sbitsState *state, sbitsIterator *it) {
+void embedDBInitIterator(embedDBState *state, embedDBIterator *it) {
     /* Build query bitmap (if used) */
     it->queryBitmap = NULL;
-    if (SBITS_USING_BMAP(state->parameters)) {
+    if (EMBEDDB_USING_BMAP(state->parameters)) {
         /* Verify that bitmap index is useful (must have set either min or max data value) */
         if (it->minData != NULL || it->maxData != NULL) {
             it->queryBitmap = calloc(1, state->bitmapSize);
@@ -1216,10 +1214,10 @@ void sbitsInitIterator(sbitsState *state, sbitsIterator *it) {
     }
 
 #ifdef PRINT_ERRORS
-    if (!SBITS_USING_BMAP(state->parameters)) {
-        printf("WARN: Iterator not using index. If this is not intended, ensure that the sbitsState is using a bitmap and was initialized with an index file\n");
-    } else if (!SBITS_USING_INDEX(state->parameters)) {
-        printf("WARN: Iterator not using index to full extent. If this is not intended, ensure that the sbitsState was initialized with an index file\n");
+    if (!EMBEDDB_USING_BMAP(state->parameters)) {
+        printf("WARN: Iterator not using index. If this is not intended, ensure that the embedDBState is using a bitmap and was initialized with an index file\n");
+    } else if (!EMBEDDB_USING_INDEX(state->parameters)) {
+        printf("WARN: Iterator not using index to full extent. If this is not intended, ensure that the embedDBState was initialized with an index file\n");
     }
 #endif
 
@@ -1243,9 +1241,9 @@ void sbitsInitIterator(sbitsState *state, sbitsIterator *it) {
 
 /**
  * @brief	Close iterator after use.
- * @param	it		SBITS iterator structure
+ * @param	it		embedDB iterator structure
  */
-void sbitsCloseIterator(sbitsIterator *it) {
+void embedDBCloseIterator(embedDBIterator *it) {
     if (it->queryBitmap != NULL) {
         free(it->queryBitmap);
     }
@@ -1255,35 +1253,35 @@ void sbitsCloseIterator(sbitsIterator *it) {
  * @brief	Flushes output buffer.
  * @param	state	algorithm state structure
  */
-int8_t sbitsFlush(sbitsState *state) {
+int8_t embedDBFlush(embedDBState *state) {
     // As the first buffer is the data write buffer, no address change is required
-    id_t pageNum = writePage(state, (int8_t *)state->buffer + SBITS_DATA_WRITE_BUFFER * state->pageSize);
+    id_t pageNum = writePage(state, (int8_t *)state->buffer + EMBEDDB_DATA_WRITE_BUFFER * state->pageSize);
     state->fileInterface->flush(state->dataFile);
 
     indexPage(state, pageNum);
 
-    if (SBITS_USING_INDEX(state->parameters)) {
-        void *buf = (int8_t *)state->buffer + state->pageSize * (SBITS_INDEX_WRITE_BUFFER);
-        count_t idxcount = SBITS_GET_COUNT(buf);
-        SBITS_INC_COUNT(buf);
+    if (EMBEDDB_USING_INDEX(state->parameters)) {
+        void *buf = (int8_t *)state->buffer + state->pageSize * (EMBEDDB_INDEX_WRITE_BUFFER);
+        count_t idxcount = EMBEDDB_GET_COUNT(buf);
+        EMBEDDB_INC_COUNT(buf);
 
         /* Copy record onto index page */
-        void *bm = SBITS_GET_BITMAP(state->buffer);
-        memcpy((void *)((int8_t *)buf + SBITS_IDX_HEADER_SIZE + state->bitmapSize * idxcount), bm, state->bitmapSize);
+        void *bm = EMBEDDB_GET_BITMAP(state->buffer);
+        memcpy((void *)((int8_t *)buf + EMBEDDB_IDX_HEADER_SIZE + state->bitmapSize * idxcount), bm, state->bitmapSize);
 
         writeIndexPage(state, buf);
         state->fileInterface->flush(state->indexFile);
 
         /* Reinitialize buffer */
-        initBufferPage(state, SBITS_INDEX_WRITE_BUFFER);
+        initBufferPage(state, EMBEDDB_INDEX_WRITE_BUFFER);
     }
 
     /* Reinitialize buffer */
-    initBufferPage(state, SBITS_DATA_WRITE_BUFFER);
+    initBufferPage(state, EMBEDDB_DATA_WRITE_BUFFER);
 
     // Flush var data page
-    if (SBITS_USING_VDATA(state->parameters)) {
-        writeVariablePage(state, (int8_t *)state->buffer + SBITS_VAR_WRITE_BUFFER(state->parameters) * state->pageSize);
+    if (EMBEDDB_USING_VDATA(state->parameters)) {
+        writeVariablePage(state, (int8_t *)state->buffer + EMBEDDB_VAR_WRITE_BUFFER(state->parameters) * state->pageSize);
         state->fileInterface->flush(state->varFile);
     }
     return 0;
@@ -1291,13 +1289,13 @@ int8_t sbitsFlush(sbitsState *state) {
 
 /**
  * @brief	Return next key, data pair for iterator.
- * @param	state	SBITS algorithm state structure
- * @param	it		SBITS iterator state structure
+ * @param	state	embedDB algorithm state structure
+ * @param	it		embedDB iterator state structure
  * @param	key		Return variable for key (Pre-allocated)
  * @param	data	Return variable for data (Pre-allocated)
  * @return	1 if successful, 0 if no more records
  */
-int8_t sbitsNext(sbitsState *state, sbitsIterator *it, void *key, void *data) {
+int8_t embedDBNext(embedDBState *state, embedDBIterator *it, void *key, void *data) {
     while (1) {
         if (it->nextDataPage >= state->nextDataPageId) {
             return 0;
@@ -1320,7 +1318,7 @@ int8_t sbitsNext(sbitsState *state, sbitsIterator *it, void *key, void *data) {
                 }
 
                 // Get bitmap for data page in question
-                void *indexBM = (int8_t *)state->buffer + SBITS_INDEX_READ_BUFFER * state->pageSize + SBITS_IDX_HEADER_SIZE + indexRec * state->bitmapSize;
+                void *indexBM = (int8_t *)state->buffer + EMBEDDB_INDEX_READ_BUFFER * state->pageSize + EMBEDDB_IDX_HEADER_SIZE + indexRec * state->bitmapSize;
 
                 // Determine if we should read the data page
                 if (!bitmapOverlap(it->queryBitmap, indexBM, state->bitmapSize)) {
@@ -1339,8 +1337,8 @@ int8_t sbitsNext(sbitsState *state, sbitsIterator *it, void *key, void *data) {
         }
 
         // Keep reading record until we find one that matches the query
-        int8_t *buf = (int8_t *)state->buffer + SBITS_DATA_READ_BUFFER * state->pageSize;
-        uint32_t pageRecordCount = SBITS_GET_COUNT(buf);
+        int8_t *buf = (int8_t *)state->buffer + EMBEDDB_DATA_READ_BUFFER * state->pageSize;
+        uint32_t pageRecordCount = EMBEDDB_GET_COUNT(buf);
         while (it->nextDataRec < pageRecordCount) {
             // Get record
             memcpy(key, buf + state->headerSize + it->nextDataRec * state->recordSize, state->keySize);
@@ -1371,29 +1369,29 @@ int8_t sbitsNext(sbitsState *state, sbitsIterator *it, void *key, void *data) {
 
 /**
  * @brief	Return next key, data, variable data set for iterator
- * @param	state	SBITS algorithm state structure
- * @param	it		SBITS iterator state structure
+ * @param	state	embedDB algorithm state structure
+ * @param	it		embedDB iterator state structure
  * @param	key		Return variable for key (Pre-allocated)
  * @param	data	Return variable for data (Pre-allocated)
- * @param	varData	Return variable for variable data as a sbitsVarDataStream (Unallocated). Returns NULL if no variable data. **Be sure to free the stream after you are done with it**
+ * @param	varData	Return variable for variable data as a embedDBVarDataStream (Unallocated). Returns NULL if no variable data. **Be sure to free the stream after you are done with it**
  * @return	1 if successful, 0 if no more records
  */
-int8_t sbitsNextVar(sbitsState *state, sbitsIterator *it, void *key, void *data, sbitsVarDataStream **varData) {
-    if (!SBITS_USING_VDATA(state->parameters)) {
+int8_t embedDBNextVar(embedDBState *state, embedDBIterator *it, void *key, void *data, embedDBVarDataStream **varData) {
+    if (!EMBEDDB_USING_VDATA(state->parameters)) {
 #ifdef PRINT_ERRORS
-        printf("ERROR: sbitsNextVar called when not using variable data\n");
+        printf("ERROR: embedDBNextVar called when not using variable data\n");
 #endif
         return 0;
     }
 
-    int8_t r = sbitsNext(state, it, key, data);
+    int8_t r = embedDBNext(state, it, key, data);
     if (!r) {
         return 0;
     }
 
     // Get the vardata address from the record
     count_t recordNum = it->nextDataRec - 1;
-    int8_t setupResult = sbitsSetupVarDataStream(state, key, varData, recordNum);
+    int8_t setupResult = embedDBSetupVarDataStream(state, key, varData, recordNum);
     switch (setupResult) {
         case 0:
         case 1:
@@ -1408,18 +1406,18 @@ int8_t sbitsNextVar(sbitsState *state, sbitsIterator *it, void *key, void *data,
 
 /**
  * @brief Setup varDataStream object to return the variable data for a record
- * @param	state	SBITS algorithm state structure
+ * @param	state	embedDB algorithm state structure
  * @param   key     Key for the record
- * @param   varData Return variable for variable data as a sbitsVarDataStream (Unallocated). Returns NULL if no variable data. **Be sure to free the stream after you are done with it**
+ * @param   varData Return variable for variable data as a embedDBVarDataStream (Unallocated). Returns NULL if no variable data. **Be sure to free the stream after you are done with it**
  * @return  Returns 0 if sucessfull or no variable data for the record, 1 if the records variable data was overwritten, 2 if the page failed to read, and 3 if the memorey failed to allocate.
  */
-int8_t sbitsSetupVarDataStream(sbitsState *state, void *key, sbitsVarDataStream **varData, id_t recordNumber) {
-    void *dataBuf = (int8_t *)state->buffer + state->pageSize * SBITS_DATA_READ_BUFFER;
+int8_t embedDBSetupVarDataStream(embedDBState *state, void *key, embedDBVarDataStream **varData, id_t recordNumber) {
+    void *dataBuf = (int8_t *)state->buffer + state->pageSize * EMBEDDB_DATA_READ_BUFFER;
     void *record = (int8_t *)dataBuf + state->headerSize + recordNumber * state->recordSize;
 
     uint32_t varDataAddr = 0;
     memcpy(&varDataAddr, (int8_t *)record + state->keySize + state->dataSize, sizeof(uint32_t));
-    if (varDataAddr == SBITS_NO_VAR_DATA) {
+    if (varDataAddr == EMBEDDB_NO_VAR_DATA) {
         *varData = NULL;
         return 0;
     }
@@ -1435,13 +1433,13 @@ int8_t sbitsSetupVarDataStream(sbitsState *state, void *key, sbitsVarDataStream 
     // Read in page
     if (readVariablePage(state, pageNum) != 0) {
 #ifdef PRINT_ERRORS
-        printf("ERROR: sbits failed to read variable page\n");
+        printf("ERROR: embedDB failed to read variable page\n");
 #endif
         return 2;
     }
 
     // Get length of variable data
-    void *varBuf = (int8_t *)state->buffer + state->pageSize * SBITS_VAR_READ_BUFFER(state->parameters);
+    void *varBuf = (int8_t *)state->buffer + state->pageSize * EMBEDDB_VAR_READ_BUFFER(state->parameters);
     uint32_t pageOffset = varDataAddr % state->pageSize;
     uint32_t dataLen = 0;
     memcpy(&dataLen, (int8_t *)varBuf + pageOffset, sizeof(uint32_t));
@@ -1456,10 +1454,10 @@ int8_t sbitsSetupVarDataStream(sbitsState *state, void *key, sbitsVarDataStream 
     }
 
     // Create varDataStream
-    sbitsVarDataStream *varDataStream = malloc(sizeof(sbitsVarDataStream));
+    embedDBVarDataStream *varDataStream = malloc(sizeof(embedDBVarDataStream));
     if (varDataStream == NULL) {
 #ifdef PRINT_ERRORS
-        printf("ERROR: Failed to alloc memory for sbitsVarDataStream\n");
+        printf("ERROR: Failed to alloc memory for embedDBVarDataStream\n");
 #endif
         return 3;
     }
@@ -1475,16 +1473,16 @@ int8_t sbitsSetupVarDataStream(sbitsState *state, void *key, sbitsVarDataStream 
 
 /**
  * @brief	Reads data from variable data stream into the given buffer.
- * @param	state	SBITS algorithm state structure
+ * @param	state	embedDB algorithm state structure
  * @param	stream	Variable data stream
  * @param	buffer	Buffer to read data into
  * @param	length	Number of bytes to read (Must be <= buffer size)
  * @return	Number of bytes read
  */
-uint32_t sbitsVarDataStreamRead(sbitsState *state, sbitsVarDataStream *stream, void *buffer, uint32_t length) {
+uint32_t embedDBVarDataStreamRead(embedDBState *state, embedDBVarDataStream *stream, void *buffer, uint32_t length) {
     if (buffer == NULL) {
 #ifdef PRINT_ERRORS
-        printf("ERROR: Cannot pass null buffer to sbitsVarDataStreamRead\n");
+        printf("ERROR: Cannot pass null buffer to embedDBVarDataStreamRead\n");
 #endif
         return 0;
     }
@@ -1499,7 +1497,7 @@ uint32_t sbitsVarDataStreamRead(sbitsState *state, sbitsVarDataStream *stream, v
     }
 
     // Keep reading in data until the buffer is full
-    void *varDataBuf = (int8_t *)state->buffer + state->pageSize * SBITS_VAR_READ_BUFFER(state->parameters);
+    void *varDataBuf = (int8_t *)state->buffer + state->pageSize * EMBEDDB_VAR_READ_BUFFER(state->parameters);
     uint32_t amtRead = 0;
     while (amtRead < length && stream->bytesRead < stream->totalBytes) {
         uint16_t pageOffset = stream->fileOffset % state->pageSize;
@@ -1528,9 +1526,9 @@ uint32_t sbitsVarDataStreamRead(sbitsState *state, sbitsVarDataStream *stream, v
 
 /**
  * @brief	Prints statistics.
- * @param	state	SBITS state structure
+ * @param	state	embedDB state structure
  */
-void printStats(sbitsState *state) {
+void embedDBPrintStats(embedDBState *state) {
     printf("Num reads: %d\n", state->numReads);
     printf("Buffer hits: %d\n", state->bufferHits);
     printf("Num writes: %d\n", state->numWrites);
@@ -1550,11 +1548,11 @@ void printStats(sbitsState *state) {
 
 /**
  * @brief	Writes page in buffer to storage. Returns page number.
- * @param	state	SBITS algorithm state structure
+ * @param	state	embedDB algorithm state structure
  * @param	buffer	Buffer for writing out page
  * @return	Return page number if success, -1 if error.
  */
-id_t writePage(sbitsState *state, void *buffer) {
+id_t writePage(embedDBState *state, void *buffer) {
     if (state->dataFile == NULL)
         return -1;
 
@@ -1590,12 +1588,12 @@ id_t writePage(sbitsState *state, void *buffer) {
 }
 
 /**
- * @brief	Calculates the number of spline points not in use by SBITs and deltes them
- * @param	state	SBITS algorithm state structure
- * @param	key 	The minimim key SBITS still needs points for
+ * @brief	Calculates the number of spline points not in use by embedDB and deltes them
+ * @param	state	embedDB algorithm state structure
+ * @param	key 	The minimim key embedDB still needs points for
  * @return	Returns the number of points deleted
  */
-uint32_t cleanSpline(sbitsState *state, void *key) {
+uint32_t cleanSpline(embedDBState *state, void *key) {
     uint32_t numPointsErased = 0;
     void *currentPoint;
     for (size_t i = 0; i < state->spl->count; i++) {
@@ -1614,11 +1612,11 @@ uint32_t cleanSpline(sbitsState *state, void *key) {
 
 /**
  * @brief	Writes index page in buffer to storage. Returns page number.
- * @param	state	SBITS algorithm state structure
+ * @param	state	embedDB algorithm state structure
  * @param	buffer	Buffer to use for writing index page
  * @return	Return page number if success, -1 if error.
  */
-id_t writeIndexPage(sbitsState *state, void *buffer) {
+id_t writeIndexPage(embedDBState *state, void *buffer) {
     if (state->indexFile == NULL)
         return -1;
 
@@ -1651,11 +1649,11 @@ id_t writeIndexPage(sbitsState *state, void *buffer) {
 
 /**
  * @brief	Writes variable data page in buffer to storage. Returns page number.
- * @param	state	SBITS algorithm state structure
+ * @param	state	embedDB algorithm state structure
  * @param	buffer	Buffer to use to write page to storage
  * @return	Return page number if success, -1 if error.
  */
-id_t writeVariablePage(sbitsState *state, void *buffer) {
+id_t writeVariablePage(embedDBState *state, void *buffer) {
     if (state->varFile == NULL) {
         return -1;
     }
@@ -1673,13 +1671,13 @@ id_t writeVariablePage(sbitsState *state, void *buffer) {
         if (readVariablePage(state, pageNum) != 0) {
             return -1;
         }
-        void *buf = (int8_t *)state->buffer + state->pageSize * SBITS_VAR_READ_BUFFER(state->parameters) + sizeof(id_t);
+        void *buf = (int8_t *)state->buffer + state->pageSize * EMBEDDB_VAR_READ_BUFFER(state->parameters) + sizeof(id_t);
         memcpy(&state->minVarRecordId, buf, state->keySize);
         state->minVarRecordId += 1;  // Add one because the result from the last line is a record that is erased
     }
 
     // Add logical page number to data page
-    void *buf = (int8_t *)state->buffer + state->pageSize * SBITS_VAR_WRITE_BUFFER(state->parameters);
+    void *buf = (int8_t *)state->buffer + state->pageSize * EMBEDDB_VAR_WRITE_BUFFER(state->parameters);
     memcpy(buf, &state->nextVarPageId, sizeof(id_t));
 
     // Write to file
@@ -1700,11 +1698,11 @@ id_t writeVariablePage(sbitsState *state, void *buffer) {
 
 /**
  * @brief	Reads given page from storage.
- * @param	state	SBITS algorithm state structure
+ * @param	state	embedDB algorithm state structure
  * @param	pageNum	Page number to read
  * @return	Return 0 if success, -1 if error.
  */
-int8_t readPage(sbitsState *state, id_t pageNum) {
+int8_t readPage(embedDBState *state, id_t pageNum) {
     /* Check if page is currently in buffer */
     if (pageNum == state->bufferedPageId) {
         state->bufferHits++;
@@ -1725,18 +1723,18 @@ int8_t readPage(sbitsState *state, id_t pageNum) {
 
 /**
  * @brief	Reads given index page from storage.
- * @param	state	SBITS algorithm state structure
+ * @param	state	embedDB algorithm state structure
  * @param	pageNum	Page number to read
  * @return	Return 0 if success, -1 if error.
  */
-int8_t readIndexPage(sbitsState *state, id_t pageNum) {
+int8_t readIndexPage(embedDBState *state, id_t pageNum) {
     /* Check if page is currently in buffer */
     if (pageNum == state->bufferedIndexPageId) {
         state->bufferHits++;
         return 0;
     }
 
-    void *buf = (int8_t *)state->buffer + state->pageSize * SBITS_INDEX_READ_BUFFER;
+    void *buf = (int8_t *)state->buffer + state->pageSize * EMBEDDB_INDEX_READ_BUFFER;
 
     /* Page is not in buffer. Read from storage. */
     /* Read page into start of buffer */
@@ -1750,11 +1748,11 @@ int8_t readIndexPage(sbitsState *state, id_t pageNum) {
 
 /**
  * @brief	Reads given variable data page from storage
- * @param 	state 	SBITS algorithm state structure
+ * @param 	state 	embedDB algorithm state structure
  * @param 	pageNum Page number to read
  * @return 	Return 0 if success, -1 if error
  */
-int8_t readVariablePage(sbitsState *state, id_t pageNum) {
+int8_t readVariablePage(embedDBState *state, id_t pageNum) {
     // Check if page is currently in buffer
     if (pageNum == state->bufferedVarPage) {
         state->bufferHits++;
@@ -1762,7 +1760,7 @@ int8_t readVariablePage(sbitsState *state, id_t pageNum) {
     }
 
     // Get buffer to read into
-    void *buf = (int8_t *)state->buffer + SBITS_VAR_READ_BUFFER(state->parameters) * state->pageSize;
+    void *buf = (int8_t *)state->buffer + EMBEDDB_VAR_READ_BUFFER(state->parameters) * state->pageSize;
 
     // Read in one page worth of data
     if (state->fileInterface->read(buf, pageNum, state->pageSize, state->varFile) == 0) {
@@ -1777,9 +1775,9 @@ int8_t readVariablePage(sbitsState *state, id_t pageNum) {
 
 /**
  * @brief	Resets statistics.
- * @param	state	SBITS state structure
+ * @param	state	embedDB state structure
  */
-void resetStats(sbitsState *state) {
+void embedDBResetStats(embedDBState *state) {
     state->numReads = 0;
     state->numWrites = 0;
     state->bufferHits = 0;
@@ -1789,9 +1787,9 @@ void resetStats(sbitsState *state) {
 
 /**
  * @brief	Closes structure and frees any dynamic space.
- * @param	state	SBITS state structure
+ * @param	state	embedDB state structure
  */
-void sbitsClose(sbitsState *state) {
+void embedDBClose(embedDBState *state) {
     if (state->dataFile != NULL) {
         state->fileInterface->close(state->dataFile);
     }

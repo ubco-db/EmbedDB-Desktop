@@ -14,14 +14,14 @@ This project is tested using the [Unity](https://github.com/ThrowTheSwitch/Unity
 
 #### Executing the tests
 
-To run the tests, you must run the [makefile](../makefile) using the command `make`. Depending on your operating system, you may have to install make, and the command may be different.
+To run the tests, you must run the [makefile](../makefile) using the command `make test`. Depending on your operating system, you may have to install make, and the command may be different.
 
 ## Information About Testing Setup
 
 The tests are run using the [makefile](../makefile). This runs the tests by searching through the [src](../src/) and [test](../test/) folders, finding matching files, building the source code and tests, and runs the generated executable file.
 
-- Note that becuase of how the tests are found, they must be named using the convention where if the srouce file is named `Math.c`, the test file must be named `TestMath.c`.
+- Note that becuase of how the tests are found, they must be named started with **Test_**
 
 Unity records the sucess and failures of the test suites in a text file in the [results](../build/results/) folder. Afterwards, all of the files are parsed using a python script to build a JUnit XML format file to summarize the results.
 
-- Both the [makefile](../makefile) and [JUnit Script](../scripts/stylize_as_junit.py) are sourced from the [Unity](https://github.com/ThrowTheSwitch/Unity) testing library. Minor modifications were made so they would work with this project.
+- Both the [makefile](../makefile) and [JUnit Script](../scripts/stylize_as_junit.py) are sourced from the [Unity](https://github.com/ThrowTheSwitch/Unity) testing library. Modifications were made so they would work with this project.

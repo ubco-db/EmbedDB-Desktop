@@ -1,9 +1,44 @@
+/******************************************************************************/
+/**
+ * @file		Test_advanced_queries.c
+ * @author		EmbedDB Team (See Authors.md)
+ * @brief		Test for EmbedDB advanced queries
+ * @copyright	Copyright 2023
+ * 			    EmbedDB Team
+ * @par Redistribution and use in source and binary forms, with or without
+ * 	modification, are permitted provided that the following conditions are met:
+ *
+ * @par 1.Redistributions of source code must retain the above copyright notice,
+ * 	this list of conditions and the following disclaimer.
+ *
+ * @par 2.Redistributions in binary form must reproduce the above copyright notice,
+ * 	this list of conditions and the following disclaimer in the documentation
+ * 	and/or other materials provided with the distribution.
+ *
+ * @par 3.Neither the name of the copyright holder nor the names of its contributors
+ * 	may be used to endorse or promote products derived from this software without
+ * 	specific prior written permission.
+ *
+ * @par THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * 	AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * 	IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * 	ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+ * 	LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * 	CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * 	SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * 	INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * 	CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * 	ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * 	POSSIBILITY OF SUCH DAMAGE.
+ */
+/******************************************************************************/
+
 #include <math.h>
 #include <string.h>
 
+#include "../src/embedDB/embedDB.h"
+#include "../src/embedDB/utilityFunctions.h"
 #include "../src/query-interface/advancedQueries.h"
-#include "../src/sbits/sbits.h"
-#include "../src/sbits/utilityFunctions.h"
 #include "unity.h"
 
 typedef struct DataSource {
@@ -12,22 +47,22 @@ typedef struct DataSource {
     int32_t pageRecord;
 } DataSource;
 
-void insertData(sbitsState* state, char* filename);
+void insertData(embedDBState* state, char* filename);
 void* nextRecord(DataSource* source);
 uint32_t dayGroup(const void* record);
 int8_t sameDayGroup(const void* lastRecord, const void* record);
-void writeDayGroup(sbitsAggregateFunc* aggFunc, sbitsSchema* schema, void* recordBuffer, const void* lastRecord);
-void customShiftInit(sbitsOperator* operator);
-int8_t customShiftNext(sbitsOperator* operator);
-void customShiftClose(sbitsOperator* operator);
+void writeDayGroup(embedDBAggregateFunc* aggFunc, embedDBSchema* schema, void* recordBuffer, const void* lastRecord);
+void customShiftInit(embedDBOperator* operator);
+int8_t customShiftNext(embedDBOperator* operator);
+void customShiftClose(embedDBOperator* operator);
 
-sbitsState *stateUWA, *stateSEA;
-sbitsSchema* baseSchema;
+embedDBState *stateUWA, *stateSEA;
+embedDBSchema* baseSchema;
 DataSource *uwaData, *seaData;
 
 void setUp(void) {
     // Init UWA dataset
-    stateUWA = calloc(1, sizeof(sbitsState));
+    stateUWA = calloc(1, sizeof(embedDBState));
     stateUWA->keySize = 4;
     stateUWA->dataSize = 12;
     stateUWA->compareKey = int32Comparator;
@@ -43,16 +78,16 @@ void setUp(void) {
     stateUWA->indexFile = setupFile(indexPath);
     stateUWA->bufferSizeInBlocks = 4;
     stateUWA->buffer = malloc(stateUWA->bufferSizeInBlocks * stateUWA->pageSize);
-    stateUWA->parameters = SBITS_USE_BMAP | SBITS_USE_INDEX | SBITS_RESET_DATA;
+    stateUWA->parameters = EMBEDDB_USE_BMAP | EMBEDDB_USE_INDEX | EMBEDDB_RESET_DATA;
     stateUWA->bitmapSize = 2;
     stateUWA->inBitmap = inBitmapInt16;
     stateUWA->updateBitmap = updateBitmapInt16;
     stateUWA->buildBitmapFromRange = buildBitmapInt16FromRange;
-    sbitsInit(stateUWA, 1);
+    embedDBInit(stateUWA, 1);
     insertData(stateUWA, "data/uwa500K.bin");
 
     // Init SEA dataset
-    stateSEA = calloc(1, sizeof(sbitsState));
+    stateSEA = calloc(1, sizeof(embedDBState));
     stateSEA->keySize = 4;
     stateSEA->dataSize = 12;
     stateSEA->compareKey = int32Comparator;
@@ -68,18 +103,18 @@ void setUp(void) {
     stateSEA->indexFile = setupFile(indexPath2);
     stateSEA->bufferSizeInBlocks = 4;
     stateSEA->buffer = malloc(stateSEA->bufferSizeInBlocks * stateSEA->pageSize);
-    stateSEA->parameters = SBITS_USE_BMAP | SBITS_USE_INDEX | SBITS_RESET_DATA;
+    stateSEA->parameters = EMBEDDB_USE_BMAP | EMBEDDB_USE_INDEX | EMBEDDB_RESET_DATA;
     stateSEA->bitmapSize = 2;
     stateSEA->inBitmap = inBitmapInt16;
     stateSEA->updateBitmap = updateBitmapInt16;
     stateSEA->buildBitmapFromRange = buildBitmapInt16FromRange;
-    sbitsInit(stateSEA, 1);
+    embedDBInit(stateSEA, 1);
     insertData(stateSEA, "data/sea100K.bin");
 
     // Init base schema
     int8_t colSizes[] = {4, 4, 4, 4};
-    int8_t colSignedness[] = {SBITS_COLUMN_UNSIGNED, SBITS_COLUMN_SIGNED, SBITS_COLUMN_SIGNED, SBITS_COLUMN_SIGNED};
-    baseSchema = sbitsCreateSchema(4, colSizes, colSignedness);
+    int8_t colSignedness[] = {embedDB_COLUMN_UNSIGNED, embedDB_COLUMN_SIGNED, embedDB_COLUMN_SIGNED, embedDB_COLUMN_SIGNED};
+    baseSchema = embedDBCreateSchema(4, colSizes, colSignedness);
 
     // Open data sources for comparison
     uwaData = malloc(sizeof(DataSource));
@@ -94,16 +129,16 @@ void setUp(void) {
 }
 
 void test_projection() {
-    sbitsIterator it;
+    embedDBIterator it;
     it.minKey = NULL;
     it.maxKey = NULL;
     it.minData = NULL;
     it.maxData = NULL;
-    sbitsInitIterator(stateUWA, &it);
+    embedDBInitIterator(stateUWA, &it);
 
-    sbitsOperator* scanOp = createTableScanOperator(stateUWA, &it, baseSchema);
+    embedDBOperator* scanOp = createTableScanOperator(stateUWA, &it, baseSchema);
     uint8_t projCols[] = {0, 1, 3};
-    sbitsOperator* projOp = createProjectionOperator(scanOp, 3, projCols);
+    embedDBOperator* projOp = createProjectionOperator(scanOp, 3, projCols);
     projOp->init(projOp);
 
     TEST_ASSERT_EQUAL_UINT8_MESSAGE(3, projOp->schema->numCols, "Output schema has wrong number of columns");
@@ -121,25 +156,25 @@ void test_projection() {
     }
 
     projOp->close(projOp);
-    sbitsFreeOperatorRecursive(&projOp);
+    embedDBFreeOperatorRecursive(&projOp);
 
     TEST_ASSERT_EQUAL_INT32_MESSAGE(500000, recordsReturned, "Projection didn't return the right number of records");
 }
 
 void test_selection() {
     int32_t maxTemp = 400;
-    sbitsIterator it;
+    embedDBIterator it;
     it.minKey = NULL;
     it.maxKey = NULL;
     it.minData = NULL;
     it.maxData = &maxTemp;
-    sbitsInitIterator(stateUWA, &it);
+    embedDBInitIterator(stateUWA, &it);
 
-    sbitsOperator* scanOp = createTableScanOperator(stateUWA, &it, baseSchema);
+    embedDBOperator* scanOp = createTableScanOperator(stateUWA, &it, baseSchema);
     int32_t selVal = 200;
-    sbitsOperator* selectOp = createSelectionOperator(scanOp, 3, SELECT_GTE, &selVal);
+    embedDBOperator* selectOp = createSelectionOperator(scanOp, 3, SELECT_GTE, &selVal);
     uint8_t projCols[] = {0, 1, 3};
-    sbitsOperator* projOp = createProjectionOperator(selectOp, 3, projCols);
+    embedDBOperator* projOp = createProjectionOperator(selectOp, 3, projCols);
     projOp->init(projOp);
 
     int32_t recordsReturned = 0;
@@ -156,31 +191,31 @@ void test_selection() {
     }
 
     projOp->close(projOp);
-    sbitsFreeOperatorRecursive(&projOp);
+    embedDBFreeOperatorRecursive(&projOp);
 
     TEST_ASSERT_EQUAL_INT32_MESSAGE(4, recordsReturned, "Selection didn't return the right number of records");
 }
 
 void test_aggregate() {
-    sbitsIterator it;
+    embedDBIterator it;
     it.minKey = NULL;
     it.maxKey = NULL;
     it.minData = NULL;
     it.maxData = NULL;
-    sbitsInitIterator(stateUWA, &it);
+    embedDBInitIterator(stateUWA, &it);
 
-    sbitsOperator* scanOp = createTableScanOperator(stateUWA, &it, baseSchema);
+    embedDBOperator* scanOp = createTableScanOperator(stateUWA, &it, baseSchema);
     int32_t selVal = 150;
-    sbitsOperator* selectOp = createSelectionOperator(scanOp, 3, SELECT_GTE, &selVal);
-    sbitsAggregateFunc groupName = {NULL, NULL, writeDayGroup, NULL, 4};
-    sbitsAggregateFunc* counter = createCountAggregate();
-    sbitsAggregateFunc* maxWind = createMaxAggregate(3, -4);
-    sbitsAggregateFunc* avgWind = createAvgAggregate(3, 4);
-    sbitsAggregateFunc* sum = createSumAggregate(2);
-    sbitsAggregateFunc* minTemp = createMinAggregate(1, -4);
-    sbitsAggregateFunc aggFunctions[] = {groupName, *counter, *maxWind, *avgWind, *sum, *minTemp};
+    embedDBOperator* selectOp = createSelectionOperator(scanOp, 3, SELECT_GTE, &selVal);
+    embedDBAggregateFunc groupName = {NULL, NULL, writeDayGroup, NULL, 4};
+    embedDBAggregateFunc* counter = createCountAggregate();
+    embedDBAggregateFunc* maxWind = createMaxAggregate(3, -4);
+    embedDBAggregateFunc* avgWind = createAvgAggregate(3, 4);
+    embedDBAggregateFunc* sum = createSumAggregate(2);
+    embedDBAggregateFunc* minTemp = createMinAggregate(1, -4);
+    embedDBAggregateFunc aggFunctions[] = {groupName, *counter, *maxWind, *avgWind, *sum, *minTemp};
     uint32_t functionsLength = 6;
-    sbitsOperator* aggOp = createAggregateOperator(selectOp, sameDayGroup, aggFunctions, functionsLength);
+    embedDBOperator* aggOp = createAggregateOperator(selectOp, sameDayGroup, aggFunctions, functionsLength);
     aggOp->init(aggOp);
 
     int32_t recordsReturned = 0;
@@ -234,45 +269,45 @@ void test_aggregate() {
     }
 
     aggOp->close(aggOp);
-    sbitsFreeOperatorRecursive(&aggOp);
+    embedDBFreeOperatorRecursive(&aggOp);
 
     TEST_ASSERT_EQUAL_INT32_MESSAGE(90, recordsReturned, "Aggregate didn't return the right number of records");
 }
 
 void test_join() {
-    sbitsIterator it;
+    embedDBIterator it;
     it.minKey = NULL;
     it.maxKey = NULL;
     it.minData = NULL;
     it.maxData = NULL;
-    sbitsIterator it2;
+    embedDBIterator it2;
     uint32_t year2015 = 1420099200;      // 2015-01-01
     uint32_t year2016 = 1451635200 - 1;  // 2016-01-01
     it2.minKey = &year2015;
     it2.maxKey = &year2016;
     it2.minData = NULL;
     it2.maxData = NULL;
-    sbitsInitIterator(stateUWA, &it);   // Iterator on uwa
-    sbitsInitIterator(stateSEA, &it2);  // Iterator on sea
+    embedDBInitIterator(stateUWA, &it);   // Iterator on uwa
+    embedDBInitIterator(stateSEA, &it2);  // Iterator on sea
 
     // Prepare uwa table
-    sbitsOperator* scan1 = createTableScanOperator(stateUWA, &it, baseSchema);
-    sbitsOperator* shift = malloc(sizeof(sbitsOperator));  // Custom operator to shift the year 2000 to 2015 to make the join work
+    embedDBOperator* scan1 = createTableScanOperator(stateUWA, &it, baseSchema);
+    embedDBOperator* shift = malloc(sizeof(embedDBOperator));  // Custom operator to shift the year 2000 to 2015 to make the join work
     shift->input = scan1;
     shift->init = customShiftInit;
     shift->next = customShiftNext;
     shift->close = customShiftClose;
 
     // Prepare sea table
-    sbitsOperator* scan2 = createTableScanOperator(stateSEA, &it2, baseSchema);
+    embedDBOperator* scan2 = createTableScanOperator(stateSEA, &it2, baseSchema);
     scan2->init(scan2);
 
     // Join tables
-    sbitsOperator* join = createKeyJoinOperator(shift, scan2);
+    embedDBOperator* join = createKeyJoinOperator(shift, scan2);
 
     // Project the timestamp and the two temp columns
     uint8_t projCols2[] = {0, 1, 5};
-    sbitsOperator* proj = createProjectionOperator(join, 3, projCols2);
+    embedDBOperator* proj = createProjectionOperator(join, 3, projCols2);
 
     proj->init(proj);
 
@@ -301,21 +336,21 @@ void test_join() {
 }
 
 void tearDown(void) {
-    sbitsClose(stateUWA);
+    embedDBClose(stateUWA);
     tearDownFile(stateUWA->dataFile);
     tearDownFile(stateUWA->indexFile);
     free(stateUWA->fileInterface);
     free(stateUWA->buffer);
     free(stateUWA);
 
-    sbitsClose(stateSEA);
+    embedDBClose(stateSEA);
     tearDownFile(stateSEA->dataFile);
     tearDownFile(stateSEA->indexFile);
     free(stateSEA->fileInterface);
     free(stateSEA->buffer);
     free(stateSEA);
 
-    sbitsFreeSchema(&baseSchema);
+    embedDBFreeSchema(&baseSchema);
 
     fclose(uwaData->fp);
     free(uwaData->pageBuffer);
@@ -336,23 +371,23 @@ int main(void) {
     UNITY_END();
 }
 
-void insertData(sbitsState* state, char* filename) {
+void insertData(embedDBState* state, char* filename) {
     FILE* fp = fopen(filename, "rb");
     char fileBuffer[512];
     int numRecords = 0;
     while (fread(fileBuffer, state->pageSize, 1, fp)) {
-        uint16_t count = SBITS_GET_COUNT(fileBuffer);
+        uint16_t count = EMBEDDB_GET_COUNT(fileBuffer);
         for (int i = 1; i <= count; i++) {
-            sbitsPut(state, fileBuffer + i * state->recordSize, fileBuffer + i * state->recordSize + state->keySize);
+            embedDBPut(state, fileBuffer + i * state->recordSize, fileBuffer + i * state->recordSize + state->keySize);
             numRecords++;
         }
     }
     fclose(fp);
-    sbitsFlush(state);
+    embedDBFlush(state);
 }
 
 void* nextRecord(DataSource* source) {
-    uint16_t count = SBITS_GET_COUNT(source->pageBuffer);
+    uint16_t count = EMBEDDB_GET_COUNT(source->pageBuffer);
     if (count <= source->pageRecord) {
         // Read next page
         if (!fread(source->pageBuffer, 512, 1, source->fp)) {
@@ -372,19 +407,19 @@ int8_t sameDayGroup(const void* lastRecord, const void* record) {
     return dayGroup(lastRecord) == dayGroup(record);
 }
 
-void writeDayGroup(sbitsAggregateFunc* aggFunc, sbitsSchema* schema, void* recordBuffer, const void* lastRecord) {
+void writeDayGroup(embedDBAggregateFunc* aggFunc, embedDBSchema* schema, void* recordBuffer, const void* lastRecord) {
     // Put day in record
     uint32_t day = dayGroup(lastRecord);
     memcpy((int8_t*)recordBuffer + getColOffsetFromSchema(schema, aggFunc->colNum), &day, sizeof(uint32_t));
 }
 
-void customShiftInit(sbitsOperator* operator) {
+void customShiftInit(embedDBOperator* operator) {
     operator->input->init(operator->input);
     operator->schema = copySchema(operator->input->schema);
     operator->recordBuffer = malloc(16);
 }
 
-int8_t customShiftNext(sbitsOperator* operator) {
+int8_t customShiftNext(embedDBOperator* operator) {
     if (operator->input->next(operator->input)) {
         memcpy(operator->recordBuffer, operator->input->recordBuffer, 16);
         *(uint32_t*)operator->recordBuffer += 473385600;  // Add the number of seconds between 2000 and 2015
@@ -393,9 +428,9 @@ int8_t customShiftNext(sbitsOperator* operator) {
     return 0;
 }
 
-void customShiftClose(sbitsOperator* operator) {
+void customShiftClose(embedDBOperator* operator) {
     operator->input->close(operator->input);
-    sbitsFreeSchema(&operator->schema);
+    embedDBFreeSchema(&operator->schema);
     free(operator->recordBuffer);
     operator->recordBuffer = NULL;
 }

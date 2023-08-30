@@ -1,6 +1,6 @@
 # Simple Query Interface
 
-SBITS has a library with quick and easy-to-use query operators. To use them, import the [`advancedQueries.h`](../src/sbits/advancedQueries.h) header file. The built-in operators are not going to be the best solution in terms of performance because they are built to be highly compatible and simple to use. If performance is your priority consider a custom solution using the functions described in the [usage documentation](usageInfo.md).
+EmbedDB has a library with quick and easy-to-use query operators. To use them, import the [`advancedQueries.h`](../src/query-interface/advancedQueries.h) header file. The built-in operators are not going to be the best solution in terms of performance because they are built to be highly compatible and simple to use. If performance is your priority consider a custom solution using the functions described in the [usage documentation](usageInfo.md).
 
 For a complete code example see [advancedQueryExamples.c](../src/advancedQueryExamples.c), but this document is a guide on each provided operator as well as how to create custom operators.
 
@@ -23,25 +23,25 @@ For a complete code example see [advancedQueryExamples.c](../src/advancedQueryEx
 
 ## Schema
 
-The schema object is used to track the size, number and positions of columns in an operator's input/output. Unlike in the base implementation of SBITS, where the key and data are always separate, this library combines them into a single record pointer, and so the schema includes both the key and data columns.
+The schema object is used to track the size, number and positions of columns in an operator's input/output. Unlike in the base implementation of EmbedDB, where the key and data are always separate, this library combines them into a single record pointer, and so the schema includes both the key and data columns.
 
-To create an `sbitsSchema` object:
+To create an `EmbedDBSchema` object:
 
 ```c
 // 4 columns, 4 bytes each
 int8_t colSizes[] = {4, 4, 4, 4};
 
-// The first column (key) is unsigned by requirement of SBITS, while the rest are signed values
-int8_t colSignedness[] = {SBITS_COLUMN_UNSIGNED, SBITS_COLUMN_SIGNED, SBITS_COLUMN_SIGNED, SBITS_COLUMN_SIGNED};
+// The first column (key) is unsigned by requirement of EmbedDB, while the rest are signed values
+int8_t colSignedness[] = {EmbedDB_COLUMN_UNSIGNED, EmbedDB_COLUMN_SIGNED, EmbedDB_COLUMN_SIGNED, EmbedDB_COLUMN_SIGNED};
 
 // Create schema. Args: 4 columns, their sizes, their signedness
-sbitsSchema* baseSchema = sbitsCreateSchema(4, colSizes, colSignedness);
+EmbedDBSchema* baseSchema = embedDBCreateSchema(4, colSizes, colSignedness);
 ```
 
-Freeing `sbitsSchema`:
+Freeing `embedDBSchema`:
 
 ```c
-sbitsFreeSchema(&baseSchema);
+embedDBFreeSchema(&baseSchema);
 ```
 
 ## Using Operators
@@ -49,10 +49,10 @@ sbitsFreeSchema(&baseSchema);
 Set up a chain of operators where a table scan is at the bottom and you progressively apply operators on top of the last. Notice that `scanOp` doesn't have an operator in its construction, but the rest do. Then you only need to `init()` the top level operator which will recursively initialize all operators in the chain. During initialization, the intermediate schemas will be calculated and buffers will be allocated.
 
 ```c
-sbitsOperator* scanOp = createTableScanOperator(state, &it, baseSchema);
+embedDBOperator* scanOp = createTableScanOperator(state, &it, baseSchema);
 int32_t selVal = 200;
-sbitsOperator* selectOp = createSelectionOperator(scanOp, 3, SELECT_GTE, &selVal);
-sbitsOperator* projOp = createProjectionOperator(selectOp, 3, projCols);
+embedDBOperator* selectOp = createSelectionOperator(scanOp, 3, SELECT_GTE, &selVal);
+embedDBOperator* projOp = createProjectionOperator(selectOp, 3, projCols);
 projOp->init(projOp);
 ```
 
@@ -65,12 +65,12 @@ while(exec(projOp)) {
 }
 ```
 
-To free the operators, first `close()` the top level operator, which will recursively close the whole chain. Then you can either call `sbitsFreeOperatorRecursive()` to free the whole chain of operators, or, if any of the operators have two inputs (such as a join), you can call `free()` each operator individually.
+To free the operators, first `close()` the top level operator, which will recursively close the whole chain. Then you can either call `embedDBFreeOperatorRecursive()` to free the whole chain of operators, or, if any of the operators have two inputs (such as a join), you can call `free()` each operator individually.
 
 ```c
 projOp->close(projOp);
 // This
-sbitsFreeOperatorRecursive(&projOp);
+embedDBFreeOperatorRecursive(&projOp);
 // Or this (required if any operator in chain has more than one input)
 free(scanOp);
 free(selectOp);
@@ -81,25 +81,25 @@ free(projOp);
 
 ### Table Scan
 
-The table scan is the base of all queries. It uses an `sbitsIterator` to read records from the database.
+The table scan is the base of all queries. It uses an `embedDBIterator` to read records from the database.
 
 ```c
 // Create and init iterator object with any constraints desired
-sbitsIterator it;
+embedDBIterator it;
 int32_t maxTemp = 400;
 it.minKey = NULL;
 it.maxKey = NULL;
 it.minData = NULL;
 it.maxData = &maxTemp;
-sbitsInitIterator(state, &it);
+embedDBInitIterator(state, &it);
 
 // Create schema object of the records returned by the operator
 int8_t colSizes[] = {4, 4, 4, 4};
-int8_t colSignedness[] = {SBITS_COLUMN_UNSIGNED, SBITS_COLUMN_SIGNED, SBITS_COLUMN_SIGNED, SBITS_COLUMN_SIGNED};
-sbitsSchema* baseSchema = sbitsCreateSchema(4, colSizes, colSignedness);
+int8_t colSignedness[] = {embedDB_COLUMN_UNSIGNED, embedDB_COLUMN_SIGNED, embedDB_COLUMN_SIGNED, embedDB_COLUMN_SIGNED};
+embedDBSchema* baseSchema = embedDBCreateSchema(4, colSizes, colSignedness);
 
 // Create operator
-sbitsOperator* scanOp = createTableScanOperator(state, &it, baseSchema);
+embedDBOperator* scanOp = createTableScanOperator(state, &it, baseSchema);
 ```
 
 ### Projection
@@ -108,7 +108,7 @@ Projects out columns of the input operator. Projected columns must be in the ord
 
 ```c
 uint8_t projCols[] = {0, 1, 3}; // Must be strictly increasing. i.e. cannot have column 3 before column 1
-sbitsOperator* projOp1 = createProjectionOperator(scanOp, 3, projCols);
+embedDBOperator* projOp1 = createProjectionOperator(scanOp, 3, projCols);
 ```
 
 ### Selection
@@ -119,12 +119,12 @@ The following selects tuples where column 3 (zero-indexed) is >= 200
 
 ```c
 int32_t selVal = 200;
-sbitsOperator* selectOp2 = createSelectionOperator(scanOp, 3, SELECT_GTE, &selVal);
+embedDBOperator* selectOp2 = createSelectionOperator(scanOp, 3, SELECT_GTE, &selVal);
 ```
 
 ### Aggregate Functions
 
-This operator allows you to run a `GROUP BY` and perform an aggregate function on each group. In order to use this operator, you will need another type of object: `sbitsAggregateFunc`. The output of an aggregate operator is dictated by the list of `sbitsAggregateFunc` provided to `createAggregateOperator()`.
+This operator allows you to run a `GROUP BY` and perform an aggregate function on each group. In order to use this operator, you will need another type of object: `embedDBAggregateFunc`. The output of an aggregate operator is dictated by the list of `embedDBAggregateFunc` provided to `createAggregateOperator()`.
 
 First, this is the code to setup the operator:
 
@@ -138,7 +138,7 @@ int8_t sameDayGroup(const void* lastRecord, const void* record) {
     return dayGroup(lastRecord) == dayGroup(record);
 }
 
-void writeDayGroup(sbitsAggregateFunc* aggFunc, sbitsSchema* schema, void* recordBuffer, const void* lastRecord) {
+void writeDayGroup(embedDBAggregateFunc* aggFunc, embedDBSchema* schema, void* recordBuffer, const void* lastRecord) {
     // Put day in record
     uint32_t day = dayGroup(lastRecord);
     memcpy((int8_t*)recordBuffer + getColOffsetFromSchema(schema, aggFunc->colNum), &day, sizeof(uint32_t));
@@ -146,17 +146,17 @@ void writeDayGroup(sbitsAggregateFunc* aggFunc, sbitsSchema* schema, void* recor
 ```
 
 ```c
-sbitsAggregateFunc groupName = {NULL, NULL, writeDayGroup, NULL, 4};
-sbitsAggregateFunc* counter = createCountAggregate();
-sbitsAggregateFunc* sum = createSumAggregate(2);
-sbitsAggregateFunc aggFunctions[] = {groupName, *counter, *sum};
+embedDBAggregateFunc groupName = {NULL, NULL, writeDayGroup, NULL, 4};
+embedDBAggregateFunc* counter = createCountAggregate();
+embedDBAggregateFunc* sum = createSumAggregate(2);
+embedDBAggregateFunc aggFunctions[] = {groupName, *counter, *sum};
 uint32_t numFunctions = 3;
-sbitsOperator* aggOp3 = createAggregateOperator(selectOp3, sameDayGroup, aggFunctions, numFunctions);
+embedDBOperator* aggOp3 = createAggregateOperator(selectOp3, sameDayGroup, aggFunctions, numFunctions);
 ```
 
 But let's break it down.
 
-An `sbitsAggregateFunc` has three functions in it:
+An `embedDBAggregateFunc` has three functions in it:
 
 -   `reset` - Gets called once at the start of the aggregate operator's `next`. Resets the state, clearing any data that is accumulated over the course of aggregating a single group. After running, the function should be ready to accept records from a new group.
 -   `add` - Gets called for every record in a group, "adding" a record to the group. Should read the record for any information necessary for computing its aggregate value. E.g. a sum function should read one of the column values and add it to a variable stored in the function's state.
@@ -170,10 +170,10 @@ After creating the aggregate functions, they must be put into an array. The orde
 
 ### Key Equijoin
 
-Simple joins can be performed on two instances of an SBITS table. It can only be done on a sorted, unsigned key. The code for it is incredibly simple though. Just provide two operators that have a sorted, unsigned number, with the same size as their first column, and they will join.
+Simple joins can be performed on two instances of an EmbedDB table. It can only be done on a sorted, unsigned key. The code for it is incredibly simple though. Just provide two operators that have a sorted, unsigned number, with the same size as their first column, and they will join.
 
 ```c
-sbitsOperator* join4 = createKeyJoinOperator(scan_1, scan_2);
+embedDBOperator* join4 = createKeyJoinOperator(scan_1, scan_2);
 ```
 
 The output schema of this operator includes all columns of both inputs. I.e. joining tables with columns (a, b, c) and (a, d, e) will result in a table with columns (a, b, c, a, d, e)
@@ -187,15 +187,15 @@ Custom operators introduce the possibility of including behaviours into your que
 The following is the struct that must be constructed for a operator to work.
 
 ```c
-typedef struct sbitsOperator {
-    struct sbitsOperator* input;
-    void (*init)(struct sbitsOperator* operator);
-    int8_t (*next)(struct sbitsOperator* operator);
-    void (*close)(struct sbitsOperator* operator);
+typedef struct embedDBOperator {
+    struct embedDBOperator* input;
+    void (*init)(struct embedDBOperator* operator);
+    int8_t (*next)(struct embedDBOperator* operator);
+    void (*close)(struct embedDBOperator* operator);
     void* state;
-    sbitsSchema* schema;
+    embedDBSchema* schema;
     void* recordBuffer;
-} sbitsOperator;
+} embedDBOperator;
 ```
 
 ### Variables
@@ -210,7 +210,7 @@ typedef struct sbitsOperator {
 #### Init
 
 ```c
-void init(sbitsOperator* operator)
+void init(embedDBOperator* operator)
 ```
 
 The first thing this operator must do is recursively call `init` of _any_ input operators. This way any information needed, like the schema of the input will become available to this method for its own initialization.
@@ -222,7 +222,7 @@ One other thing to during init is to allocate buffers. The `recordBuffer` is req
 #### Next
 
 ```c
-int8_t next(sbitsOperator* operator)
+int8_t next(embedDBOperator* operator)
 ```
 
 This is the heart of the operator. It will be called for each output row. The responsibilities of the next function include getting rows from the input, performing its own operation, and copying the output tuple to `operator->recordBuffer` before returning.
@@ -234,7 +234,7 @@ To get records from the input, you would call `operator->input->next(operator->i
 #### Close
 
 ```c
-void close(sbitsOperator* operator)
+void close(embedDBOperator* operator)
 ```
 
-The close function is responsible for, first, calling close on any input operators, and then freeing any buffers that were allocated to `recordBuffer` or `state`. It also should free the schema with `sbitsFreeSchema()`.
+The close function is responsible for, first, calling close on any input operators, and then freeing any buffers that were allocated to `recordBuffer` or `state`. It also should free the schema with `embedDBFreeSchema()`.

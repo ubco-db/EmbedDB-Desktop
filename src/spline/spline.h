@@ -1,11 +1,10 @@
 /******************************************************************************/
 /**
  * @file		spline.h
- * @author		Ramon Lawrence
+ * @author		EmbedDB Team (See Authors.md)
  * @brief		Implementation of spline for embedded devices.
- * @copyright	Copyright 2021
- * 			The University of British Columbia,
- * 			Ramon Lawrence
+ * @copyright	Copyright 2023
+ * 			    EmbedDB Team
  * @par Redistribution and use in source and binary forms, with or without
  * 	modification, are permitted provided that the following conditions are met:
  *
@@ -33,6 +32,7 @@
  * 	POSSIBILITY OF SUCH DAMAGE.
  */
 /******************************************************************************/
+
 #pragma once
 #ifdef __cplusplus
 extern "C" {
