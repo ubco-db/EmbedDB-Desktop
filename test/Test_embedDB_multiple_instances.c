@@ -40,15 +40,12 @@
 #include "../src/embedDB/utilityFunctions.h"
 #include "unity.h"
 
-embedDBState **states;
-
-void setupembedDBInstanceKeySize4DataSize4(embedDBState **stateArray, int number) {
-    embedDBState *state = (embedDBState *)malloc(sizeof(embedDBState));
+void setupembedDBInstanceKeySize4DataSize4(embedDBState *state, int number) {
     state->keySize = 4;
     state->dataSize = 4;
     state->pageSize = 512;
     state->bufferSizeInBlocks = 2;
-    state->numSplinePoints = 300;
+    state->numSplinePoints = 2;
     state->buffer = calloc(1, state->pageSize * state->bufferSizeInBlocks);
     state->numDataPages = 2000;
     state->parameters = EMBEDDB_RESET_DATA;
@@ -62,7 +59,6 @@ void setupembedDBInstanceKeySize4DataSize4(embedDBState **stateArray, int number
     state->compareData = int32Comparator;
     int8_t result = embedDBInit(state, 1);
     TEST_ASSERT_EQUAL_INT8_MESSAGE(0, result, "embedDB init did not return zero when initializing state.");
-    *(stateArray + number) = state;
 }
 
 void setUp() {}
@@ -170,7 +166,7 @@ void queryRecordsFromFile(embedDBState *state, char *fileName, int32_t numRecord
             snprintf(message, 100, "embedDBGet was not able to find the data for key %i", *((uint32_t *)buf));
             TEST_ASSERT_EQUAL_INT8_MESSAGE(0, getResult, message);
             snprintf(message, 100, "embedDBGet did not return the correct data for key %i", *((uint32_t *)buf));
-            TEST_ASSERT_EQUAL_MEMORY_MESSAGE(buf + 4, dataBuffer, state->dataSize, message);
+            TEST_ASSERT_EQUAL_MEMORY_MESSAGE((int8_t *)buf + 4, dataBuffer, state->dataSize, message);
             numRead++;
             if (numRead >= numRecords)
                 break;
@@ -202,7 +198,7 @@ void queryRecordsFromFileWithVarData(embedDBState *state, char *fileName, int32_
             snprintf(message, 100, "embedDBGetVar was not able to find the data for key %i", *((uint32_t *)buf));
             TEST_ASSERT_EQUAL_INT8_MESSAGE(0, getResult, message);
             snprintf(message, 100, "embedDBGetBar did not return the correct data for key %i", *((uint32_t *)buf));
-            TEST_ASSERT_EQUAL_MEMORY_MESSAGE(buf + 4, dataBuffer, state->dataSize, message);
+            TEST_ASSERT_EQUAL_MEMORY_MESSAGE((int8_t *)buf + 4, dataBuffer, state->dataSize, message);
             uint32_t streamBytesRead = embedDBVarDataStreamRead(state, stream, varDataBuffer, strlen(varDataExpected));
             snprintf(message, 100, "embedDBGetVar did not return the correct variable data for key %i", *((uint32_t *)buf));
 
@@ -220,13 +216,12 @@ void queryRecordsFromFileWithVarData(embedDBState *state, char *fileName, int32_
     free(varDataExpected);
 }
 
-void setupembedDBInstanceKeySize4DataSize12(embedDBState **stateArray, int number) {
-    embedDBState *state = (embedDBState *)malloc(sizeof(embedDBState));
+void setupembedDBInstanceKeySize4DataSize12(embedDBState *state, int number, uint32_t numPoints) {
     state->keySize = 4;
     state->dataSize = 12;
     state->pageSize = 512;
     state->bufferSizeInBlocks = 4;
-    state->numSplinePoints = 300;
+    state->numSplinePoints = numPoints;
     state->buffer = calloc(1, state->pageSize * state->bufferSizeInBlocks);
     state->numDataPages = 20000;
     state->numIndexPages = 1000;
@@ -246,16 +241,14 @@ void setupembedDBInstanceKeySize4DataSize12(embedDBState **stateArray, int numbe
     state->compareData = int32Comparator;
     int8_t result = embedDBInit(state, 1);
     TEST_ASSERT_EQUAL_INT8_MESSAGE(0, result, "embedDB init did not return zero when initializing state.");
-    *(stateArray + number) = state;
 }
 
-void setupembedDBInstanceKeySize4DataSize12WithVarData(embedDBState **stateArray, int number) {
-    embedDBState *state = (embedDBState *)malloc(sizeof(embedDBState));
+void setupembedDBInstanceKeySize4DataSize12WithVarData(embedDBState *state, int number, uint32_t numPoints) {
     state->keySize = 4;
     state->dataSize = 12;
     state->pageSize = 512;
     state->bufferSizeInBlocks = 6;
-    state->numSplinePoints = 300;
+    state->numSplinePoints = numPoints;
     state->buffer = calloc(1, state->pageSize * state->bufferSizeInBlocks);
     state->numDataPages = 22000;
     state->numIndexPages = 1000;
@@ -278,77 +271,100 @@ void setupembedDBInstanceKeySize4DataSize12WithVarData(embedDBState **stateArray
     state->compareData = int32Comparator;
     int8_t result = embedDBInit(state, 1);
     TEST_ASSERT_EQUAL_INT8_MESSAGE(0, result, "embedDB init did not return zero when initializing state.");
-    *(stateArray + number) = state;
+}
+
+void closeState(embedDBState *state) {
+    embedDBClose(state);
+    tearDownFile(state->dataFile);
+    free(state->buffer);
+    free(state->fileInterface);
+}
+
+void closeStateIndexFile(embedDBState *state) {
+    tearDownFile(state->indexFile);
+    closeState(state);
+}
+
+void closeStateWithVarFile(embedDBState *state) {
+    tearDownFile(state->varFile);
+    closeStateIndexFile(state);
 }
 
 void test_insert_on_multiple_embedDB_states() {
-    int numStates = 3;
-    states = malloc(numStates * sizeof(embedDBState *));
-    for (int i = 0; i < numStates; i++)
-        setupembedDBInstanceKeySize4DataSize4(states, i);
+    embedDBState *state1 = malloc(sizeof(embedDBState));
+    embedDBState *state2 = malloc(sizeof(embedDBState));
+    embedDBState *state3 = malloc(sizeof(embedDBState));
+
+    /* Setup State */
+    setupembedDBInstanceKeySize4DataSize4(state1, 1);
+    setupembedDBInstanceKeySize4DataSize4(state2, 2);
+    setupembedDBInstanceKeySize4DataSize4(state3, 3);
+
     int32_t key = 100;
     int32_t data = 1000;
     int32_t numRecords = 100000;
 
-    // Insert records
-    for (int i = 0; i < numStates; i++) {
-        embedDBState *state = *(states + i);
-        insertRecords(state, numRecords, key, data);
-    }
+    /* Insert records into each state */
+    insertRecords(state1, numRecords, key, data);
+    insertRecords(state2, numRecords, key, data);
+    insertRecords(state3, numRecords, key, data);
 
-    for (int i = 0; i < numStates; i++) {
-        embedDBState *state = *(states + i);
-        queryRecords(state, numRecords, key, data);
-    }
+    /* Query Records */
+    queryRecords(state1, numRecords, key, data);
+    queryRecords(state2, numRecords, key, data);
+    queryRecords(state3, numRecords, key, data);
 
-    for (int i = 0; i < numStates; i++) {
-        embedDBState *state = *(states + i);
-        embedDBClose(state);
-        tearDownFile(state->dataFile);
-        free(state->buffer);
-        free(state->fileInterface);
-    }
-    free(states);
+    /* Free States */
+    closeState(state1);
+    closeState(state2);
+    closeState(state3);
 }
 
 void test_insert_from_files_with_index_multiple_states() {
-    int numStates = 3;
-    states = malloc(numStates * sizeof(embedDBState *));
-    for (int i = 0; i < numStates; i++)
-        setupembedDBInstanceKeySize4DataSize12(states, i);
+    embedDBState *state1 = malloc(sizeof(embedDBState));
+    embedDBState *state2 = malloc(sizeof(embedDBState));
+    embedDBState *state3 = malloc(sizeof(embedDBState));
 
-    insertRecordsFromFile(*(states), "data/uwa500K.bin", 500000);
-    insertRecordsFromFile(*(states + 1), "data/ethylene_CO.bin", 400000);
-    queryRecordsFromFile(*(states), "data/uwa500K.bin", 500000);
-    insertRecordsFromFile(*(states + 2), "data/PRSA_Data_Hongxin.bin", 33311);
-    queryRecordsFromFile(*(states + 1), "data/ethylene_CO.bin", 400000);
-    queryRecordsFromFile(*(states + 2), "data/PRSA_Data_Hongxin.bin", 33311);
+    setupembedDBInstanceKeySize4DataSize12(state1, 1, 30);
+    setupembedDBInstanceKeySize4DataSize12(state2, 2, 10);
+    setupembedDBInstanceKeySize4DataSize12(state3, 3, 4);
 
-    for (int i = 0; i < numStates; i++) {
-        embedDBState *state = *(states + i);
-        embedDBClose(state);
-        tearDownFile(state->dataFile);
-        tearDownFile(state->indexFile);
-        free(state->buffer);
-        free(state->fileInterface);
-    }
-    free(states);
+    insertRecordsFromFile(state1, "data/uwa500K.bin", 500000);
+    insertRecordsFromFile(state2, "data/ethylene_CO.bin", 400000);
+    queryRecordsFromFile(state1, "data/uwa500K.bin", 500000);
+    insertRecordsFromFile(state3, "data/PRSA_Data_Hongxin.bin", 33311);
+    queryRecordsFromFile(state2, "data/ethylene_CO.bin", 400000);
+    queryRecordsFromFile(state3, "data/PRSA_Data_Hongxin.bin", 33311);
+
+    closeStateIndexFile(state1);
+    closeStateIndexFile(state2);
+    closeStateIndexFile(state3);
 }
 
 void test_insert_from_files_with_vardata_multiple_states() {
-    int numStates = 4;
-    states = malloc(numStates * sizeof(embedDBState *));
-    for (int i = 0; i < numStates; i++)
-        setupembedDBInstanceKeySize4DataSize12WithVarData(states, i);
+    embedDBState *state1 = malloc(sizeof(embedDBState));
+    embedDBState *state2 = malloc(sizeof(embedDBState));
+    embedDBState *state3 = malloc(sizeof(embedDBState));
+    embedDBState *state4 = malloc(sizeof(embedDBState));
 
-    insertRecordsFromFileWithVarData(*(states), "data/uwa500K.bin", 500000);
-    insertRecordsFromFileWithVarData(*(states + 1), "data/measure1_smartphone_sens.bin", 18354);
-    queryRecordsFromFileWithVarData(*(states), "data/uwa500K.bin", 500000);
-    insertRecordsFromFileWithVarData(*(states + 2), "data/ethylene_CO.bin", 185589);
-    insertRecordsFromFileWithVarData(*(states + 3), "data/position.bin", 1518);
-    queryRecordsFromFileWithVarData(*(states + 2), "data/ethylene_CO.bin", 185589);
-    queryRecordsFromFileWithVarData(*(states + 3), "data/position.bin", 1518);
-    queryRecordsFromFileWithVarData(*(states + 1), "data/measure1_smartphone_sens.bin", 18354);
+    setupembedDBInstanceKeySize4DataSize12WithVarData(state1, 1, 30);
+    setupembedDBInstanceKeySize4DataSize12WithVarData(state2, 2, 30);
+    setupembedDBInstanceKeySize4DataSize12WithVarData(state3, 3, 10);
+    setupembedDBInstanceKeySize4DataSize12WithVarData(state4, 4, 12);
+
+    insertRecordsFromFileWithVarData(state1, "data/uwa500K.bin", 500000);
+    insertRecordsFromFileWithVarData(state2, "data/measure1_smartphone_sens.bin", 18354);
+    queryRecordsFromFileWithVarData(state1, "data/uwa500K.bin", 500000);
+    insertRecordsFromFileWithVarData(state3, "data/ethylene_CO.bin", 185589);
+    insertRecordsFromFileWithVarData(state4, "data/position.bin", 1518);
+    queryRecordsFromFileWithVarData(state3, "data/ethylene_CO.bin", 185589);
+    queryRecordsFromFileWithVarData(state4, "data/position.bin", 1518);
+    queryRecordsFromFileWithVarData(state2, "data/measure1_smartphone_sens.bin", 18354);
+
+    closeStateWithVarFile(state1);
+    closeStateWithVarFile(state2);
+    closeStateWithVarFile(state3);
+    closeStateWithVarFile(state4);
 }
 
 int main(void) {
