@@ -41,13 +41,20 @@
 #include <string.h>
 
 /**
- * @brief    Initialize a spline structure with given maximum size and error.
- * @param    spl        Spline structure
- * @param    size       Maximum size of spline
- * @param    maxError   Maximum error allowed in spline
- * @param    keySize    Size of key in bytes
+ * @brief   Initialize a spline structure with given maximum size and error.
+ * @param   spl        Spline structure
+ * @param   size       Maximum size of spline
+ * @param   maxError   Maximum error allowed in spline
+ * @param   keySize    Size of key in bytes
+ * @return  Returns 0 if successful and -1 if not
  */
-void splineInit(spline *spl, id_t size, size_t maxError, uint8_t keySize) {
+int8_t splineInit(spline *spl, id_t size, size_t maxError, uint8_t keySize) {
+    if (size < 2) {
+#ifdef PRINT_ERRORS
+        printf("ERROR: The size of the spline must be at least two points.");
+#endif
+        return -1;
+    }
     uint8_t pointSize = sizeof(uint32_t) + keySize;
     spl->count = 0;
     spl->pointsStartIndex = 0;
@@ -62,6 +69,7 @@ void splineInit(spline *spl, id_t size, size_t maxError, uint8_t keySize) {
     spl->upper = malloc(pointSize);
     spl->firstSplinePoint = malloc(pointSize);
     spl->numAddCalls = 0;
+    return 0;
 }
 
 /**

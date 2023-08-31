@@ -66,13 +66,14 @@ struct spline_s {
 };
 
 /**
- * @brief    Initialize a spline structure with given maximum size and error.
- * @param    spl        Spline structure
- * @param    size       Maximum size of spline
- * @param    maxError   Maximum error allowed in spline
- * @param    keySize    Size of key in bytes
+ * @brief   Initialize a spline structure with given maximum size and error.
+ * @param   spl        Spline structure
+ * @param   size       Maximum size of spline
+ * @param   maxError   Maximum error allowed in spline
+ * @param   keySize    Size of key in bytes
+ * @return  Returns 0 if successful and -1 if not
  */
-void splineInit(spline *spl, id_t size, size_t maxError, uint8_t keySize);
+int8_t splineInit(spline *spl, id_t size, size_t maxError, uint8_t keySize);
 
 /**
  * @brief	Builds a spline structure given a sorted data set. GreedySplineCorridor
