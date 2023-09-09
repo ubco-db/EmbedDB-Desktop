@@ -62,108 +62,92 @@ void setUp(void) {
 }
 
 void embedDB_initial_configuration_is_correct() {
-    TEST_ASSERT_NOT_NULL_MESSAGE(state->dataFile, "embedDB file was not initialized correctly.");
-    TEST_ASSERT_NULL_MESSAGE(state->varFile, "embedDB varFile was intialized for non-variable data.");
-    TEST_ASSERT_EQUAL_UINT32_MESSAGE(0, state->nextDataPageId, "embedDB nextDataPageId was not initialized correctly.");
-    TEST_ASSERT_EQUAL_INT8_MESSAGE(6, state->headerSize, "embedDB headerSize was not initialized correctly.");
-    TEST_ASSERT_EQUAL_INT64_MESSAGE(UINT32_MAX, state->minKey, "embedDB minKey was not initialized correctly.");
-    TEST_ASSERT_EQUAL_UINT32_MESSAGE(UINT32_MAX, state->bufferedPageId, "embedDB bufferedPageId was not initialized correctly.");
-    TEST_ASSERT_EQUAL_UINT32_MESSAGE(UINT32_MAX, state->bufferedIndexPageId, "embedDB bufferedIndexPageId was not initialized correctly.");
-    TEST_ASSERT_EQUAL_UINT32_MESSAGE(UINT32_MAX, state->bufferedVarPage, "embedDB bufferedVarPage was not initialized correctly.");
-    TEST_ASSERT_EQUAL_UINT16_MESSAGE(63, state->maxRecordsPerPage, "embedDB maxRecordsPerPage was not initialized correctly.");
-    TEST_ASSERT_EQUAL_INT32_MESSAGE(63, state->maxError, "embedDB maxError was not initialized correctly.");
-    TEST_ASSERT_EQUAL_UINT32_MESSAGE(1000, state->numDataPages, "embedDB numDataPages was not initialized correctly.");
-    TEST_ASSERT_EQUAL_UINT32_MESSAGE(0, state->minDataPageId, "embedDB minDataPageId was not initialized correctly.");
-    TEST_ASSERT_EQUAL_UINT32_MESSAGE(1, state->avgKeyDiff, "embedDB avgKeyDiff was not initialized correctly.");
-    TEST_ASSERT_NOT_NULL_MESSAGE(state->spl, "embedDB spline was not initialized correctly.");
+    TEST_ASSERT_NOT_NULL_MESSAGE(state->dataFile, "EmbedDB file was not initialized correctly.");
+    TEST_ASSERT_NULL_MESSAGE(state->varFile, "EmbedDB varFile was intialized for non-variable data.");
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(0, state->nextDataPageId, "EmbedDB nextDataPageId was not initialized correctly.");
+    TEST_ASSERT_EQUAL_INT8_MESSAGE(6, state->headerSize, "EmbedDB headerSize was not initialized correctly.");
+    TEST_ASSERT_EQUAL_INT64_MESSAGE(UINT32_MAX, state->minKey, "EmbedDB minKey was not initialized correctly.");
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(UINT32_MAX, state->bufferedPageId, "EmbedDB bufferedPageId was not initialized correctly.");
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(UINT32_MAX, state->bufferedIndexPageId, "EmbedDB bufferedIndexPageId was not initialized correctly.");
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(UINT32_MAX, state->bufferedVarPage, "EmbedDB bufferedVarPage was not initialized correctly.");
+    TEST_ASSERT_EQUAL_UINT16_MESSAGE(63, state->maxRecordsPerPage, "EmbedDB maxRecordsPerPage was not initialized correctly.");
+    TEST_ASSERT_EQUAL_INT32_MESSAGE(63, state->maxError, "EmbedDB maxError was not initialized correctly.");
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(1000, state->numDataPages, "EmbedDB numDataPages was not initialized correctly.");
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(0, state->minDataPageId, "EmbedDB minDataPageId was not initialized correctly.");
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(1, state->avgKeyDiff, "EmbedDB avgKeyDiff was not initialized correctly.");
+    TEST_ASSERT_NOT_NULL_MESSAGE(state->spl, "EmbedDB spline was not initialized correctly.");
 }
 
 void embedDB_put_inserts_single_record_correctly() {
-    int8_t *data = (int8_t *)malloc(state->recordSize);
-    *((int32_t *)data) = 15648;
-    *((int32_t *)(data + 4)) = 27335;
-    int8_t result = embedDBPut(state, data, (void *)(data + 4));
+    int32_t key = 15648;
+    int32_t data = 27335;
+    int8_t result = embedDBPut(state, &key, &data);
     TEST_ASSERT_EQUAL_INT8_MESSAGE(0, result, "embedDBPut did not correctly insert data (returned non-zero code)");
     TEST_ASSERT_EQUAL_UINT64_MESSAGE(15648, state->minKey, "embedDBPut did not update minimim key on first insert.");
     TEST_ASSERT_EQUAL_UINT32_MESSAGE(0, state->nextDataPageId, "embedDBPut incremented next page to write and it should not have.");
     TEST_ASSERT_EQUAL_UINT32_MESSAGE(1, EMBEDDB_GET_COUNT(state->buffer), "embedDBPut did not increment count in buffer correctly.");
-    int32_t *embedDBPutResultKey = malloc(sizeof(int32_t));
-    int32_t *embedDBPutResultData = malloc(sizeof(int32_t));
-    memcpy(embedDBPutResultKey, (int8_t *)state->buffer + 6, 4);
-    memcpy(embedDBPutResultData, (int8_t *)state->buffer + 10, 4);
-    TEST_ASSERT_EQUAL_INT32_MESSAGE(15648, *embedDBPutResultKey, "embedDBPut did not put correct key value in buffer.");
-    TEST_ASSERT_EQUAL_INT32_MESSAGE(27335, *embedDBPutResultData, "embedDBPut did not put correct data value in buffer.");
-    free(embedDBPutResultKey);
-    free(embedDBPutResultData);
-    free(data);
+    int32_t embedDBPutResultKey = 0;
+    int32_t embedDBPutResultData = 0;
+    memcpy(&embedDBPutResultKey, (int8_t *)state->buffer + 6, 4);
+    memcpy(&embedDBPutResultData, (int8_t *)state->buffer + 10, 4);
+    TEST_ASSERT_EQUAL_INT32_MESSAGE(15648, embedDBPutResultKey, "embedDBPut did not put correct key value in buffer.");
+    TEST_ASSERT_EQUAL_INT32_MESSAGE(27335, embedDBPutResultData, "embedDBPut did not put correct data value in buffer.");
 }
 
 void embedDB_put_inserts_eleven_records_correctly() {
-    int8_t *data = (int8_t *)malloc(state->recordSize);
-    int32_t *embedDBPutResultKey = malloc(sizeof(int32_t));
-    int32_t *embedDBPutResultData = malloc(sizeof(int32_t));
-    *((int32_t *)data) = 16321;
-    *((int32_t *)(data + 4)) = 28361;
+    uint32_t embedDBPutResultKey = 0;
+    int32_t embedDBPutResultData = 0;
+    uint32_t key = 16321;
+    int32_t data = 28361;
     for (int i = 0; i < 11; i++) {
-        *((int32_t *)data) += i;
-        *((int32_t *)(data + 4)) %= (i + 1);
-        int8_t result = embedDBPut(state, data, (void *)(data + 4));
+        key += i;
+        data %= (i + 1);
+        int8_t result = embedDBPut(state, &key, &data);
         TEST_ASSERT_EQUAL_INT8_MESSAGE(0, result, "embedDBPut did not correctly insert data (returned non-zero code)");
-        memcpy(embedDBPutResultKey, (int8_t *)state->buffer + 6 + (i * 8), 4);
-        memcpy(embedDBPutResultData, (int8_t *)state->buffer + 10 + (i * 8), 4);
-        TEST_ASSERT_EQUAL_INT32_MESSAGE(*((int32_t *)data), *embedDBPutResultKey, "embedDBPut did not put correct key value in buffer.");
-        TEST_ASSERT_EQUAL_INT32_MESSAGE(*((int32_t *)(data + 4)), *embedDBPutResultData, "embedDBPut did not put correct data value in buffer.");
+        memcpy(&embedDBPutResultKey, (int8_t *)state->buffer + 6 + (i * 8), 4);
+        memcpy(&embedDBPutResultData, (int8_t *)state->buffer + 10 + (i * 8), 4);
+        TEST_ASSERT_EQUAL_UINT32_MESSAGE(key, embedDBPutResultKey, "embedDBPut did not put correct key value in buffer.");
+        TEST_ASSERT_EQUAL_INT32_MESSAGE(data, embedDBPutResultData, "embedDBPut did not put correct data value in buffer.");
     }
     TEST_ASSERT_EQUAL_INT64_MESSAGE(16321, state->minKey, "embedDBPut did not update minimim key on first insert.");
     TEST_ASSERT_EQUAL_UINT32_MESSAGE(0, state->nextDataPageId, "embedDBPut incremented next page to write and it should not have.");
     TEST_ASSERT_EQUAL_UINT32_MESSAGE(11, EMBEDDB_GET_COUNT(state->buffer), "embedDBPut did not increment count in buffer correctly.");
-    free(embedDBPutResultKey);
-    free(embedDBPutResultData);
-    free(data);
 }
 
 void embedDB_put_inserts_one_page_of_records_correctly() {
-    int8_t *data = (int8_t *)malloc(state->recordSize);
-    int32_t *embedDBPutResultKey = malloc(sizeof(int32_t));
-    int32_t *embedDBPutResultData = malloc(sizeof(int32_t));
-    *((int32_t *)data) = 100;
-    *((int32_t *)(data + 4)) = 724;
+    uint32_t embedDBPutResultKey = 0;
+    int32_t embedDBPutResultData = 0;
+    uint32_t key = 100;
+    int32_t data = 724;
     for (int i = 0; i < 63; i++) {
-        *((int32_t *)data) += i;
-        *((int32_t *)(data + 4)) %= (i + 1);
-        int8_t result = embedDBPut(state, data, (void *)(data + 4));
+        key += i;
+        data %= (i + 1);
+        int8_t result = embedDBPut(state, &key, &data);
         TEST_ASSERT_EQUAL_INT8_MESSAGE(0, result, "embedDBPut did not correctly insert data (returned non-zero code)");
-        memcpy(embedDBPutResultKey, (int8_t *)state->buffer + 6 + (i * 8), 4);
-        memcpy(embedDBPutResultData, (int8_t *)state->buffer + 10 + (i * 8), 4);
-        TEST_ASSERT_EQUAL_INT32_MESSAGE(*((int32_t *)data), *embedDBPutResultKey, "embedDBPut did not put correct key value in buffer.");
-        TEST_ASSERT_EQUAL_INT32_MESSAGE(*((int32_t *)(data + 4)), *embedDBPutResultData, "embedDBPut did not put correct data value in buffer.");
+        memcpy(&embedDBPutResultKey, (int8_t *)state->buffer + 6 + (i * 8), 4);
+        memcpy(&embedDBPutResultData, (int8_t *)state->buffer + 10 + (i * 8), 4);
+        TEST_ASSERT_EQUAL_UINT32_MESSAGE(key, embedDBPutResultKey, "embedDBPut did not put correct key value in buffer.");
+        TEST_ASSERT_EQUAL_INT32_MESSAGE(data, embedDBPutResultData, "embedDBPut did not put correct data value in buffer.");
     }
     TEST_ASSERT_EQUAL_INT64_MESSAGE(100, state->minKey, "embedDBPut did not update minimim key on first insert.");
     TEST_ASSERT_EQUAL_UINT32_MESSAGE(0, state->nextDataPageId, "embedDBPut incremented next page to write and it should not have.");
     TEST_ASSERT_EQUAL_UINT32_MESSAGE(63, EMBEDDB_GET_COUNT(state->buffer), "embedDBPut did not increment count in buffer correctly.");
-    free(embedDBPutResultKey);
-    free(embedDBPutResultData);
-    free(data);
 }
 
 void embedDB_put_inserts_one_more_than_one_page_of_records_correctly() {
-    int8_t *data = (int8_t *)malloc(state->recordSize);
-    int32_t *embedDBPutResultKey = malloc(sizeof(int32_t));
-    int32_t *embedDBPutResultData = malloc(sizeof(int32_t));
-    *((int32_t *)data) = 4444444;
-    *((int32_t *)(data + 4)) = 96875;
+    uint32_t embedDBPutResultKey = 0;
+    int32_t embedDBPutResultData = 0;
+    uint32_t key = 4444444;
+    int32_t data = 96875;
     for (int i = 0; i < 64; i++) {
-        *((int32_t *)data) += i;
-        *((int32_t *)(data + 4)) %= (i + 1);
-        int8_t result = embedDBPut(state, data, (void *)(data + 4));
+        key += i;
+        data %= (i + 1);
+        int8_t result = embedDBPut(state, &key, &data);
         TEST_ASSERT_EQUAL_INT8_MESSAGE(0, result, "embedDBPut did not correctly insert data (returned non-zero code)");
     }
     TEST_ASSERT_EQUAL_INT64_MESSAGE(4444444, state->minKey, "embedDBPut did not update minimim key on first insert.");
     TEST_ASSERT_EQUAL_UINT32_MESSAGE(1, state->nextDataPageId, "embedDBPut did not move to next page after writing the first page of records.");
     TEST_ASSERT_EQUAL_UINT32_MESSAGE(1, EMBEDDB_GET_COUNT(state->buffer), "embedDBPut did not reset buffer count to correct value after writing the page");
-    free(embedDBPutResultKey);
-    free(embedDBPutResultData);
-    free(data);
 }
 
 void iteratorReturnsCorrectRecords(void) {

@@ -386,7 +386,6 @@ void runalltests_embedDB() {
                                    *((int32_t *)((int8_t *)buf + 8)),
                                    *((int32_t *)((int8_t *)buf + 12)));
                             result = embedDBGet(state, key, recordBuffer);
-                            // return;
                         }
 
                         if (i % stepSize == 0) {
@@ -452,7 +451,6 @@ void runalltests_embedDB() {
                 rec = 0;
                 reads = state->numReads;
                 while (embedDBNext(state, &it, &itKey, itData)) {
-                    printf("Key: %d  Data: %d\n", itKey, *(uint32_t *)itData);
                     if ((it.minData != NULL && *((int32_t *)itData) < *((int32_t *)it.minData)) ||
                         (it.maxData != NULL && *((int32_t *)itData) > *((int32_t *)it.maxData))) {
                         printf("Key: %d Data: %d Error\n", itKey, *(uint32_t *)itData);

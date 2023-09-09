@@ -41,6 +41,7 @@ extern "C" {
 #ifndef SPLINE_H
 #define SPLINE_H
 
+#include <stddef.h>
 #include <stdint.h>
 
 /* Define type for keys and location ids. */
@@ -48,7 +49,6 @@ typedef uint32_t id_t;
 
 typedef struct spline_s spline;
 
-#include "radixspline.h"
 struct spline_s {
     size_t count;            /* Number of points in spline */
     size_t size;             /* Maximum number of points */
@@ -67,13 +67,14 @@ struct spline_s {
 };
 
 /**
- * @brief    Initialize a spline structure with given maximum size and error.
- * @param    spl        Spline structure
- * @param    size       Maximum size of spline
- * @param    maxError   Maximum error allowed in spline
- * @param    keySize    Size of key in bytes
+ * @brief   Initialize a spline structure with given maximum size and error.
+ * @param   spl        Spline structure
+ * @param   size       Maximum size of spline
+ * @param   maxError   Maximum error allowed in spline
+ * @param   keySize    Size of key in bytes
+ * @return  Returns 0 if successful and -1 if not
  */
-void splineInit(spline *spl, id_t size, size_t maxError, uint8_t keySize);
+int8_t splineInit(spline *spl, id_t size, size_t maxError, uint8_t keySize);
 
 /**
  * @brief	Builds a spline structure given a sorted data set. GreedySplineCorridor
