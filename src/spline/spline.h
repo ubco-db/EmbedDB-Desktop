@@ -41,8 +41,8 @@ extern "C" {
 #ifndef SPLINE_H
 #define SPLINE_H
 
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 
 /* Define type for keys and location ids. */
 typedef uint32_t id_t;
