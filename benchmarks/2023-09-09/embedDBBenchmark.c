@@ -76,7 +76,7 @@ void testRawPerformance() { /* Tests storage raw read and write performance */
 
 int main() {
     printf("\n");
-    // testRawPerformance();
+    testRawPerformance();
     printf("\n");
 
 #define numRuns 3
