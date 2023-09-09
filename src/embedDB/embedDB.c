@@ -126,15 +126,19 @@ void initBufferPage(embedDBState *state, int pageNum) {
  * @param   radixSize   number bits to be indexed by radix
  * @return  void
  */
-void initRadixSpline(embedDBState *state, size_t radixSize) {
+int8_t initRadixSpline(embedDBState *state, size_t radixSize) {
     spline *spl = (spline *)malloc(sizeof(spline));
     state->spl = spl;
 
-    splineInit(state->spl, state->numSplinePoints, state->indexMaxError, state->keySize);
+    int8_t initResult = splineInit(state->spl, state->numSplinePoints, state->indexMaxError, state->keySize);
+    if (initResult == -1) {
+        return -1;
+    }
 
     radixspline *rsidx = (radixspline *)malloc(sizeof(radixspline));
     state->rdix = rsidx;
     radixsplineInit(state->rdix, state->spl, radixSize, state->keySize);
+    return 0;
 }
 
 /**
@@ -212,11 +216,19 @@ int8_t embedDBInit(embedDBState *state, size_t indexMaxError) {
     /* Initalize the spline or radix spline structure if either are to be used */
     if (SEARCH_METHOD == 2) {
         state->cleanSpline = 1;
+        int8_t splineInitResult = 0;
         if (RADIX_BITS > 0) {
-            initRadixSpline(state, RADIX_BITS);
+            splineInitResult = initRadixSpline(state, RADIX_BITS);
+
         } else {
             state->spl = malloc(sizeof(spline));
-            splineInit(state->spl, state->numSplinePoints, indexMaxError, state->keySize);
+            splineInitResult = splineInit(state->spl, state->numSplinePoints, indexMaxError, state->keySize);
+        }
+        if (splineInitResult == -1) {
+#ifdef PRINT_ERRORS
+            printf("ERROR: Failed to initialize spline.");
+#endif
+            return -1;
         }
     }
 

@@ -60,13 +60,13 @@ void test_init() {
 }
 
 void initState(uint32_t dataSize) {
-    // Initialize embedDB State
+    // Initialize EmbedDB State
     state = malloc(sizeof(embedDBState));
     state->keySize = 4;
     state->dataSize = dataSize;
     state->pageSize = 512;
     state->bufferSizeInBlocks = 6;
-    state->numSplinePoints = 300;
+    state->numSplinePoints = 2;
     state->buffer = calloc(1, state->pageSize * state->bufferSizeInBlocks);
     state->numDataPages = 1000;
     state->numIndexPages = 48;
@@ -149,17 +149,17 @@ void test_get_when_1() {
 
 void test_get_when_almost_almost_full_page() {
     // Check that page gasn't been written
-    TEST_ASSERT_EQUAL_UINT32_MESSAGE(0, state->nextDataPageId, "embedDB should not have written a page yet");
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(0, state->nextDataPageId, "EmbedDB should not have written a page yet");
     // Check that there is still space for another record
     TEST_ASSERT_EACH_EQUAL_CHAR_MESSAGE(0, (int8_t *)state->buffer + EMBEDDB_DATA_WRITE_BUFFER * state->pageSize + (state->pageSize - state->recordSize), state->recordSize, "There isn't space for another record in the buffer");
 }
 
 void test_get_when_almost_full_page() {
-    TEST_ASSERT_EQUAL_UINT32_MESSAGE(0, state->nextDataPageId, "embedDB should not have written a page yet");
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(0, state->nextDataPageId, "EmbedDB should not have written a page yet");
 }
 
 void test_get_when_full_page() {
-    TEST_ASSERT_EQUAL_UINT32_MESSAGE(1, state->nextDataPageId, "embedDB should have written a page by now");
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(1, state->nextDataPageId, "EmbedDB should have written a page by now");
 
     uint32_t key = 23;
     uint64_t expectedData = 23, data = 0;

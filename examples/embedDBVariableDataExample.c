@@ -83,7 +83,7 @@ uint8_t dataEquals(embedDBState *state, embedDBVarDataStream *varStream, Node *n
 void randomVarData(uint32_t chance, uint32_t sizeLowerBound, uint32_t sizeUpperBound, uint8_t *usingVarData, uint32_t *length, void **varData);
 
 int main() {
-    printf("\nSTARTING embedDB VARIABLE DATA TESTS.\n");
+    printf("\nSTARTING EmbedDB VARIABLE DATA TESTS.\n");
 
     // Two extra bufferes required for variable data
     int8_t M = 6;
@@ -947,7 +947,7 @@ void imageVarData(float chance, char *filename, uint8_t *usingVarData, uint32_t 
  */
 void randomVarData(uint32_t chance, uint32_t sizeLowerBound, uint32_t sizeUpperBound, uint8_t *usingVarData, uint32_t *length, void **varData) {
     *usingVarData = (rand() % chance) == 0;
-    if (usingVarData) {
+    if (*usingVarData) {
         *length = randomData(varData, sizeLowerBound, sizeUpperBound);
     } else {
         *length = 0;
