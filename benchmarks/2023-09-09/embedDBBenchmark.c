@@ -105,6 +105,7 @@ int main() {
         state->compareData = int32Comparator;
         state->pageSize = 512;
         state->eraseSizeInPages = 4;
+        state->numSplinePoints = 300;
         state->numDataPages = 20000;
         state->numIndexPages = 100;
         state->fileInterface = getFileInterface();
