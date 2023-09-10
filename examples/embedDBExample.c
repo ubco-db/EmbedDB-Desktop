@@ -124,8 +124,8 @@ void runalltests_embedDB() {
         // maxRange = INT32_MAX;
         // numRecords = 500000;
 
-        // infile = fopen("data/seatac_data_100KSorted.bin", "r+b");
-        // infileRandom = fopen("data/seatac_data_100KSorted_randomized.bin",
+        // infile = fopen("data/sea100K.bin", "r+b");
+        // infileRandom = fopen("data/sea100K_randomized.bin",
         // "r+b"); minRange = 1314604380; maxRange = 1609487580; numRecords =
         // 100001; testRecords = 100001;
 
