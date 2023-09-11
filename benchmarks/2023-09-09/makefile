@@ -27,14 +27,14 @@ sqliteBenchmark:
 	gcc -o sqliteBenchmark.$(TARGET_EXTENSION) sqlite3.o sqliteBenchmark.o $(OSFLAGS) $(SQLITEOSFLAG)
 	./sqliteBenchmark.$(TARGET_EXTENSION)
 
-embedDBBenchmark:
+embedDBBenchmarkUWA:
 	gcc -c $(PATHEMBEDDB)embedDB.c -o embedDB.o $(OSFLAGS)
 	gcc -c $(PATHEMBEDDB)utilityFunctions.c -o utilityFunctions.o  $(OSFLAGS)
 	gcc -c $(PATHSPLINE)spline.c -o spline.o $(OSFLAGS)
 	gcc -c $(PATHSPLINE)radixspline.c -o radixspline.o $(OSFLAGS)
-	gcc -c embedDBBenchmark.c -o embedDBBenchmark.o $(OSFLAGS)
-	gcc -o embedDBBenchmark.$(TARGET_EXTENSION) embedDBBenchmark.o embedDB.o utilityFunctions.o spline.o radixspline.o $(OSFLAGS)
-	./embedDBBenchmark.$(TARGET_EXTENSION)
+	gcc -c embedDBBenchmarkUWA.c -o embedDBBenchmarkUWA.o $(OSFLAGS)
+	gcc -o embedDBBenchmarkUWA.$(TARGET_EXTENSION) embedDBBenchmarkUWA.o embedDB.o utilityFunctions.o spline.o radixspline.o $(OSFLAGS)
+	./embedDBBenchmarkUWA.$(TARGET_EXTENSION)
 
 clean:
 	$(CLEANUP) *.o	
