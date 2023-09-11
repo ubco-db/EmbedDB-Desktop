@@ -27,7 +27,7 @@ void testRawPerformance() { /* Tests storage raw read and write performance */
     }
 
     // Test time to write 100000 blocks
-    int numWrites = 100000;
+    int numWrites = 1000000;
     start = clock();
 
     for (int i = 0; i < numWrites; i++) {
