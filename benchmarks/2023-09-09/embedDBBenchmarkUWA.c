@@ -27,7 +27,7 @@ void testRawPerformance() { /* Tests storage raw read and write performance */
     }
 
     // Test time to write 100000 blocks
-    int numWrites = 1000000;
+    int numWrites = 100000;
     start = clock();
 
     for (int i = 0; i < numWrites; i++) {
@@ -35,8 +35,8 @@ void testRawPerformance() { /* Tests storage raw read and write performance */
             printf("Write error.\n");
         }
     }
-    printf("Write time: %lums (%.2f MB/s)\n", (clock() - start) / (CLOCKS_PER_SEC / 1000), (double)numWrites * 512 / 1000000 / ((clock() - start) / (CLOCKS_PER_SEC / 1000)) * 1000);
     fflush(fp);
+    printf("Write time: %lums (%.2f MB/s)\n", (clock() - start) / (CLOCKS_PER_SEC / 1000), (double)numWrites * 512 / 1000000 / ((clock() - start) / (CLOCKS_PER_SEC / 1000)) * 1000);
 
     start = clock();
 
@@ -47,8 +47,8 @@ void testRawPerformance() { /* Tests storage raw read and write performance */
             printf("Write error.\n");
         }
     }
-    printf("Random write time: %lums (%.2f MB/s)\n", (clock() - start) / (CLOCKS_PER_SEC / 1000), (double)numWrites * 512 / 1000000 / ((clock() - start) / (CLOCKS_PER_SEC / 1000)) * 1000);
     fflush(fp);
+    printf("Random write time: %lums (%.2f MB/s)\n", (clock() - start) / (CLOCKS_PER_SEC / 1000), (double)numWrites * 512 / 1000000 / ((clock() - start) / (CLOCKS_PER_SEC / 1000)) * 1000);
 
     // Time to read 1000 blocks
     fseek(fp, 0, SEEK_SET);
