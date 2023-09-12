@@ -22,10 +22,10 @@ endif
 PATHEMBEDDB = ../../src/embedDB/
 PATHSPLINE = ../../src/spline/
 
-sqliteBenchmark:
-	gcc -c sqlite3.c sqliteBenchmark.c $(OSFLAGS) $(SQLITEOSFLAG)
-	gcc -o sqliteBenchmark.$(TARGET_EXTENSION) sqlite3.o sqliteBenchmark.o $(OSFLAGS) $(SQLITEOSFLAG)
-	./sqliteBenchmark.$(TARGET_EXTENSION)
+sqliteBenchmarkUWA:
+	gcc -c sqlite3.c sqliteBenchmarkUWA.c $(OSFLAGS) $(SQLITEOSFLAG)
+	gcc -o sqliteBenchmarkUWA.$(TARGET_EXTENSION) sqlite3.o sqliteBenchmarkUWA.o $(OSFLAGS) $(SQLITEOSFLAG)
+	./sqliteBenchmarkUWA.$(TARGET_EXTENSION)
 
 embedDBBenchmarkUWA:
 	gcc -c $(PATHEMBEDDB)embedDB.c -o embedDB.o $(OSFLAGS)
