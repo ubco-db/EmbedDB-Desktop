@@ -429,7 +429,7 @@ int main() {
     printf("Num reads: %d\n", numReadsSelectKeyLargeResult);
 
     sum = 0;
-    printf("\nSELECT * FROM r WHERE data = 600\n");
+    printf("\nSELECT * FROM r WHERE data = -93050848\n");
     printf("Time: ");
     for (int i = 0; i < numRuns; i++) {
         printf("%d ", timeSelectSingleDataResult[i]);
