@@ -1,0 +1,72 @@
+rm -f *.o	
+rm -f *.out
+rm -f *.bin
+gcc -c ../../src/embedDB/embedDB.c -o embedDB.o -ldl -lm
+gcc -c ../../src/embedDB/utilityFunctions.c -o utilityFunctions.o  -ldl -lm
+gcc -c ../../src/spline/spline.c -o spline.o -ldl -lm
+gcc -c ../../src/spline/radixspline.c -o radixspline.o -ldl -lm
+gcc -c embedDBBenchmarkWatch.c -o embedDBBenchmarkWatch.o -ldl -lm
+gcc -o embedDBBenchmarkWatch.out embedDBBenchmarkWatch.o embedDB.o utilityFunctions.o spline.o radixspline.o -ldl -lm
+./embedDBBenchmarkWatch.out
+
+Starting RAW performance test.
+Write time: 458ms (111.79 MB/s)
+Random write time: 2308ms (22.18 MB/s)
+Read time: 118ms (433.90 MB/s)
+Random Read time: 1221ms (41.93 MB/s)
+
+
+INSERT
+Time: 171 171 169 ~ 170ms
+Num Records inserted: 100000
+Num data pages written: 3226
+Num index pages written: 14
+
+SELECT * FROM r
+Time: 37 37 37 ~ 37ms
+Result size: 100000
+Num reads: 3226
+
+SELECT Continuous 5% (key >= 7026900)
+Time: 2 2 2 ~ 2ms
+Result size: 5013
+Num reads: 163
+
+SELECT Continuous 80% (key >= 949287)
+Time: 32 32 32 ~ 32ms
+Result size: 79994
+Num reads: 2582
+
+SELECT * FROM r WHERE data = 600
+Time: 28 28 28 ~ 28ms
+Result size: 1
+Num reads: 2520
+Num idx reads: 14
+
+SELECT * FROM r WHERE data >= 871998912
+Time: 7 7 7 ~ 7ms
+Result size: 11
+Num reads: 648
+Num idx reads: 14
+
+SELECT * FROM r WHERE data >= -5000000
+Time: 37 37 37 ~ 37ms
+Result size: 65309
+Num reads: 3226
+Num idx reads: 14
+
+SELECT * FROM r WHERE key >= 1970000 AND data >= 0 AND data <= 871998912
+Time: 23 23 23 ~ 23ms
+Result size: 29868
+Num reads: 1802
+Num idx reads: 9
+
+Sequential Key-Value
+Time: 297 297 297 ~ 297ms
+Result size: 100000
+Num reads: 3245
+
+Random Key-Value
+Time: 1623 1625 1627 ~ 1625ms
+Result size: 100000
+Num reads: 127110
