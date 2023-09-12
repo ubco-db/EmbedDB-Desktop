@@ -263,11 +263,11 @@ int main() {
         query = NULL;
 
         ////////////////////////////////////////////////////////////////////////////
-        // SELECT * FROM r WHERE key >= 958885776 AND data >= 450 AND data <= 650 //
+        // SELECT * FROM r WHERE key >= 949118688 AND data >= 450 AND data <= 650 //
         ////////////////////////////////////////////////////////////////////////////
 
         numRecords = 0;
-        char const selectKeyDataResultInt[] = "SELECT * FROM keyValue WHERE key >= 958885776 AND airTemp >= 450 AND airTemp <= 650;";
+        char const selectKeyDataResultInt[] = "SELECT * FROM keyValue WHERE key >= 949118688 AND airTemp >= 450 AND airTemp <= 650;";
 
         timeSelectKeyDataInt[run] = clock();
 
@@ -415,7 +415,7 @@ int main() {
     printf("Num Records Queried: %d\n", numRecordsSelectDataLargeResultInt);
 
     sum = 0;
-    printf("\nSELECT * FROM r WHERE key >= 958885776 AND data >= 450 AND data <= 650\n");
+    printf("\nSELECT * FROM r WHERE key >= 949118688 AND data >= 450 AND data <= 650\n");
     printf("Time: ");
     for (int i = 0; i < numRuns; i++) {
         printf("%d ", timeSelectKeyDataInt[i]);

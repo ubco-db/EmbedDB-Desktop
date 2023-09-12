@@ -299,12 +299,12 @@ int main() {
         numIdxReadsSelectDataLargeResult = state->numIdxReads - numIdxReadsSelectDataLargeResult;
 
         ////////////////////////////////////////////////////////////////////////////
-        // SELECT * FROM r WHERE key >= 958885776 AND data >= 450 AND data <= 650 //
+        // SELECT * FROM r WHERE key >= 949118688 AND data >= 450 AND data <= 650 //
         ////////////////////////////////////////////////////////////////////////////
         start = clock();
 
         embedDBIterator itSelectKeyData;
-        uint32_t minKeySelectKeyData = minKey + (maxKey - minKey) * 0.4;
+        uint32_t minKeySelectKeyData = minKey + (maxKey - minKey) * 0.4;  // 949118688
         int32_t minDataSelectKeyData = 450, maxDataSelectKeyData = 650;
         itSelectKeyData.minKey = &minKeySelectKeyData;
         itSelectKeyData.maxKey = NULL;
@@ -464,7 +464,7 @@ int main() {
     printf("Num idx reads: %d\n", numIdxReadsSelectDataLargeResult);
 
     sum = 0;
-    printf("\nSELECT * FROM r WHERE key >= 958885776 AND data >= 450 AND data <= 650\n");
+    printf("\nSELECT * FROM r WHERE key >= 949118688 AND data >= 450 AND data <= 650\n");
     printf("Time: ");
     for (int i = 0; i < numRuns; i++) {
         printf("%d ", timeSelectKeyData[i]);
