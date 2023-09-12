@@ -25,7 +25,7 @@ Time: 32 32 32 ~ 32ms
 Result size: 79994
 Num reads: 2582
 
-SELECT * FROM r WHERE data = 600
+SELECT * FROM r WHERE data = -93050848
 Time: 28 28 28 ~ 28ms
 Result size: 1
 Num reads: 2520
