@@ -1,0 +1,46 @@
+rm -f *.o	
+rm -f *.out
+rm -f *.bin
+gcc -c sqlite3.c sqliteBenchmarkWatch.c -ldl -lm -lpthread
+gcc -o sqliteBenchmarkWatch.out sqlite3.o sqliteBenchmarkWatch.o -ldl -lm -lpthread
+./sqliteBenchmarkWatch.out
+
+INSERT
+Time: 1128 1128 1127 ~ 1127ms
+Num Records inserted: 100000
+
+SELECT * FROM r
+Time: 223 224 224 ~ 223ms
+Num Records Queried: 100000
+
+SELECT Continuous 5% (key >= 7026900)
+Time: 11 11 11 ~ 11ms
+Num Records Queried: 5013
+
+SELECT Continuous 80% (key >= 949287)
+Time: 175 175 175 ~ 175ms
+Num Records Queried: 79994
+
+SELECT * FROM r WHERE data = -93050848
+Time: 98 98 98 ~ 98ms
+Num Records Queried: 1
+
+SELECT * FROM r WHERE data >= 871998912
+Time: 99 99 99 ~ 99ms
+Num Records Queried: 11
+
+SELECT * FROM r WHERE data >= -5000000
+Time: 199 200 199 ~ 199ms
+Num Records Queried: 65309
+
+SELECT * FROM r WHERE key >= 1970000 AND data >= 0 AND data <= 871998912
+Time: 107 107 107 ~ 107ms
+Num Records Queried: 29868
+
+Sequential Key-Value
+Time: 3149 3145 3146 ~ 3146ms
+Num Records Queried: 100000
+
+Random Key-Value
+Time: 3479 3474 3478 ~ 3477ms
+Num Records Queried: 100000
