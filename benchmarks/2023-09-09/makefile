@@ -7,7 +7,7 @@ ifeq ($(OS),Windows_NT)
 	MKDIR = mkdir -p
   endif
 	TARGET_EXTENSION=exe
-	OSFLAGS =
+	OSFLAGS = 
 	SQLITEOSFLAG =
 else
 	CLEANUP = rm -f
@@ -49,6 +49,15 @@ embedDBBenchmarkWatch:
 	gcc -c embedDBBenchmarkWatch.c -o embedDBBenchmarkWatch.o $(OSFLAGS)
 	gcc -o embedDBBenchmarkWatch.$(TARGET_EXTENSION) embedDBBenchmarkWatch.o embedDB.o utilityFunctions.o spline.o radixspline.o $(OSFLAGS)
 	./embedDBBenchmarkWatch.$(TARGET_EXTENSION)
+
+embedDBBenchmarkEthylene:
+	gcc -c $(PATHEMBEDDB)embedDB.c -o embedDB.o $(OSFLAGS)
+	gcc -c $(PATHEMBEDDB)utilityFunctions.c -o utilityFunctions.o  $(OSFLAGS)
+	gcc -c $(PATHSPLINE)spline.c -o spline.o $(OSFLAGS)
+	gcc -c $(PATHSPLINE)radixspline.c -o radixspline.o $(OSFLAGS)
+	gcc -c embedDBBenchmarkEthylene.c -o embedDBBenchmarkEthylene.o $(OSFLAGS)
+	gcc -o embedDBBenchmarkEthylene.$(TARGET_EXTENSION) embedDBBenchmarkEthylene.o embedDB.o utilityFunctions.o spline.o radixspline.o $(OSFLAGS)
+	./embedDBBenchmarkEthylene.$(TARGET_EXTENSION)
 
 clean:
 	$(CLEANUP) *.o	
