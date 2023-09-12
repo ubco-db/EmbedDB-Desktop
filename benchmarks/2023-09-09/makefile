@@ -36,6 +36,15 @@ embedDBBenchmarkUWA:
 	gcc -o embedDBBenchmarkUWA.$(TARGET_EXTENSION) embedDBBenchmarkUWA.o embedDB.o utilityFunctions.o spline.o radixspline.o $(OSFLAGS)
 	./embedDBBenchmarkUWA.$(TARGET_EXTENSION)
 
+embedDBBenchmarkWatch:
+	gcc -c $(PATHEMBEDDB)embedDB.c -o embedDB.o $(OSFLAGS)
+	gcc -c $(PATHEMBEDDB)utilityFunctions.c -o utilityFunctions.o  $(OSFLAGS)
+	gcc -c $(PATHSPLINE)spline.c -o spline.o $(OSFLAGS)
+	gcc -c $(PATHSPLINE)radixspline.c -o radixspline.o $(OSFLAGS)
+	gcc -c embedDBBenchmarkWatch.c -o embedDBBenchmarkWatch.o $(OSFLAGS)
+	gcc -o embedDBBenchmarkWatch.$(TARGET_EXTENSION) embedDBBenchmarkWatch.o embedDB.o utilityFunctions.o spline.o radixspline.o $(OSFLAGS)
+	./embedDBBenchmarkWatch.$(TARGET_EXTENSION)
+
 clean:
 	$(CLEANUP) *.o	
 	$(CLEANUP) *.$(TARGET_EXTENSION)
