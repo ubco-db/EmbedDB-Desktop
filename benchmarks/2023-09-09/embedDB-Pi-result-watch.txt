@@ -1,20 +1,8 @@
-rm -f *.o	
-rm -f *.out
-rm -f *.bin
-gcc -c ../../src/embedDB/embedDB.c -o embedDB.o -ldl -lm
-gcc -c ../../src/embedDB/utilityFunctions.c -o utilityFunctions.o  -ldl -lm
-gcc -c ../../src/spline/spline.c -o spline.o -ldl -lm
-gcc -c ../../src/spline/radixspline.c -o radixspline.o -ldl -lm
-gcc -c embedDBBenchmarkWatch.c -o embedDBBenchmarkWatch.o -ldl -lm
-gcc -o embedDBBenchmarkWatch.out embedDBBenchmarkWatch.o embedDB.o utilityFunctions.o spline.o radixspline.o -ldl -lm
-./embedDBBenchmarkWatch.out
-
 Starting RAW performance test.
 Write time: 458ms (111.79 MB/s)
 Random write time: 2308ms (22.18 MB/s)
 Read time: 118ms (433.90 MB/s)
 Random Read time: 1221ms (41.93 MB/s)
-
 
 INSERT
 Time: 171 171 169 ~ 170ms
