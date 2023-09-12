@@ -11,19 +11,19 @@ gcc -o embedDBBenchmarkWatch.out embedDBBenchmarkWatch.o embedDB.o utilityFuncti
 
 Starting RAW performance test.
 Write time: 457ms (112.04 MB/s)
-Random write time: 2289ms (22.37 MB/s)
-Read time: 116ms (441.38 MB/s)
-Random Read time: 1191ms (42.99 MB/s)
+Random write time: 2307ms (22.19 MB/s)
+Read time: 119ms (430.25 MB/s)
+Random Read time: 1205ms (42.49 MB/s)
 
 
 INSERT
-Time: 175 170 170 ~ 171ms
+Time: 171 170 171 ~ 170ms
 Num Records inserted: 100000
 Num data pages written: 3226
 Num index pages written: 14
 
 SELECT * FROM r
-Time: 36 36 36 ~ 36ms
+Time: 36 36 37 ~ 36ms
 Result size: 100000
 Num reads: 3226
 
@@ -62,11 +62,11 @@ Num reads: 1802
 Num idx reads: 9
 
 Sequential Key-Value
-Time: 296 296 296 ~ 296ms
+Time: 297 297 298 ~ 297ms
 Result size: 100000
-Num reads: 3245
+Num reads: 3226
 
 Random Key-Value
-Time: 1603 1596 1599 ~ 1599ms
+Time: 1612 1620 1612 ~ 1614ms
 Result size: 100000
-Num reads: 127110
+Num reads: 126533
