@@ -32,6 +32,11 @@ sqliteBenchmarkWatch:
 	gcc -o sqliteBenchmarkWatch.$(TARGET_EXTENSION) sqlite3.o sqliteBenchmarkWatch.o $(OSFLAGS) $(SQLITEOSFLAG)
 	./sqliteBenchmarkWatch.$(TARGET_EXTENSION)
 
+sqliteBenchmarkEthylene:
+	gcc -c sqlite3.c sqliteBenchmarkEthylene.c $(OSFLAGS) $(SQLITEOSFLAG)
+	gcc -o sqliteBenchmarkEthylene.$(TARGET_EXTENSION) sqlite3.o sqliteBenchmarkEthylene.o $(OSFLAGS) $(SQLITEOSFLAG)
+	./sqliteBenchmarkEthylene.$(TARGET_EXTENSION)
+
 embedDBBenchmarkUWA:
 	gcc -c $(PATHEMBEDDB)embedDB.c -o embedDB.o $(OSFLAGS)
 	gcc -c $(PATHEMBEDDB)utilityFunctions.c -o utilityFunctions.o  $(OSFLAGS)
