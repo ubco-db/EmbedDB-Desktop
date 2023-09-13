@@ -32,6 +32,9 @@ void testRawPerformance() { /* Tests storage raw read and write performance */
     start = clock();
 
     for (int i = 0; i < numWrites; i++) {
+        for (int j = 0; j < 128; j++) {
+            ((uint32_t *)buffer)[j]++;
+        }
         if (0 == fwrite(buffer, 512, 1, fp)) {
             printf("Write error.\n");
         }
@@ -42,6 +45,9 @@ void testRawPerformance() { /* Tests storage raw read and write performance */
     start = clock();
 
     for (int i = 0; i < numWrites; i++) {
+        for (int j = 0; j < 128; j++) {
+            ((uint32_t *)buffer)[j]++;
+        }
         unsigned long num = rand() % numWrites;
         fseek(fp, num * 512, SEEK_SET);
         if (0 == fwrite(buffer, 512, 1, fp)) {
@@ -55,6 +61,9 @@ void testRawPerformance() { /* Tests storage raw read and write performance */
     fseek(fp, 0, SEEK_SET);
     start = clock();
     for (int i = 0; i < numWrites; i++) {
+        for (int j = 0; j < 128; j++) {
+            ((uint32_t *)buffer)[j]++;
+        }
         if (0 == fread(buffer, 512, 1, fp)) {
             printf("Read error.\n");
         }
@@ -66,6 +75,9 @@ void testRawPerformance() { /* Tests storage raw read and write performance */
     start = clock();
     srand(1);
     for (int i = 0; i < numWrites; i++) {
+        for (int j = 0; j < 128; j++) {
+            ((uint32_t *)buffer)[j]++;
+        }
         unsigned long num = rand() % numWrites;
         fseek(fp, num * 512, SEEK_SET);
         if (0 == fread(buffer, 512, 1, fp)) {
