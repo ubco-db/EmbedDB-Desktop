@@ -1,0 +1,46 @@
+rm -f *.o	
+rm -f *.out
+rm -f *.bin
+gcc -c sqlite3.c sqliteBenchmarkEthylene.c -ldl -lm -lpthread
+gcc -o sqliteBenchmarkEthylene.out sqlite3.o sqliteBenchmarkEthylene.o -ldl -lm -lpthread
+./sqliteBenchmarkEthylene.out
+
+INSERT
+Time: 1059 ~ 1059ms
+Num Records inserted: 100000
+
+SELECT * FROM r
+Time: 210 ~ 210ms
+Num Records Queried: 100000
+
+SELECT Continuous 5% (key >= 104449)
+Time: 11 ~ 11ms
+Num Records Queried: 5499
+
+SELECT Continuous 80% (key >= 21989)
+Time: 179 ~ 179ms
+Num Records Queried: 84282
+
+SELECT * FROM r WHERE data = 214517
+Time: 104 ~ 104ms
+Num Records Queried: 7
+
+SELECT * FROM r WHERE data >= 350000
+Time: 105 ~ 105ms
+Num Records Queried: 12
+
+SELECT * FROM r WHERE data >= 149000
+Time: 186 ~ 186ms
+Num Records Queried: 65487
+
+SELECT * FROM r WHERE key >= 43978 AND data >= 149000 AND data <= 215000
+Time: 118 ~ 118ms
+Num Records Queried: 30101
+
+Sequential Key-Value
+Time: 3096 ~ 3096ms
+Num Records Queried: 100000
+
+Random Key-Value
+Time: 3238 ~ 3238ms
+Num Records Queried: 100000
