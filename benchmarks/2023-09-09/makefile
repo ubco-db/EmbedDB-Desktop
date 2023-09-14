@@ -21,6 +21,7 @@ endif
 
 PATHEMBEDDB = ../../src/embedDB/
 PATHSPLINE = ../../src/spline/
+PATHQUERYOP = ../../src/query-interface/
 
 sqliteBenchmarkUWA:
 	gcc -c sqlite3.c sqliteBenchmarkUWA.c $(OSFLAGS) $(SQLITEOSFLAG)
@@ -63,6 +64,17 @@ embedDBBenchmarkEthylene:
 	gcc -c embedDBBenchmarkEthylene.c -o embedDBBenchmarkEthylene.o $(OSFLAGS)
 	gcc -o embedDBBenchmarkEthylene.$(TARGET_EXTENSION) embedDBBenchmarkEthylene.o embedDB.o utilityFunctions.o spline.o radixspline.o $(OSFLAGS)
 	./embedDBBenchmarkEthylene.$(TARGET_EXTENSION)
+
+embedDBBenchmarkAggregate:
+	gcc -c $(PATHEMBEDDB)embedDB.c -o embedDB.o $(OSFLAGS)
+	gcc -c $(PATHEMBEDDB)utilityFunctions.c -o utilityFunctions.o  $(OSFLAGS)
+	gcc -c $(PATHSPLINE)spline.c -o spline.o $(OSFLAGS)
+	gcc -c $(PATHSPLINE)radixspline.c -o radixspline.o $(OSFLAGS)
+	gcc -c $(PATHQUERYOP)schema.c -o schema.o $(OSFLAGS)
+	gcc -c $(PATHQUERYOP)advancedQueries.c -o advancedQueries.o $(OSFLAGS)
+	gcc -c embedDBBenchmarkAggregate.c -o embedDBBenchmarkAggregate.o $(OSFLAGS)
+	gcc -o embedDBBenchmarkAggregate.$(TARGET_EXTENSION) embedDBBenchmarkAggregate.o embedDB.o utilityFunctions.o spline.o radixspline.o schema.o advancedQueries.o $(OSFLAGS)
+	./embedDBBenchmarkAggregate.$(TARGET_EXTENSION)
 
 clean:
 	$(CLEANUP) *.o	
