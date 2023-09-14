@@ -81,6 +81,10 @@ embedDBBenchmarkAggregate:
 	gcc -o embedDBBenchmarkAggregate.$(TARGET_EXTENSION) embedDBBenchmarkAggregate.o embedDB.o utilityFunctions.o spline.o radixspline.o schema.o advancedQueries.o $(OSFLAGS)
 	./embedDBBenchmarkAggregate.$(TARGET_EXTENSION)
 
+rawPerformance:
+	gcc justRawPerfomance.c -o justRawPerfomance.$(TARGET_EXTENSION) $(OSFLAGS)
+	./justRawPerfomance.$(TARGET_EXTENSION)
+
 clean:
 	$(CLEANUP) *.o	
 	$(CLEANUP) *.$(TARGET_EXTENSION)
