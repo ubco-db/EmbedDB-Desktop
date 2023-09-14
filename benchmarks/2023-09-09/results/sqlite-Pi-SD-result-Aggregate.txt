@@ -1,10 +1,3 @@
-rm -f *.o	
-rm -f *.out
-rm -f *.bin
-gcc -c sqlite3.c sqliteBenchmarkAggregate.c -ldl -lm -lpthread
-gcc -o sqliteBenchmarkAggregate.out sqlite3.o sqliteBenchmarkAggregate.o -ldl -lm -lpthread
-./sqliteBenchmarkAggregate.out
-
 Aggregate
 Time: 744 742 744 ~ 743ms
 Num Records Queried: 70
