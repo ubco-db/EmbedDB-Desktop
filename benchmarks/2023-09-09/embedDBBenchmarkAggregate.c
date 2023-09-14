@@ -139,7 +139,7 @@ int main() {
         // }
 
         // End benchmark
-        times[run] = (clock() - times[run]) / CLOCKS_PER_SEC;
+        times[run] = (clock() - times[run]) / (CLOCKS_PER_SEC / 1000);
         numReads[run] = stateUWA->numReads - numReads[run];
         numIdxReads[run] = stateUWA->numIdxReads - numIdxReads[run];
         numRecords[run] = recordsReturned;
