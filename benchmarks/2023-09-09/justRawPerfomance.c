@@ -29,9 +29,6 @@ int main() {
         }
         fflush(fp);
     }
-    // if (0 != fsync(fileno(fp))) {
-    //     printf("fsync error.\n");
-    // }
     printf("Write time: %lums (%.2f MB/s)\n", (clock() - start) / (CLOCKS_PER_SEC / 1000), (double)numWrites * 512 / 1000000 / ((clock() - start) / (CLOCKS_PER_SEC / 1000)) * 1000);
 
     start = clock();
@@ -47,9 +44,6 @@ int main() {
         }
         fflush(fp);
     }
-    // if (0 != fsync(fileno(fp))) {
-    //     printf("fsync error.\n");
-    // }
     printf("Random write time: %lums (%.2f MB/s)\n", (clock() - start) / (CLOCKS_PER_SEC / 1000), (double)numWrites * 512 / 1000000 / ((clock() - start) / (CLOCKS_PER_SEC / 1000)) * 1000);
 
     // Time to read 1000 blocks
@@ -63,9 +57,6 @@ int main() {
             printf("Read error.\n");
         }
     }
-    // if (0 != fsync(fileno(fp))) {
-    //     printf("fsync error.\n");
-    // }
     printf("Read time: %lums (%.2f MB/s)\n", (clock() - start) / (CLOCKS_PER_SEC / 1000), (double)numWrites * 512 / 1000000 / ((clock() - start) / (CLOCKS_PER_SEC / 1000)) * 1000);
 
     fseek(fp, 0, SEEK_SET);
@@ -82,9 +73,6 @@ int main() {
             printf("Read error.\n");
         }
     }
-    // if (0 != fsync(fileno(fp))) {
-    //     printf("fsync error.\n");
-    // }
     printf("Random Read time: %lums (%.2f MB/s)\n", (clock() - start) / (CLOCKS_PER_SEC / 1000), (double)numWrites * 512 / 1000000 / ((clock() - start) / (CLOCKS_PER_SEC / 1000)) * 1000);
 
     return 0;
