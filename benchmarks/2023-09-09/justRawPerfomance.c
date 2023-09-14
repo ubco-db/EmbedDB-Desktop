@@ -27,11 +27,11 @@ int main() {
         if (0 == fwrite(buffer, 512, 1, fp)) {
             printf("Write error.\n");
         }
-        if (0 != fsync(fileno(fp))) {
-            printf("fsync error.\n");
-        }
     }
     fflush(fp);
+    if (0 != fsync(fileno(fp))) {
+        printf("fsync error.\n");
+    }
     printf("Write time: %lums (%.2f MB/s)\n", (clock() - start) / (CLOCKS_PER_SEC / 1000), (double)numWrites * 512 / 1000000 / ((clock() - start) / (CLOCKS_PER_SEC / 1000)) * 1000);
 
     start = clock();
@@ -45,9 +45,9 @@ int main() {
         if (0 == fwrite(buffer, 512, 1, fp)) {
             printf("Write error.\n");
         }
-        if (0 != fsync(fileno(fp))) {
-            printf("fsync error.\n");
-        }
+    }
+    if (0 != fsync(fileno(fp))) {
+        printf("fsync error.\n");
     }
     fflush(fp);
     printf("Random write time: %lums (%.2f MB/s)\n", (clock() - start) / (CLOCKS_PER_SEC / 1000), (double)numWrites * 512 / 1000000 / ((clock() - start) / (CLOCKS_PER_SEC / 1000)) * 1000);
@@ -81,9 +81,9 @@ int main() {
         if (0 == fread(buffer, 512, 1, fp)) {
             printf("Read error.\n");
         }
-        if (0 != fsync(fileno(fp))) {
-            printf("fsync error.\n");
-        }
+    }
+    if (0 != fsync(fileno(fp))) {
+        printf("fsync error.\n");
     }
     printf("Random Read time: %lums (%.2f MB/s)\n", (clock() - start) / (CLOCKS_PER_SEC / 1000), (double)numWrites * 512 / 1000000 / ((clock() - start) / (CLOCKS_PER_SEC / 1000)) * 1000);
 
