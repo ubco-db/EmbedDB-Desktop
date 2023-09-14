@@ -38,6 +38,11 @@ sqliteBenchmarkEthylene:
 	gcc -o sqliteBenchmarkEthylene.$(TARGET_EXTENSION) sqlite3.o sqliteBenchmarkEthylene.o $(OSFLAGS) $(SQLITEOSFLAG)
 	./sqliteBenchmarkEthylene.$(TARGET_EXTENSION)
 
+sqliteBenchmarkAggregate:
+	gcc -c sqlite3.c sqliteBenchmarkAggregate.c $(OSFLAGS) $(SQLITEOSFLAG)
+	gcc -o sqliteBenchmarkAggregate.$(TARGET_EXTENSION) sqlite3.o sqliteBenchmarkAggregate.o $(OSFLAGS) $(SQLITEOSFLAG)
+	./sqliteBenchmarkAggregate.$(TARGET_EXTENSION)
+
 embedDBBenchmarkUWA:
 	gcc -c $(PATHEMBEDDB)embedDB.c -o embedDB.o $(OSFLAGS)
 	gcc -c $(PATHEMBEDDB)utilityFunctions.c -o utilityFunctions.o  $(OSFLAGS)
