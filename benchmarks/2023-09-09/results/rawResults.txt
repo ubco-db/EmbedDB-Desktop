@@ -1,8 +1,5 @@
-rm -f *.o	
-rm -f *.out
-rm -f *.bin
-gcc justRawPerfomance.c -o justRawPerfomance.out -ldl -lm
-./justRawPerfomance.out
+Raw performance with a fflush on each page write, no fsync.
+
 Starting RAW performance test.
 Write time: 2048ms (25.00 MB/s)
 Random write time: 2051ms (24.96 MB/s)
