@@ -67,9 +67,11 @@ int main() {
     }
     printf("Read time: %lums (%.2f MB/s)\n", (clock() - start) / (CLOCKS_PER_SEC / 1000), (double)numWrites * 512 / 1000000 / ((clock() - start) / (CLOCKS_PER_SEC / 1000)) * 1000);
 
-    fseek(fp, 0, SEEK_SET);
+    fclose(fp);
+
     // Time to read 1000 blocks randomly
     start = clock();
+    fp = fopen("speedTestTemp.bin", "rb");
     srand(1);
     for (int i = 0; i < numWrites; i++) {
         for (int j = 0; j < 128; j++) {
