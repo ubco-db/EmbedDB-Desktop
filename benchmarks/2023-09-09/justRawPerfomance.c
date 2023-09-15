@@ -17,7 +17,7 @@ int main() {
     }
 
     // Test time to write 100000 blocks
-    int numWrites = 100000;
+    int numWrites = 1000000;
     start = clock();
 
     for (int i = 0; i < numWrites; i++) {
@@ -27,10 +27,10 @@ int main() {
         if (0 == fwrite(buffer, 512, 1, fp)) {
             printf("Write error.\n");
         }
-        if (i % 100 == 0) {
-            fflush(fp);
-            fsync(fileno(fp));
-        }
+        // if (i % 100 == 0) {
+        //     fflush(fp);
+        //     fsync(fileno(fp));
+        // }
     }
     printf("Write time: %lums (%.2f MB/s)\n", (clock() - start) / (CLOCKS_PER_SEC / 1000), (double)numWrites * 512 / 1000000 / ((clock() - start) / (CLOCKS_PER_SEC / 1000)) * 1000);
 
@@ -45,16 +45,18 @@ int main() {
         if (0 == fwrite(buffer, 512, 1, fp)) {
             printf("Write error.\n");
         }
-        if (i % 100 == 0) {
-            fflush(fp);
-            fsync(fileno(fp));
-        }
+        // if (i % 100 == 0) {
+        //     fflush(fp);
+        //     fsync(fileno(fp));
+        // }
     }
     printf("Random write time: %lums (%.2f MB/s)\n", (clock() - start) / (CLOCKS_PER_SEC / 1000), (double)numWrites * 512 / 1000000 / ((clock() - start) / (CLOCKS_PER_SEC / 1000)) * 1000);
 
+    fclose(fp);
+
     // Time to read 1000 blocks
-    fseek(fp, 0, SEEK_SET);
     start = clock();
+    fp = fopen("speedTestTemp.bin", "rb");
     for (int i = 0; i < numWrites; i++) {
         for (int j = 0; j < 128; j++) {
             ((uint32_t *)buffer)[j]++;
@@ -80,6 +82,8 @@ int main() {
         }
     }
     printf("Random Read time: %lums (%.2f MB/s)\n", (clock() - start) / (CLOCKS_PER_SEC / 1000), (double)numWrites * 512 / 1000000 / ((clock() - start) / (CLOCKS_PER_SEC / 1000)) * 1000);
+
+    fclose(fp);
 
     return 0;
 }
