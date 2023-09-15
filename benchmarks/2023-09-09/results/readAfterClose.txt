@@ -1,8 +1,5 @@
-rm -f *.o	
-rm -f *.out
-rm -f *.bin
-gcc justRawPerfomance.c -o justRawPerfomance.out -ldl -lm
-./justRawPerfomance.out
+Nothing fancy on the write, but the read as done after closing the file, starting the timer, then opening it again
+
 Starting RAW performance test.
 Write time: 6557ms (78.08 MB/s)
 Random write time: 42261ms (12.12 MB/s)
