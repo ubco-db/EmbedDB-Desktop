@@ -29,6 +29,7 @@ int main() {
         }
         if (i % 100 == 0) {
             fflush(fp);
+            fsync(fileno(fp));
         }
     }
     printf("Write time: %lums (%.2f MB/s)\n", (clock() - start) / (CLOCKS_PER_SEC / 1000), (double)numWrites * 512 / 1000000 / ((clock() - start) / (CLOCKS_PER_SEC / 1000)) * 1000);
@@ -46,6 +47,7 @@ int main() {
         }
         if (i % 100 == 0) {
             fflush(fp);
+            fsync(fileno(fp));
         }
     }
     printf("Random write time: %lums (%.2f MB/s)\n", (clock() - start) / (CLOCKS_PER_SEC / 1000), (double)numWrites * 512 / 1000000 / ((clock() - start) / (CLOCKS_PER_SEC / 1000)) * 1000);
