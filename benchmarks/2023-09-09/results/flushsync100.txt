@@ -1,0 +1,10 @@
+rm -f *.o	
+rm -f *.out
+rm -f *.bin
+gcc justRawPerfomance.c -o justRawPerfomance.out -ldl -lm
+./justRawPerfomance.out
+Starting RAW performance test.
+Write time: 1516ms (33.77 MB/s)
+Random write time: 9327ms (5.49 MB/s)
+Read time: 330ms (155.15 MB/s)
+Random Read time: 1465ms (34.95 MB/s)
