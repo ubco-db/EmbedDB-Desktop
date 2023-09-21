@@ -140,6 +140,8 @@ int main() {
         sqlite3_finalize(query);
         sqlite3_exec(db, "END TRANSACTION", NULL, NULL, NULL);
 
+        fclose(dataset);
+
         timeInsertNTInt[run] = (clock() - timeInsertNTInt[run]) / (CLOCKS_PER_SEC / 1000);
         numRecordsInsertNTInt = getNumRecords();
 
@@ -222,6 +224,8 @@ int main() {
         sqlite3_finalize(query);
         sqlite3_exec(db, "END TRANSACTION", NULL, NULL, NULL);
 
+        fclose(dataset);
+
         timeInsertNTInt[run] = (clock() - timeInsertNTInt[run]) / (CLOCKS_PER_SEC / 1000);
         numRecordsInsertNTInt = getNumRecords();
 
@@ -300,6 +304,8 @@ int main() {
         }
         sqlite3_finalize(query);
         sqlite3_exec(db, "END TRANSACTION", NULL, NULL, NULL);
+
+        fclose(dataset);
 
         timeInsertNTInt[run] = (clock() - timeInsertNTInt[run]) / (CLOCKS_PER_SEC / 1000);
         numRecordsInsertNTInt = getNumRecords();
@@ -380,6 +386,8 @@ int main() {
         sqlite3_finalize(query);
         sqlite3_exec(db, "END TRANSACTION", NULL, NULL, NULL);
 
+        fclose(datasetUWA);
+
         createTableIntIntIntInt("sea");
         char const insertIntsSEA[] = "INSERT INTO sea VALUES (?, ?, ?, ?);";
         fseek(datasetSEA, 0, SEEK_SET);
@@ -399,6 +407,8 @@ int main() {
         }
         sqlite3_finalize(query);
         sqlite3_exec(db, "END TRANSACTION", NULL, NULL, NULL);
+
+        fclose(datasetSEA);
 
         numRecordsInsertNTInt = getNumRecords();
 
@@ -478,6 +488,8 @@ int main() {
         }
         sqlite3_finalize(query);
         sqlite3_exec(db, "END TRANSACTION", NULL, NULL, NULL);
+
+        fclose(dataset);
 
         timeInsertNTInt[run] = (clock() - timeInsertNTInt[run]) / (CLOCKS_PER_SEC / 1000);
         numRecordsInsertNTInt = getNumRecords();
