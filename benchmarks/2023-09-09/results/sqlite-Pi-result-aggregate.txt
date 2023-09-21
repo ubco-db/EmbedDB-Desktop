@@ -1,7 +1,3 @@
-gcc -c sqliteBenchmarkAggregate.c -ldl -lm -lpthread
-gcc -o sqliteBenchmarkAggregate.out sqlite3.o sqliteBenchmarkAggregate.o -ldl -lm -lpthread
-./sqliteBenchmarkAggregate.out
-
 Aggregate Query: min, max, and avg temperature for each day
 Time: 752 750 752 ~ 751ms
 Num Records Queried: 70

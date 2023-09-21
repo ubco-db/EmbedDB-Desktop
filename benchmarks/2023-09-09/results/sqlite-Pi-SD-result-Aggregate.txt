@@ -1,3 +1,0 @@
-Aggregate
-Time: 744 742 744 ~ 743ms
-Num Records Queried: 70

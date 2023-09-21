@@ -1,13 +1,3 @@
-gcc -c ../../src/embedDB/embedDB.c -o embedDB.o -ldl -lm
-gcc -c ../../src/embedDB/utilityFunctions.c -o utilityFunctions.o  -ldl -lm
-gcc -c ../../src/spline/spline.c -o spline.o -ldl -lm
-gcc -c ../../src/spline/radixspline.c -o radixspline.o -ldl -lm
-gcc -c ../../src/query-interface/schema.c -o schema.o -ldl -lm
-gcc -c ../../src/query-interface/advancedQueries.c -o advancedQueries.o -ldl -lm
-gcc -c embedDBBenchmarkAggregate.c -o embedDBBenchmarkAggregate.o -ldl -lm
-gcc -o embedDBBenchmarkAggregate.out embedDBBenchmarkAggregate.o embedDB.o utilityFunctions.o spline.o radixspline.o schema.o advancedQueries.o -ldl -lm
-./embedDBBenchmarkAggregate.out
-
 Aggregate Query: min, max, and avg temperature for each day
 Time: 140 140 140 ~ 140ms
 Num records returned: 70
