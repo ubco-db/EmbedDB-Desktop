@@ -7,7 +7,7 @@
 
 #include "sqlite3.h"
 
-int createTableIntIntIntInt();
+int createTableIntIntIntInt(char tableName[]);
 int setupDatabase();
 void dropDatabase();
 int getNumRecords();
@@ -101,6 +101,7 @@ int main() {
         numRecordsInsertTBlob,
         numRecordsInsertTInt;
 
+    /* SELECT cast((key / 86400) as int), min(airTemp), max(airTemp), avg(airTemp) FROM keyValue GROUP BY cast((key / 86400) as int) */
     for (int run = 0; run < numRuns; run++) {
         ///////////
         // Setup //
@@ -118,7 +119,7 @@ int main() {
         ////////////
         char const insertInts[] = "INSERT INTO keyValue VALUES (?, ?, ?, ?);";
         setupDatabase();
-        createTableIntIntIntInt();
+        createTableIntIntIntInt("keyValue");
         fseek(dataset, 0, SEEK_SET);
 
         timeInsertNTInt[run] = clock();
@@ -144,14 +145,11 @@ int main() {
 
         query = NULL;
 
-        ////////////////////////////
-        // SELECT * FROM keyValue //
-        ////////////////////////////
         int numRecords = 0;
 
         timeAggregate[run] = clock();
 
-        char const selectStar[] = "SELECT cast((key / 86400) as int), min(airTemp), max(airTemp), avg(airTemp) FROM keyValue GROUP BY cast((key / 86400) as int);";
+        char const selectStar[] = "SELECT cast((key / 86400) as int), min(col1), max(col1), avg(col1) FROM keyValue GROUP BY cast((key / 86400) as int);";
         sqlite3_prepare_v2(db, selectStar, strlen(selectStar), &query, NULL);
         // Print out the results
         while (sqlite3_step(query) == SQLITE_ROW) {
@@ -174,7 +172,345 @@ int main() {
     // Print out the results //
     ///////////////////////////
     int sum = 0;
-    printf("\nAggregate\n");
+    printf("\nAggregate Query: min, max, and avg temperature for each day\n");
+    printf("Time: ");
+    for (int i = 0; i < numRuns; i++) {
+        printf("%d ", timeAggregate[i]);
+        sum += timeAggregate[i];
+    }
+    printf("~ %dms\n", sum / numRuns);
+    printf("Num Records Queried: %d\n", numRecordsSelectStarInt);
+
+    /* SELECT cast(time / 86400 as int), avg(airTemp) / 10.0, max(windSpeed) / 10.0
+     * FROM keyValue GROUP BY cast(time / 86400 as int)
+     * HAVING max(windSpeed) > 150 */
+    for (int run = 0; run < numRuns; run++) {
+        ///////////
+        // Setup //
+        ///////////
+        sqlite3_stmt *query = NULL;
+        int8_t recordSize = 16;
+        int8_t dataSize = 12;
+        int8_t keySize = 4;
+        char const insert[] = "INSERT INTO keyValue VALUES (?, ?);";
+        FILE *dataset = fopen(dataFileName, "rb");
+        char dataPage[512];
+
+        ////////////
+        // Insert //
+        ////////////
+        char const insertInts[] = "INSERT INTO keyValue VALUES (?, ?, ?, ?);";
+        setupDatabase();
+        createTableIntIntIntInt("keyValue");
+        fseek(dataset, 0, SEEK_SET);
+
+        timeInsertNTInt[run] = clock();
+
+        sqlite3_exec(db, "BEGIN TRANSACTION", NULL, NULL, NULL);
+        sqlite3_prepare_v2(db, insertInts, 42, &query, NULL);
+        while (fread(dataPage, 512, 1, dataset)) {
+            uint16_t count = *(uint16_t *)(dataPage + 4);
+            for (int record = 1; record <= count; record++) {
+                sqlite3_bind_int(query, 1, *(uint32_t *)(dataPage + record * recordSize));
+                sqlite3_bind_int(query, 2, *(int32_t *)(dataPage + record * recordSize + keySize));
+                sqlite3_bind_int(query, 3, *(int32_t *)(dataPage + record * recordSize + keySize + 4));
+                sqlite3_bind_int(query, 4, *(int32_t *)(dataPage + record * recordSize + keySize + 8));
+                sqlite3_step(query);
+                sqlite3_reset(query);
+            }
+        }
+        sqlite3_finalize(query);
+        sqlite3_exec(db, "END TRANSACTION", NULL, NULL, NULL);
+
+        timeInsertNTInt[run] = (clock() - timeInsertNTInt[run]) / (CLOCKS_PER_SEC / 1000);
+        numRecordsInsertNTInt = getNumRecords();
+
+        query = NULL;
+
+        int numRecords = 0;
+
+        timeAggregate[run] = clock();
+
+        char const selectStar[] = "SELECT cast(key / 86400 as int), avg(col1) / 10.0, max(col3) / 10.0 FROM keyValue GROUP BY cast(key / 86400 as int) HAVING max(col3) > 150;";
+        sqlite3_prepare_v2(db, selectStar, strlen(selectStar), &query, NULL);
+        while (sqlite3_step(query) == SQLITE_ROW) {
+            numRecords++;
+        }
+        sqlite3_finalize(query);
+
+        timeAggregate[run] = (clock() - timeAggregate[run]) / (CLOCKS_PER_SEC / 1000);
+        numRecordsSelectStarInt = numRecords;
+
+        query = NULL;
+
+        dropDatabase();
+        db = NULL;
+        query = NULL;
+    }
+
+    ///////////////////////////
+    // Print out the results //
+    ///////////////////////////
+    sum = 0;
+    printf("\nAggregate Query: Average temperature on days where the max wind speed was above 15\n");
+    printf("Time: ");
+    for (int i = 0; i < numRuns; i++) {
+        printf("%d ", timeAggregate[i]);
+        sum += timeAggregate[i];
+    }
+    printf("~ %dms\n", sum / numRuns);
+    printf("Num Records Queried: %d\n", numRecordsSelectStarInt);
+
+    /* SELECT COUNT(*) / 1000.0 FROM eth WHERE ethConc > 0 */
+    for (int run = 0; run < numRuns; run++) {
+        ///////////
+        // Setup //
+        ///////////
+        sqlite3_stmt *query = NULL;
+        int8_t recordSize = 16;
+        int8_t dataSize = 12;
+        int8_t keySize = 4;
+        char const insert[] = "INSERT INTO keyValue VALUES (?, ?);";
+        char dataFileNameEth[] = "../../data/ethylene_CO_only_100K.bin";
+        FILE *dataset = fopen(dataFileNameEth, "rb");
+        char dataPage[512];
+
+        ////////////
+        // Insert //
+        ////////////
+        char const insertInts[] = "INSERT INTO keyValue VALUES (?, ?, ?, ?);";
+        setupDatabase();
+        createTableIntIntIntInt("keyValue");
+        fseek(dataset, 0, SEEK_SET);
+
+        timeInsertNTInt[run] = clock();
+
+        sqlite3_exec(db, "BEGIN TRANSACTION", NULL, NULL, NULL);
+        sqlite3_prepare_v2(db, insertInts, 42, &query, NULL);
+        while (fread(dataPage, 512, 1, dataset)) {
+            uint16_t count = *(uint16_t *)(dataPage + 4);
+            for (int record = 1; record <= count; record++) {
+                sqlite3_bind_int(query, 1, *(uint32_t *)(dataPage + record * recordSize));
+                sqlite3_bind_int(query, 2, *(int32_t *)(dataPage + record * recordSize + keySize));
+                sqlite3_bind_int(query, 3, *(int32_t *)(dataPage + record * recordSize + keySize + 4));
+                sqlite3_bind_int(query, 4, *(int32_t *)(dataPage + record * recordSize + keySize + 8));
+                sqlite3_step(query);
+                sqlite3_reset(query);
+            }
+        }
+        sqlite3_finalize(query);
+        sqlite3_exec(db, "END TRANSACTION", NULL, NULL, NULL);
+
+        timeInsertNTInt[run] = (clock() - timeInsertNTInt[run]) / (CLOCKS_PER_SEC / 1000);
+        numRecordsInsertNTInt = getNumRecords();
+
+        query = NULL;
+
+        int numRecords = 0;
+        int printLimit = 100;
+
+        timeAggregate[run] = clock();
+
+        char const selectStar[] = "SELECT COUNT(*) FROM keyValue WHERE col2 > 0;";
+        sqlite3_prepare_v2(db, selectStar, strlen(selectStar), &query, NULL);
+        while (sqlite3_step(query) == SQLITE_ROW) {
+            numRecords = sqlite3_column_int(query, 0);
+        }
+        sqlite3_finalize(query);
+
+        timeAggregate[run] = (clock() - timeAggregate[run]) / (CLOCKS_PER_SEC / 1000);
+        numRecordsSelectStarInt = numRecords;
+
+        query = NULL;
+
+        dropDatabase();
+        db = NULL;
+        query = NULL;
+    }
+
+    ///////////////////////////
+    // Print out the results //
+    ///////////////////////////
+    sum = 0;
+    printf("\nAggregate Query: Percent of records with ethylene concentration > 0\n");
+    printf("Time: ");
+    for (int i = 0; i < numRuns; i++) {
+        printf("%d ", timeAggregate[i]);
+        sum += timeAggregate[i];
+    }
+    printf("~ %dms\n", sum / numRuns);
+    printf("Percent records returned: %2.1f%% (%d/%d)\n", numRecordsSelectStarInt / (double)numRecordsInsertNTInt * 100, numRecordsSelectStarInt, numRecordsInsertNTInt);
+
+    /* Join UWA & SEA */
+    for (int run = 0; run < numRuns; run++) {
+        ///////////
+        // Setup //
+        ///////////
+        sqlite3_stmt *query = NULL;
+        int8_t recordSize = 16;
+        int8_t dataSize = 12;
+        int8_t keySize = 4;
+        char filenameUWA[] = "../../data/uwa500K.bin";
+        FILE *datasetUWA = fopen(filenameUWA, "rb");
+        char fileNameSEA[] = "../../data/sea100k.bin";
+        FILE *datasetSEA = fopen(fileNameSEA, "rb");
+        char dataPage[512];
+
+        ////////////
+        // Insert //
+        ////////////
+        char const insertIntsUWA[] = "INSERT INTO uwa VALUES (?, ?, ?, ?);";
+        setupDatabase();
+        createTableIntIntIntInt("uwa");
+        fseek(datasetUWA, 0, SEEK_SET);
+
+        sqlite3_exec(db, "BEGIN TRANSACTION", NULL, NULL, NULL);
+        sqlite3_prepare_v2(db, insertIntsUWA, strlen(insertIntsUWA), &query, NULL);
+        while (fread(dataPage, 512, 1, datasetUWA)) {
+            uint16_t count = *(uint16_t *)(dataPage + 4);
+            for (int record = 1; record <= count; record++) {
+                sqlite3_bind_int(query, 1, *(uint32_t *)(dataPage + record * recordSize));
+                sqlite3_bind_int(query, 2, *(int32_t *)(dataPage + record * recordSize + keySize));
+                sqlite3_bind_int(query, 3, *(int32_t *)(dataPage + record * recordSize + keySize + 4));
+                sqlite3_bind_int(query, 4, *(int32_t *)(dataPage + record * recordSize + keySize + 8));
+                sqlite3_step(query);
+                sqlite3_reset(query);
+            }
+        }
+        sqlite3_finalize(query);
+        sqlite3_exec(db, "END TRANSACTION", NULL, NULL, NULL);
+
+        createTableIntIntIntInt("sea");
+        char const insertIntsSEA[] = "INSERT INTO sea VALUES (?, ?, ?, ?);";
+        fseek(datasetSEA, 0, SEEK_SET);
+
+        sqlite3_exec(db, "BEGIN TRANSACTION", NULL, NULL, NULL);
+        sqlite3_prepare_v2(db, insertIntsSEA, strlen(insertIntsSEA), &query, NULL);
+        while (fread(dataPage, 512, 1, datasetSEA)) {
+            uint16_t count = *(uint16_t *)(dataPage + 4);
+            for (int record = 1; record <= count; record++) {
+                sqlite3_bind_int(query, 1, *(uint32_t *)(dataPage + record * recordSize));
+                sqlite3_bind_int(query, 2, *(int32_t *)(dataPage + record * recordSize + keySize));
+                sqlite3_bind_int(query, 3, *(int32_t *)(dataPage + record * recordSize + keySize + 4));
+                sqlite3_bind_int(query, 4, *(int32_t *)(dataPage + record * recordSize + keySize + 8));
+                sqlite3_step(query);
+                sqlite3_reset(query);
+            }
+        }
+        sqlite3_finalize(query);
+        sqlite3_exec(db, "END TRANSACTION", NULL, NULL, NULL);
+
+        numRecordsInsertNTInt = getNumRecords();
+
+        query = NULL;
+
+        int numRecords = 0;
+
+        timeAggregate[run] = clock();
+
+        char const selectStar[] = "SELECT u.key, s.col1 / 10 as Temp_SEA, u.col1 /10 as Temp_UWA FROM sea s JOIN (SELECT key + 473385600 as key, col1 FROM uwa) u ON s.key = u.key WHERE s.key >= 1420099200 AND s.key < 1451635200;";
+        sqlite3_prepare_v2(db, selectStar, strlen(selectStar), &query, NULL);
+        // Print out the results
+        while (sqlite3_step(query) == SQLITE_ROW) {
+            // printf("%d | %.2f | %.2f | %.2f\n", sqlite3_column_int(query, 0), sqlite3_column_double(query, 1) / 10.0, sqlite3_column_double(query, 2) / 10.0, sqlite3_column_double(query, 3) / 10.0);
+            numRecords++;
+        }
+        sqlite3_finalize(query);
+
+        timeAggregate[run] = (clock() - timeAggregate[run]) / (CLOCKS_PER_SEC / 1000);
+        numRecordsSelectStarInt = numRecords;
+
+        query = NULL;
+
+        dropDatabase();
+        db = NULL;
+        query = NULL;
+    }
+
+    ///////////////////////////
+    // Print out the results //
+    ///////////////////////////
+    sum = 0;
+    printf("\nJoin Query: Join SEA and UWA dataset to compare temperatures on the same day of the year\n");
+    printf("Time: ");
+    for (int i = 0; i < numRuns; i++) {
+        printf("%d ", timeAggregate[i]);
+        sum += timeAggregate[i];
+    }
+    printf("~ %dms\n", sum / numRuns);
+    printf("Num Records Queried: %d\n", numRecordsSelectStarInt);
+
+    /* Watch dataset */
+    for (int run = 0; run < numRuns; run++) {
+        ///////////
+        // Setup //
+        ///////////
+        sqlite3_stmt *query = NULL;
+        int8_t recordSize = 16;
+        int8_t dataSize = 12;
+        int8_t keySize = 4;
+        char filenameWatch[] = "../../data/watch_only_100K.bin";
+        FILE *dataset = fopen(filenameWatch, "rb");
+        char dataPage[512];
+
+        ////////////
+        // Insert //
+        ////////////
+        char const insertInts[] = "INSERT INTO watch VALUES (?, ?, ?, ?);";
+        setupDatabase();
+        createTableIntIntIntInt("watch");
+        fseek(dataset, 0, SEEK_SET);
+
+        timeInsertNTInt[run] = clock();
+
+        sqlite3_exec(db, "BEGIN TRANSACTION", NULL, NULL, NULL);
+        sqlite3_prepare_v2(db, insertInts, 42, &query, NULL);
+        while (fread(dataPage, 512, 1, dataset)) {
+            uint16_t count = *(uint16_t *)(dataPage + 4);
+            for (int record = 1; record <= count; record++) {
+                sqlite3_bind_int(query, 1, *(uint32_t *)(dataPage + record * recordSize));
+                sqlite3_bind_int(query, 2, *(int32_t *)(dataPage + record * recordSize + keySize));
+                sqlite3_bind_int(query, 3, *(int32_t *)(dataPage + record * recordSize + keySize + 4));
+                sqlite3_bind_int(query, 4, *(int32_t *)(dataPage + record * recordSize + keySize + 8));
+                sqlite3_step(query);
+                sqlite3_reset(query);
+            }
+        }
+        sqlite3_finalize(query);
+        sqlite3_exec(db, "END TRANSACTION", NULL, NULL, NULL);
+
+        timeInsertNTInt[run] = (clock() - timeInsertNTInt[run]) / (CLOCKS_PER_SEC / 1000);
+        numRecordsInsertNTInt = getNumRecords();
+
+        query = NULL;
+
+        int numRecords = 0;
+
+        timeAggregate[run] = clock();
+
+        char const selectStar[] = "SELECT cast(key / (7060000 / 10) as int) as 'Bucket', COUNT(*) as 'Count' FROM watch WHERE col1 > 500000000 GROUP BY cast(key / (7060000 / 10) as int);";
+        sqlite3_prepare_v2(db, selectStar, strlen(selectStar), &query, NULL);
+        while (sqlite3_step(query) == SQLITE_ROW) {
+            numRecords += sqlite3_column_int(query, 2);
+            // printf("%d | %d\n", sqlite3_column_int(query, 0), sqlite3_column_int(query, 1));
+        }
+        sqlite3_finalize(query);
+
+        timeAggregate[run] = (clock() - timeAggregate[run]) / (CLOCKS_PER_SEC / 1000);
+        numRecordsSelectStarInt = numRecords;
+
+        query = NULL;
+
+        dropDatabase();
+        db = NULL;
+        query = NULL;
+    }
+
+    ///////////////////////////
+    // Print out the results //
+    ///////////////////////////
+    sum = 0;
+    printf("\nAggregate Query: Count the number of records with a magnitude of motion above 5e8 on the X axis for each of 10 time windows\n");
     printf("Time: ");
     for (int i = 0; i < numRuns; i++) {
         printf("%d ", timeAggregate[i]);
@@ -205,11 +541,12 @@ void printQueryExplain() {
     sqlite3_finalize(query);
 }
 
-int createTableIntIntIntInt() {
+int createTableIntIntIntInt(char tableName[]) {
     /* Setup Table */
     sqlite3_stmt *ps = NULL;
-    char const createStatement[] = "CREATE TABLE keyValue (key INTEGER PRIMARY KEY, airTemp INTEGER, airPressure INTEGER, windSpeed INTEGER);";
-    int prepareResult = sqlite3_prepare_v2(db, createStatement, 106, &ps, NULL);
+    char createStatement[100];
+    sprintf(createStatement, "CREATE TABLE %s (key INTEGER PRIMARY KEY, col1 INTEGER, col2 INTEGER, col3 INTEGER);", tableName);
+    int prepareResult = sqlite3_prepare_v2(db, createStatement, strlen(createStatement), &ps, NULL);
     if (prepareResult != 0) {
         printf("Error preparing the statement!\n");
         return -1;
