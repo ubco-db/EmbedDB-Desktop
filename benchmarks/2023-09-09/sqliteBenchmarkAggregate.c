@@ -285,6 +285,7 @@ int main() {
         char const insertInts[] = "INSERT INTO keyValue VALUES (?, ?, ?, ?);";
         setupDatabase();
         createTableIntIntIntInt("keyValue");
+        sqlite3_exec(db, "CREATE INDEX data ON keyValue (col2);", NULL, NULL, NULL);
         fseek(dataset, 0, SEEK_SET);
 
         timeInsertNTInt[run] = clock();
