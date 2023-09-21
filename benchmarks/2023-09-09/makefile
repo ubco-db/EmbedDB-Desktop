@@ -23,6 +23,9 @@ PATHEMBEDDB = ../../src/embedDB/
 PATHSPLINE = ../../src/spline/
 PATHQUERYOP = ../../src/query-interface/
 
+sqlite3.o:
+	gcc -c sqlite3.c $(OSFLAGS) $(SQLITEOSFLAG)
+
 sqliteBenchmarkUWA:
 	gcc -c sqlite3.c sqliteBenchmarkUWA.c $(OSFLAGS) $(SQLITEOSFLAG)
 	gcc -o sqliteBenchmarkUWA.$(TARGET_EXTENSION) sqlite3.o sqliteBenchmarkUWA.o $(OSFLAGS) $(SQLITEOSFLAG)
@@ -39,7 +42,7 @@ sqliteBenchmarkEthylene:
 	./sqliteBenchmarkEthylene.$(TARGET_EXTENSION)
 
 sqliteBenchmarkAggregate:
-	gcc -c sqlite3.c sqliteBenchmarkAggregate.c $(OSFLAGS) $(SQLITEOSFLAG)
+	gcc -c sqliteBenchmarkAggregate.c $(OSFLAGS) $(SQLITEOSFLAG)
 	gcc -o sqliteBenchmarkAggregate.$(TARGET_EXTENSION) sqlite3.o sqliteBenchmarkAggregate.o $(OSFLAGS) $(SQLITEOSFLAG)
 	./sqliteBenchmarkAggregate.$(TARGET_EXTENSION)
 
