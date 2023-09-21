@@ -500,10 +500,10 @@ int main() {
 
         timeAggregate[run] = clock();
 
-        char const selectStar[] = "SELECT cast(key / (7060000 / 10) as int) as 'Bucket', COUNT(*) as 'Count' FROM watch WHERE col1 > 500000000 GROUP BY cast(key / (7060000 / 10) as int);";
+        char const selectStar[] = "SELECT cast(key / 706000 as int) as 'Bucket', COUNT(*) as 'Count' FROM watch WHERE col1 > 500000000 GROUP BY cast(key / 706000 as int);";
         sqlite3_prepare_v2(db, selectStar, strlen(selectStar), &query, NULL);
         while (sqlite3_step(query) == SQLITE_ROW) {
-            numRecords += sqlite3_column_int(query, 2);
+            numRecords += sqlite3_column_int(query, 1);
             // printf("%d | %d\n", sqlite3_column_int(query, 0), sqlite3_column_int(query, 1));
         }
         sqlite3_finalize(query);
