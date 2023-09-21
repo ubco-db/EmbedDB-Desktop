@@ -6,3 +6,5 @@ varFile.bin
 .vscode/
 build/
 result.xml
+venv/
+env/
