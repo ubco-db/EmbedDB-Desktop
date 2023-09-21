@@ -72,13 +72,13 @@ embedDBExample: $(BUILD_PATHS) $(PATHB)embedDBExample.$(TARGET_EXTENSION)
 	@echo "Finished running EmbedDB example file"
 
 $(PATHB)embedDBExample.$(TARGET_EXTENSION): $(EMBEDDB_OBJECTS) $(EMBEDDB_EXAMPLE)
-	$(LINK) -o $@ $^
+	$(LINK) -o $@ $^ $(MATH)
 
 queryExample: $(BUILD_PATHS) $(PATHB)advancedQueryInterfaceExample.$(TARGET_EXTENSION)
 	-./$(PATHB)advancedQueryInterfaceExample.$(TARGET_EXTENSION)
 
 $(PATHB)advancedQueryInterfaceExample.$(TARGET_EXTENSION): $(EMBEDDB_OBJECTS) $(QUERY_OBJECTS) $(ADVANCED_QUERY)
-	$(LINK) -o $@ $^
+	$(LINK) -o $@ $^ $(MATH)
 
 test: $(BUILD_PATHS) $(RESULTS)
 	pip install -r requirements.txt -q
