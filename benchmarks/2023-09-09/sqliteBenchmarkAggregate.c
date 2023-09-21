@@ -358,7 +358,7 @@ int main() {
         int8_t keySize = 4;
         char filenameUWA[] = "../../data/uwa500K.bin";
         FILE *datasetUWA = fopen(filenameUWA, "rb");
-        char fileNameSEA[] = "../../data/sea100k.bin";
+        char fileNameSEA[] = "../../data/sea100K.bin";
         FILE *datasetSEA = fopen(fileNameSEA, "rb");
         char dataPage[512];
 
