@@ -470,7 +470,6 @@ int main() {
         char const insertInts[] = "INSERT INTO watch VALUES (?, ?, ?, ?);";
         setupDatabase();
         createTableIntIntIntInt("watch");
-        sqlite3_exec(db, "CREATE INDEX data ON watch (col1);", NULL, NULL, NULL);
         fseek(dataset, 0, SEEK_SET);
 
         timeInsertNTInt[run] = clock();

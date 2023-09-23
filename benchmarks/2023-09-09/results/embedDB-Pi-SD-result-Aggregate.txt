@@ -1,5 +1,0 @@
-Aggregate query
-Time: 140 140 140 ~ 140ms
-Num records returned: 70
-Num data pages read: 3226
-Num index pages read: 0
