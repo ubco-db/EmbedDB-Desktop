@@ -51,7 +51,7 @@
  * 1 = Binary serach
  * 2 = Modified linear search (Spline)
  */
-#define SEARCH_METHOD 2
+#define SEARCH_METHOD 1
 
 /**
  * Number of bits to be indexed by the Radix Search structure
@@ -703,7 +703,6 @@ void indexPage(embedDBState *state, uint32_t pageNumber) {
  */
 int8_t embedDBPut(embedDBState *state, void *key, void *data) {
     /* Copy record into block */
-
     count_t count = EMBEDDB_GET_COUNT(state->buffer);
     if (state->minKey != UINT32_MAX) {
         void *previousKey = NULL;
@@ -1035,6 +1034,21 @@ int8_t linearSearch(embedDBState *state, int16_t *numReads, void *buf, void *key
     }
 }
 
+int8_t queryBuffer(embedDBState *state, void *key, void *data){
+    // point to output buffer
+    void* outputBuffer = (int8_t *)state->buffer;
+    // binary search on output buffer
+    id_t nextId = embedDBSearchNode(state, outputBuffer, key, 0);
+    
+    if (nextId != -1) {
+        /* Key found */
+        memcpy(data, (void *)((int8_t *)outputBuffer + state->headerSize + state->recordSize * nextId + state->keySize), state->dataSize);
+        return 0;
+    }
+    // Key not found
+    return -1;
+}
+
 /**
  * @brief	Given a key, returns data associated with key.
  * 			Note: Space for data must be already allocated.
@@ -1049,11 +1063,13 @@ int8_t embedDBGet(embedDBState *state, void *key, void *data) {
 #ifdef PRINT_ERRORS
         printf("ERROR: No data in database.\n");
 #endif
+        queryBuffer(state, key, data);
         return -1;
     }
 
     void *buf = (int8_t *)state->buffer + state->pageSize;
     int16_t numReads = 0;
+    //printf("%d\n", (int*)state->pageSize);
 
     uint64_t thisKey = 0;
     memcpy(&thisKey, key, state->keySize);
@@ -1116,6 +1132,7 @@ int8_t embedDBGet(embedDBState *state, void *key, void *data) {
         if (readPage(state, pageId % state->numDataPages) != 0)
             return -1;
         numReads++;
+        
 
         if (first >= last)
             break;
@@ -1160,7 +1177,6 @@ int8_t embedDBGet(embedDBState *state, void *key, void *data) {
         memcpy(data, (void *)((int8_t *)buf + state->headerSize + state->recordSize * nextId + state->keySize), state->dataSize);
         return 0;
     }
-
     // Key not found
     return -1;
 }
