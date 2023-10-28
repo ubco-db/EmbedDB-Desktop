@@ -1059,12 +1059,25 @@ int8_t queryBuffer(embedDBState *state, void *key, void *data){
  * @return	Return 0 if success. Non-zero value if error.
  */
 int8_t embedDBGet(embedDBState *state, void *key, void *data) {
+
+    /*printf("nextDataPageId = %d\n", state->nextDataPageId);
+    printf("minKey = %d\n", state->minKey);
+    printf("maxKey = %d\n", state->maxKey);\
+    printf("Num of data pages = %d\n", state->numDataPages);*/
+    /*
     if (state->nextDataPageId == 0) {
 #ifdef PRINT_ERRORS
         printf("ERROR: No data in database.\n");
 #endif
         queryBuffer(state, key, data);
         return -1;
+    }*/
+
+    // I guess what I'm thinking here is why bother with this check. Why not just start with QueryBuffer? I feel like this if statement will always be true. 
+    if(state->nextDataPageId > (state->nextDataPageId - 1)){
+        printf("nextDataPage %d\n", state->nextDataPageId);
+        printf("I'm writing some bullshit I guess.\n");
+        queryBuffer(state, key, data);
     }
 
     void *buf = (int8_t *)state->buffer + state->pageSize;

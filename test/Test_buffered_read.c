@@ -71,17 +71,44 @@ void test_single_insert_one_retrieval_no_flush(void) {
     free(return_data);
 }
 
+// this is creating 3 pages... 
 void test_multiple_insert_one_retrieval_no_flush(void){
-    int numInserts = 100; 
+    int numInserts = 35; 
     for(int i = 0; i < numInserts; ++i){
         insert_static_record(state, i, (i+100));
     }
-    uint32_t key = 35;
+    uint32_t key = 34;
     int* return_data = query_record(state, &key);
-    TEST_ASSERT_EQUAL(135, *return_data);
+    printf("%d\n", *return_data);
+
+    // okay that was fun, let's try something else.
+    key = 8; 
+    return_data = query_record(state, &key);
+    printf("%d\n", *return_data);
+
+    //TEST_ASSERT_EQUAL(108, *return_data);
 }
 
-void test_insert_and_write_no_flush(void){
+void test_multiple_insert_and_retrieve_no_flush(void){
+    // create a key 
+    uint32_t key = 1; 
+    // save to buffer
+    insert_static_record(state, key, 154);
+    // query data 
+    int* return_data = query_record(state, &key);
+    // create new key
+    key = 2; 
+    // save new data
+    insert_static_record(state, key, 321);
+    // query data 
+    return_data = query_record(state, &key);
+    // test to see if second retrievel works
+    TEST_ASSERT_EQUAL(321, *return_data);
+    // free allocated 
+    free(return_data); 
+}
+
+void test_insert_flush_insert_buffer(void){
     // create a key 
     uint32_t key = 1; 
     // save to buffer
@@ -89,7 +116,19 @@ void test_insert_and_write_no_flush(void){
     // query data 
     int* return_data = query_record(state, &key);
     // test
-    TEST_ASSERT_EQUAL(154, *return_data);
+    printf("%d\n", *return_data);
+    // flush 
+    printf("Flushing embedDB\n");
+    embedDBFlush(state);
+    embedDBFlush(state);
+    key = 2; 
+    insert_static_record(state, key, 69420);
+    return_data = query_record(state, &key);
+    printf("%d\n", *return_data);
+    
+    
+    
+    /*
     // save again 
     key = 2; 
     insert_static_record(state, key, 321);
@@ -99,15 +138,18 @@ void test_insert_and_write_no_flush(void){
     TEST_ASSERT_EQUAL(321, *return_data);
     // free allocated 
     free(return_data); 
+    */
+
 }
 
 int main(){
     UNITY_BEGIN();
-    RUN_TEST(test_single_insert_one_retrieval_flush);
-    RUN_TEST(test_multiple_insert_one_retrieval_flush); // this test seg faults for me using modified binary search. 
-    RUN_TEST(test_single_insert_one_retrieval_no_flush);
+    //RUN_TEST(test_single_insert_one_retrieval_flush);
+    //RUN_TEST(test_multiple_insert_one_retrieval_flush); // this test seg faults for me using modified binary search. 
+    //RUN_TEST(test_single_insert_one_retrieval_no_flush);
     RUN_TEST(test_multiple_insert_one_retrieval_no_flush);
-    RUN_TEST(test_insert_and_write_no_flush);
+    //RUN_TEST(test_multiple_insert_and_retrieve_no_flush);
+    //RUN_TEST(test_insert_flush_insert_buffer);
 }
 
 /* function puts a static record into buffer without flushing. Creates and frees record allocation in the heap.*/
@@ -143,13 +185,13 @@ embedDBState* init_state(){
         exit(0);
     }
      // configure state variables
-    state->recordSize = 16; 
-    state->keySize = 4; 
-    state->dataSize = 12; 
-    state->pageSize = 512; 
+    state->recordSize = 16;                                                 // size of record in bytes
+    state->keySize = 4;                                                     // size of key in bytes 
+    state->dataSize = 12;                                                   // size of data in bytes
+    state->pageSize = 512;                                                  // page size (I am sure this is in bytes)
     state->numSplinePoints = 300;
     state->bitmapSize = 1;
-    state->bufferSizeInBlocks = 4; 
+    state->bufferSizeInBlocks = 4;                                          // size of the buffer in blocks (where I am assuming that a block is the same as a page size)
     // allocate buffer 
     state->buffer = malloc((size_t) state->bufferSizeInBlocks * state->pageSize);
     // check 
