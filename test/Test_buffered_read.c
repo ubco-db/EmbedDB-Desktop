@@ -42,7 +42,6 @@ void test_single_insert_one_retrieval_flush(void) {
     TEST_ASSERT_EQUAL(123, *return_data);
     // free allocated memory
     free(return_data);
-    
 }
 
 void test_multiple_insert_one_retrieval_flush(void){
@@ -54,7 +53,6 @@ void test_multiple_insert_one_retrieval_flush(void){
     uint32_t key = 35;
     int* return_data = query_record(state, &key);
     TEST_ASSERT_EQUAL(135, *return_data);
-
 }
 
 // test saving data to buffer and retrieves it
@@ -66,25 +64,32 @@ void test_single_insert_one_retrieval_no_flush(void) {
     //query data
     int* return_data = query_record(state, &key);
     // test 
-    TEST_ASSERT_EQUAL(123, *return_data);
+    if(return_data != NULL)  TEST_ASSERT_EQUAL(123, *return_data);
+    else TEST_FAIL_MESSAGE("If not marry, cry");
     // free allocated memory
     free(return_data);
 }
 
-// this is creating 3 pages... 
+// 512 / 16 = 32, can have 32 records per page. 
 void test_multiple_insert_one_retrieval_no_flush(void){
-    int numInserts = 35; 
+
+    int numInserts = 31; 
     for(int i = 0; i < numInserts; ++i){
         insert_static_record(state, i, (i+100));
     }
+
+    // query two records.
+    
     uint32_t key = 34;
     int* return_data = query_record(state, &key);
-    printf("%d\n", *return_data);
+    printf("data = %d\n", *return_data);
 
     // okay that was fun, let's try something else.
     key = 8; 
     return_data = query_record(state, &key);
-    printf("%d\n", *return_data);
+    printf("data = %d\n", *return_data);
+    
+    
 
     //TEST_ASSERT_EQUAL(108, *return_data);
 }
@@ -124,7 +129,7 @@ void test_insert_flush_insert_buffer(void){
     key = 2; 
     insert_static_record(state, key, 69420);
     return_data = query_record(state, &key);
-    printf("%d\n", *return_data);
+    //printf("this return_data = %d\n", *return_data);
     
     
     
@@ -142,14 +147,62 @@ void test_insert_flush_insert_buffer(void){
 
 }
 
+void test_above_max_query(void){
+    // flush database to ensure nextDataPageId is > 0 
+    embedDBFlush(state);
+    // insert random records 
+    int numInserts = 8; 
+    for(int i = 0; i < numInserts; ++i){
+        insert_static_record(state, i, (i+100));
+    }
+    // query for max key not in buffer
+    int key = 55; 
+    int* return_data = query_record(state, &key);
+    // test if value is null 
+    TEST_ASSERT_EQUAL(NULL, return_data);
+    // free 
+    free(return_data);
+}
+
+void test_flush_before_insert(void){
+    // flush database to ensure nextDataPageId is > 0 
+    embedDBFlush(state);
+    // create a key 
+    uint32_t key = 1; 
+    // save to buffer
+    insert_static_record(state, key, 123);
+    //query data
+    int* return_data = query_record(state, &key);
+    printf("%d\n", *return_data);
+    // test 
+    TEST_ASSERT_EQUAL(123, *return_data);
+    // free allocated memory
+    free(return_data);
+}
+
+void test_multi_insert_flush_buffer(void){
+    int numInserts = 31; 
+    for(int i = 0; i < numInserts; ++i){
+        insert_static_record(state, i, (i+100));
+    }
+    embedDBFlush(state);
+
+    uint32_t key = 35;
+    int* return_data = query_record(state, &key);
+    TEST_ASSERT_EQUAL(135, *return_data);
+}
+
 int main(){
     UNITY_BEGIN();
     //RUN_TEST(test_single_insert_one_retrieval_flush);
-    //RUN_TEST(test_multiple_insert_one_retrieval_flush); // this test seg faults for me using modified binary search. 
+    //RUN_TEST(test_multiple_insert_one_retrieval_flush);                   // this test seg faults for me using modified binary search. 
     //RUN_TEST(test_single_insert_one_retrieval_no_flush);
-    RUN_TEST(test_multiple_insert_one_retrieval_no_flush);
+    //RUN_TEST(test_multiple_insert_one_retrieval_no_flush);
     //RUN_TEST(test_multiple_insert_and_retrieve_no_flush);
     //RUN_TEST(test_insert_flush_insert_buffer);
+    RUN_TEST(test_above_max_query);
+    //RUN_TEST(test_flush_before_insert);                                     // I get very high maxKey value for buffer. 
+    //RUN_TEST(test_multi_insert_flush_buffer);
 }
 
 /* function puts a static record into buffer without flushing. Creates and frees record allocation in the heap.*/
@@ -166,14 +219,16 @@ int insert_static_record(embedDBState* state, uint32_t key, uint32_t data){
     return (result == 0) ? 0 : -1;
 }
 
-/* function that returns a pointer to allocated space in heap */
+/* function that returns a pointer to allocated space in heap
+   Calling function must free memory as appropriate          */
+// @TODO make this into a malloc wrapper so it's clear that I need to clear memory. 
 void* query_record(embedDBState* state, uint32_t* key){
     // allocate dataSize record in heap
     void* temp = calloc(1, state->dataSize);
-    // query embedDB
-    embedDBGet(state, key, (void*) temp);
-    // return pointer 
-    return temp;
+    // query embedDB and returun pointer
+    if(embedDBGet(state, key, (void*) temp) == 0) return temp; 
+    // else, return NULL
+    return 0;
 }
 
 /* Function returns a pointer to a newly created embedDBState*/

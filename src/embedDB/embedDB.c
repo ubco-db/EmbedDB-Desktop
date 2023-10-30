@@ -1034,12 +1034,10 @@ int8_t linearSearch(embedDBState *state, int16_t *numReads, void *buf, void *key
     }
 }
 
-int8_t queryBuffer(embedDBState *state, void *key, void *data){
-    // point to output buffer
-    void* outputBuffer = (int8_t *)state->buffer;
-    // binary search on output buffer
+int8_t searchOutputBuffer(embedDBState *state, void *outputBuffer, void *key, void *data){
+    // find index of record
     id_t nextId = embedDBSearchNode(state, outputBuffer, key, 0);
-    
+    // return record found 
     if (nextId != -1) {
         /* Key found */
         memcpy(data, (void *)((int8_t *)outputBuffer + state->headerSize + state->recordSize * nextId + state->keySize), state->dataSize);
@@ -1059,33 +1057,38 @@ int8_t queryBuffer(embedDBState *state, void *key, void *data){
  * @return	Return 0 if success. Non-zero value if error.
  */
 int8_t embedDBGet(embedDBState *state, void *key, void *data) {
-
-    /*printf("nextDataPageId = %d\n", state->nextDataPageId);
-    printf("minKey = %d\n", state->minKey);
-    printf("maxKey = %d\n", state->maxKey);\
-    printf("Num of data pages = %d\n", state->numDataPages);*/
-    /*
+    // unsure of the location of where I should init
+    void* outputBuffer = (int8_t *)state->buffer;
+    // Check if no pages are written 
     if (state->nextDataPageId == 0) {
 #ifdef PRINT_ERRORS
         printf("ERROR: No data in database.\n");
 #endif
-        queryBuffer(state, key, data);
-        return -1;
-    }*/
-
-    // I guess what I'm thinking here is why bother with this check. Why not just start with QueryBuffer? I feel like this if statement will always be true. 
-    if(state->nextDataPageId > (state->nextDataPageId - 1)){
-        printf("nextDataPage %d\n", state->nextDataPageId);
-        printf("I'm writing some bullshit I guess.\n");
-        queryBuffer(state, key, data);
+        return(searchOutputBuffer(state, outputBuffer, key, data));
+        //return -1;
     }
+
+    uint64_t thisKey = 0;
+    uint64_t bufMaxKey = 0;
+    uint64_t bufMinKey = 0; 
+    memcpy(&thisKey, key, state->keySize);
+    memcpy(&bufMaxKey, embedDBGetMaxKey(state, outputBuffer), state->keySize);
+    memcpy(&bufMinKey, embedDBGetMaxKey(state, outputBuffer), state->keySize);
+
+    printf("%ld\n", bufMaxKey);
+   
+    // if key > buffer's max key, return -1
+    if(thisKey > bufMaxKey){
+        printf("This is called\n");
+        return -1;
+    }
+
+    // if key >= buffer's min, check buffer
+    if(thisKey >= bufMinKey) return(searchOutputBuffer(state, outputBuffer, key, data));
 
     void *buf = (int8_t *)state->buffer + state->pageSize;
     int16_t numReads = 0;
-    //printf("%d\n", (int*)state->pageSize);
 
-    uint64_t thisKey = 0;
-    memcpy(&thisKey, key, state->keySize);
 
 #if SEARCH_METHOD == 0
     /* Perform a modified binary search that uses info on key location sequence for first placement. */
@@ -1188,6 +1191,7 @@ int8_t embedDBGet(embedDBState *state, void *key, void *data) {
     if (nextId != -1) {
         /* Key found */
         memcpy(data, (void *)((int8_t *)buf + state->headerSize + state->recordSize * nextId + state->keySize), state->dataSize);
+        printf("we got here?");
         return 0;
     }
     // Key not found
