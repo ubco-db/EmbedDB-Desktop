@@ -1034,9 +1034,10 @@ int8_t linearSearch(embedDBState *state, int16_t *numReads, void *buf, void *key
     }
 }
 
-int8_t searchOutputBuffer(embedDBState *state, void *outputBuffer, void *key, void *data){
+
+int8_t searchBuffer(embedDBState *state, void *outputBuffer, void *key, void *data, int8_t range){
     // find index of record
-    id_t nextId = embedDBSearchNode(state, outputBuffer, key, 0);
+    id_t nextId = embedDBSearchNode(state, outputBuffer, key, range);
     // return record found 
     if (nextId != -1) {
         /* Key found */
@@ -1057,15 +1058,14 @@ int8_t searchOutputBuffer(embedDBState *state, void *outputBuffer, void *key, vo
  * @return	Return 0 if success. Non-zero value if error.
  */
 int8_t embedDBGet(embedDBState *state, void *key, void *data) {
-    // unsure of the location of where I should init
+    // get address of write buffer
     void* outputBuffer = (int8_t *)state->buffer;
     // Check if no pages are written 
     if (state->nextDataPageId == 0) {
 #ifdef PRINT_ERRORS
         printf("ERROR: No data in database.\n");
 #endif
-        return(searchOutputBuffer(state, outputBuffer, key, data));
-        //return -1;
+        return(searchBuffer(state, outputBuffer, key, data, 0));
     }
 
     uint64_t thisKey = 0;
@@ -1074,17 +1074,12 @@ int8_t embedDBGet(embedDBState *state, void *key, void *data) {
     memcpy(&thisKey, key, state->keySize);
     memcpy(&bufMaxKey, embedDBGetMaxKey(state, outputBuffer), state->keySize);
     memcpy(&bufMinKey, embedDBGetMaxKey(state, outputBuffer), state->keySize);
-
-    printf("%ld\n", bufMaxKey);
    
     // if key > buffer's max key, return -1
-    if(thisKey > bufMaxKey){
-        printf("This is called\n");
-        return -1;
-    }
+    if(thisKey > bufMaxKey) return -1;
 
     // if key >= buffer's min, check buffer
-    if(thisKey >= bufMinKey) return(searchOutputBuffer(state, outputBuffer, key, data));
+    if(thisKey >= bufMinKey) return(searchBuffer(state, outputBuffer, key, data, 0));
 
     void *buf = (int8_t *)state->buffer + state->pageSize;
     int16_t numReads = 0;
@@ -1186,16 +1181,7 @@ int8_t embedDBGet(embedDBState *state, void *key, void *data) {
     }
 
 #endif
-    id_t nextId = embedDBSearchNode(state, buf, key, 0);
-
-    if (nextId != -1) {
-        /* Key found */
-        memcpy(data, (void *)((int8_t *)buf + state->headerSize + state->recordSize * nextId + state->keySize), state->dataSize);
-        printf("we got here?");
-        return 0;
-    }
-    // Key not found
-    return -1;
+    return(searchBuffer(state, buf, key, data, 0));
 }
 
 /**

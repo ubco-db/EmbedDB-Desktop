@@ -147,6 +147,7 @@ void test_insert_flush_insert_buffer(void){
 
 }
 
+// test checks to see if queried key > maxKey in buffer 
 void test_above_max_query(void){
     // flush database to ensure nextDataPageId is > 0 
     embedDBFlush(state);
@@ -164,6 +165,7 @@ void test_above_max_query(void){
     free(return_data);
 }
 
+// test checks to see if queried key is >= the minKey in the buffer. 
 void test_flush_before_insert(void){
     // flush database to ensure nextDataPageId is > 0 
     embedDBFlush(state);
@@ -173,7 +175,6 @@ void test_flush_before_insert(void){
     insert_static_record(state, key, 123);
     //query data
     int* return_data = query_record(state, &key);
-    printf("%d\n", *return_data);
     // test 
     TEST_ASSERT_EQUAL(123, *return_data);
     // free allocated memory
@@ -186,22 +187,22 @@ void test_multi_insert_flush_buffer(void){
         insert_static_record(state, i, (i+100));
     }
     embedDBFlush(state);
-
     uint32_t key = 35;
     int* return_data = query_record(state, &key);
     TEST_ASSERT_EQUAL(135, *return_data);
 }
 
+// @TODO need to test range of inserts and retrieval
 int main(){
     UNITY_BEGIN();
-    //RUN_TEST(test_single_insert_one_retrieval_flush);
+    RUN_TEST(test_single_insert_one_retrieval_flush);
     //RUN_TEST(test_multiple_insert_one_retrieval_flush);                   // this test seg faults for me using modified binary search. 
     //RUN_TEST(test_single_insert_one_retrieval_no_flush);
     //RUN_TEST(test_multiple_insert_one_retrieval_no_flush);
     //RUN_TEST(test_multiple_insert_and_retrieve_no_flush);
-    //RUN_TEST(test_insert_flush_insert_buffer);
+    RUN_TEST(test_insert_flush_insert_buffer);
     RUN_TEST(test_above_max_query);
-    //RUN_TEST(test_flush_before_insert);                                     // I get very high maxKey value for buffer. 
+    RUN_TEST(test_flush_before_insert);                                     // I get very high maxKey value for buffer. 
     //RUN_TEST(test_multi_insert_flush_buffer);
 }
 

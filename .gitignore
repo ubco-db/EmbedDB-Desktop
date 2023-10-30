@@ -7,4 +7,5 @@ varFile.bin
 build/
 result.xml
 proposed_README.md
-
+*.md
+notes.md
