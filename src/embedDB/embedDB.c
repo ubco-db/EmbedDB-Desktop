@@ -1034,14 +1034,24 @@ int8_t linearSearch(embedDBState *state, int16_t *numReads, void *buf, void *key
     }
 }
 
-
-int8_t searchBuffer(embedDBState *state, void *outputBuffer, void *key, void *data, int8_t range){
+/**
+ * @brief	Given a key, searches for data associated with 
+ *          that key in embedDB buffer using embedDBSearchNode. 
+ *          Note: Space for data must be already allocated.
+ * @param	state	embedDB algorithm state structure
+ * @param   buffer  pointer to embedDB buffer 
+ * @param	key		Key for record
+ * @param	data	Pre-allocated memory to copy data for record
+ * @param   range 
+ * @return	Return 0 if success. Non-zero value if error.
+ */
+int8_t searchBuffer(embedDBState *state, void *buffer, void *key, void *data, int8_t range){
     // find index of record
-    id_t nextId = embedDBSearchNode(state, outputBuffer, key, range);
+    id_t nextId = embedDBSearchNode(state, buffer, key, range);
     // return record found 
     if (nextId != -1) {
         /* Key found */
-        memcpy(data, (void *)((int8_t *)outputBuffer + state->headerSize + state->recordSize * nextId + state->keySize), state->dataSize);
+        memcpy(data, (void *)((int8_t *)buffer + state->headerSize + state->recordSize * nextId + state->keySize), state->dataSize);
         return 0;
     }
     // Key not found
