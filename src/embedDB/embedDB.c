@@ -51,7 +51,7 @@
  * 1 = Binary serach
  * 2 = Modified linear search (Spline)
  */
-#define SEARCH_METHOD 1
+#define SEARCH_METHOD 2
 
 /**
  * Number of bits to be indexed by the Radix Search structure
@@ -574,6 +574,9 @@ void embedDBPrintInit(embedDBState *state) {
 float embedDBCalculateSlope(embedDBState *state, void *buffer) {
     // simplistic slope calculation where the first two entries are used, should be improved
 
+    // return -1 if buffer is empty
+    // if (EMBEDDB_GET_COUNT(buffer) == 0) return -1;
+
     uint32_t slopeX1, slopeX2;
     slopeX1 = 0;
     slopeX2 = EMBEDDB_GET_COUNT(buffer) - 1;
@@ -937,7 +940,11 @@ int16_t embedDBEstimateKeyLocation(embedDBState *state, void *buffer, void *key)
     // return estimated location of the key
     float slope = embedDBCalculateSlope(state, buffer);
 
-    uint64_t minKey = 0, thisKey = 0;
+    //
+    // if (slope == -1) return -1;
+
+    uint64_t minKey = 0,
+             thisKey = 0;
     memcpy(&minKey, embedDBGetMinKey(state, buffer), state->keySize);
     memcpy(&thisKey, key, state->keySize);
 
@@ -958,6 +965,9 @@ id_t embedDBSearchNode(embedDBState *state, void *buffer, void *key, int8_t rang
 
     count = EMBEDDB_GET_COUNT(buffer);
     middle = embedDBEstimateKeyLocation(state, buffer, key);
+
+    // return early if no data in buffer
+    // if (middle == -1) return -1;
 
     // check that maxError was calculated and middle is valid (searches full node otherwise)
     if (state->maxError == -1 || middle >= count || middle <= 0) {
@@ -1035,65 +1045,54 @@ int8_t linearSearch(embedDBState *state, int16_t *numReads, void *buf, void *key
 }
 
 /**
- * @brief	Given a key, searches for data associated with 
- *          that key in embedDB buffer using embedDBSearchNode. 
+ * @brief	Given a key, searches for data associated with
+ *          that key in embedDB buffer using embedDBSearchNode.
  *          Note: Space for data must be already allocated.
  * @param	state	embedDB algorithm state structure
- * @param   buffer  pointer to embedDB buffer 
+ * @param   buffer  pointer to embedDB buffer
  * @param	key		Key for record
  * @param	data	Pre-allocated memory to copy data for record
- * @param   range 
+ * @param   range
  * @return	Return 0 if success. Non-zero value if error.
  */
-int8_t searchBuffer(embedDBState *state, void *buffer, void *key, void *data, int8_t range){
+int8_t searchBuffer(embedDBState *state, void *buffer, void *key, void *data, int8_t range) {
+    // return -1 if there is nothing in the buffer
+    if (EMBEDDB_GET_COUNT(buffer) == 0) return -1;
     // find index of record
     id_t nextId = embedDBSearchNode(state, buffer, key, range);
-    // return record found 
+    // return record found
     if (nextId != -1) {
         /* Key found */
         memcpy(data, (void *)((int8_t *)buffer + state->headerSize + state->recordSize * nextId + state->keySize), state->dataSize);
-        return 0;
+        // return 0;
     }
     // Key not found
     return -1;
 }
 
-/**
- * @brief	Given a key, returns data associated with key.
- * 			Note: Space for data must be already allocated.
- * 			Data is copied from database into data buffer.
- * @param	state	embedDB algorithm state structure
- * @param	key		Key for record
- * @param	data	Pre-allocated memory to copy data for record
- * @return	Return 0 if success. Non-zero value if error.
- */
 int8_t embedDBGet(embedDBState *state, void *key, void *data) {
-    // get address of write buffer
-    void* outputBuffer = (int8_t *)state->buffer;
-    // Check if no pages are written 
+    void *outputBuffer = (int8_t *)state->buffer;
     if (state->nextDataPageId == 0) {
 #ifdef PRINT_ERRORS
         printf("ERROR: No data in database.\n");
 #endif
-        return(searchBuffer(state, outputBuffer, key, data, 0));
+        return -1;
     }
 
     uint64_t thisKey = 0;
     uint64_t bufMaxKey = 0;
-    uint64_t bufMinKey = 0; 
+    uint64_t bufMinKey = 0;
     memcpy(&thisKey, key, state->keySize);
     memcpy(&bufMaxKey, embedDBGetMaxKey(state, outputBuffer), state->keySize);
     memcpy(&bufMinKey, embedDBGetMaxKey(state, outputBuffer), state->keySize);
-   
-    // if key > buffer's max key, return -1
-    if(thisKey > bufMaxKey) return -1;
-
-    // if key >= buffer's min, check buffer
-    if(thisKey >= bufMinKey) return(searchBuffer(state, outputBuffer, key, data, 0));
 
     void *buf = (int8_t *)state->buffer + state->pageSize;
     int16_t numReads = 0;
 
+    if (thisKey > bufMaxKey) return -1;
+
+    // if key >= buffer's min, check buffer
+    if (thisKey >= bufMinKey) return (searchBuffer(state, outputBuffer, key, data, 0));
 
 #if SEARCH_METHOD == 0
     /* Perform a modified binary search that uses info on key location sequence for first placement. */
@@ -1153,7 +1152,6 @@ int8_t embedDBGet(embedDBState *state, void *key, void *data) {
         if (readPage(state, pageId % state->numDataPages) != 0)
             return -1;
         numReads++;
-        
 
         if (first >= last)
             break;
@@ -1191,7 +1189,16 @@ int8_t embedDBGet(embedDBState *state, void *key, void *data) {
     }
 
 #endif
-    return(searchBuffer(state, buf, key, data, 0));
+    id_t nextId = embedDBSearchNode(state, buf, key, 0);
+
+    if (nextId != -1) {
+        /* Key found */
+        memcpy(data, (void *)((int8_t *)buf + state->headerSize + state->recordSize * nextId + state->keySize), state->dataSize);
+        return 0;
+    }
+
+    // Key not found
+    return -1;
 }
 
 /**
