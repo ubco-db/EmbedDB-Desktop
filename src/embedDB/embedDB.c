@@ -940,9 +940,6 @@ int16_t embedDBEstimateKeyLocation(embedDBState *state, void *buffer, void *key)
     // return estimated location of the key
     float slope = embedDBCalculateSlope(state, buffer);
 
-    //
-    // if (slope == -1) return -1;
-
     uint64_t minKey = 0,
              thisKey = 0;
     memcpy(&minKey, embedDBGetMinKey(state, buffer), state->keySize);
@@ -965,9 +962,6 @@ id_t embedDBSearchNode(embedDBState *state, void *buffer, void *key, int8_t rang
 
     count = EMBEDDB_GET_COUNT(buffer);
     middle = embedDBEstimateKeyLocation(state, buffer, key);
-
-    // return early if no data in buffer
-    // if (middle == -1) return -1;
 
     // check that maxError was calculated and middle is valid (searches full node otherwise)
     if (state->maxError == -1 || middle >= count || middle <= 0) {
@@ -1099,10 +1093,14 @@ int8_t embedDBGet(embedDBState *state, void *key, void *data) {
     void *buf = (int8_t *)state->buffer + state->pageSize;
     int16_t numReads = 0;
 
-    if (thisKey > bufMaxKey) return -1;
+    // if search buffer is not empty
+    if ((EMBEDDB_GET_COUNT(outputBuffer) != 0)) {
+        // return -1 if key is not in buffer
+        if (thisKey > bufMaxKey) return -1;
 
-    // if key >= buffer's min, check buffer
-    if (thisKey >= bufMinKey) return (searchBuffer(state, outputBuffer, key, data, 0));
+        // if key >= buffer's min, check buffer
+        if (thisKey >= bufMinKey) return (searchBuffer(state, outputBuffer, key, data, 0));
+    }
 
 #if SEARCH_METHOD == 0
     /* Perform a modified binary search that uses info on key location sequence for first placement. */
