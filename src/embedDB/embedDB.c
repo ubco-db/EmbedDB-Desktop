@@ -1070,11 +1070,21 @@ int8_t searchBuffer(embedDBState *state, void *buffer, void *key, void *data, in
     return -1;
 }
 
+/**
+ * @brief	Given a key, returns data associated with key.
+ * 			Note: Space for data must be already allocated.
+ * 			Data is copied from database into data buffer.
+ * @param	state	embedDB algorithm state structure
+ * @param	key		Key for record
+ * @param	data	Pre-allocated memory to copy data for record
+ * @return	Return 0 if success. Non-zero value if error.
+ */
 int8_t embedDBGet(embedDBState *state, void *key, void *data) {
     void *outputBuffer = (int8_t *)state->buffer;
     if (state->nextDataPageId == 0) {
 #ifdef PRINT_ERRORS
         printf("ERROR: No data in database.\n");
+        searchBuffer(state, outputBuffer, key, data, 0);
 #endif
         return -1;
     }
@@ -1084,7 +1094,7 @@ int8_t embedDBGet(embedDBState *state, void *key, void *data) {
     uint64_t bufMinKey = 0;
     memcpy(&thisKey, key, state->keySize);
     memcpy(&bufMaxKey, embedDBGetMaxKey(state, outputBuffer), state->keySize);
-    memcpy(&bufMinKey, embedDBGetMaxKey(state, outputBuffer), state->keySize);
+    memcpy(&bufMinKey, embedDBGetMinKey(state, outputBuffer), state->keySize);
 
     void *buf = (int8_t *)state->buffer + state->pageSize;
     int16_t numReads = 0;
