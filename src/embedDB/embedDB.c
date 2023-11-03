@@ -574,9 +574,6 @@ void embedDBPrintInit(embedDBState *state) {
 float embedDBCalculateSlope(embedDBState *state, void *buffer) {
     // simplistic slope calculation where the first two entries are used, should be improved
 
-    // return -1 if buffer is empty
-    // if (EMBEDDB_GET_COUNT(buffer) == 0) return -1;
-
     uint32_t slopeX1, slopeX2;
     slopeX1 = 0;
     slopeX2 = EMBEDDB_GET_COUNT(buffer) - 1;
@@ -1058,7 +1055,7 @@ int8_t searchBuffer(embedDBState *state, void *buffer, void *key, void *data, in
     if (nextId != -1) {
         /* Key found */
         memcpy(data, (void *)((int8_t *)buffer + state->headerSize + state->recordSize * nextId + state->keySize), state->dataSize);
-        // return 0;
+        return 0;
     }
     // Key not found
     return -1;
@@ -1076,9 +1073,11 @@ int8_t searchBuffer(embedDBState *state, void *buffer, void *key, void *data, in
 int8_t embedDBGet(embedDBState *state, void *key, void *data) {
     void *outputBuffer = (int8_t *)state->buffer;
     if (state->nextDataPageId == 0) {
+        int8_t success = searchBuffer(state, outputBuffer, key, data, 0);
+        if (success == 0) return success;
+
 #ifdef PRINT_ERRORS
         printf("ERROR: No data in database.\n");
-        searchBuffer(state, outputBuffer, key, data, 0);
 #endif
         return -1;
     }

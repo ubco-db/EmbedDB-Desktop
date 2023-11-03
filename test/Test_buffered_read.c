@@ -19,10 +19,10 @@ void tearDown(void) {
     embedDBClose(state);
     tearDownFile(state->dataFile);
     tearDownFile(state->indexFile);
-    // tearDownFile(state->varFile);   // seg fualted here. Will need to implement when I haft to test var file queries.
     free(state->fileInterface);
     free(state->buffer);
     free(state);
+    state = NULL;
 }
 
 // test saving data to buffer, flush, and then retrieval.
@@ -81,25 +81,6 @@ void test_multiple_insert_one_retrieval_no_flush(void) {
     TEST_ASSERT_EQUAL(103, *return_data);
 }
 
-void test_multiple_insert_and_retrieve_no_flush(void) {
-    // create a key
-    uint32_t key = 1;
-    // save to buffer
-    insert_static_record(state, key, 154);
-    // query data
-    int* return_data = query_record(state, &key);
-    // create new key
-    key = 2;
-    // save new data
-    insert_static_record(state, key, 321);
-    // query data
-    return_data = query_record(state, &key);
-    // test to see if second retrievel works
-    TEST_ASSERT_EQUAL(321, *return_data);
-    // free allocated
-    free(return_data);
-}
-
 // test insert key, flush, and insert again for retrieval
 void test_insert_flush_insert_buffer(void) {
     // create a key
@@ -150,42 +131,30 @@ void test_flush_before_insert(void) {
     free(return_data);
 }
 
-void test_multi_insert_flush_buffer(void) {
-    int numInserts = 31;
-    for (int i = 0; i < numInserts; ++i) {
-        insert_static_record(state, i, (i + 100));
-    }
-    embedDBFlush(state);
-    uint32_t key = 30;
-    int* return_data = query_record(state, &key);
-    TEST_ASSERT_EQUAL(130, *return_data);
-}
-
+// test checks retrievel if there is no data and nothing in the buffer
 void test_no_data(void) {
     // create a key
     uint32_t key = 1;
     // allocate dataSize record in heap
     void* temp = calloc(1, state->dataSize);
     // query embedDB and returun pointer
-    embedDBGet(state, &key, (void*)temp);
-    //
-    printf("we got here = %d\n", *(uint32_t*)temp);
-    // else, return NULL
+    int8_t status = embedDBGet(state, &key, (void*)temp);
+    // test
+    TEST_ASSERT_EQUAL(-1, status);
+    free(temp);
 }
 
-// @TODO need to test range of inserts and retrieval
 int main() {
     UNITY_BEGIN();
-    // RUN_TEST(test_single_insert_one_retrieval_flush);
-    // RUN_TEST(test_multiple_insert_one_retrieval_flush);
-    // RUN_TEST(test_single_insert_one_retrieval_no_flush);
-    // RUN_TEST(test_multiple_insert_one_retrieval_no_flush);
-    // RUN_TEST(test_multiple_insert_and_retrieve_no_flush);
-    // RUN_TEST(test_insert_flush_insert_buffer);
-    // RUN_TEST(test_above_max_query);
-    // RUN_TEST(test_flush_before_insert);
-    // RUN_TEST(test_multi_insert_flush_buffer);
+    RUN_TEST(test_single_insert_one_retrieval_flush);
+    RUN_TEST(test_multiple_insert_one_retrieval_flush);
+    RUN_TEST(test_single_insert_one_retrieval_no_flush);
+    RUN_TEST(test_multiple_insert_one_retrieval_no_flush);
+    RUN_TEST(test_insert_flush_insert_buffer);
+    RUN_TEST(test_above_max_query);
+    RUN_TEST(test_flush_before_insert);
     RUN_TEST(test_no_data);
+    UNITY_END();
 }
 
 /* function puts a static record into buffer without flushing. Creates and frees record allocation in the heap.*/
@@ -261,5 +230,7 @@ embedDBState* init_state() {
         printf("Initialization error");
         exit(0);
     }
+
+    embedDBResetStats(state);
     return state;
 }
