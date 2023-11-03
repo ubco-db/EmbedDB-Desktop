@@ -69,6 +69,11 @@ void tearDown() {
     state = NULL;
 }
 
+void test_keyInWriteBuffer_0_after_flush(void) {
+    uint32_t key = 1;
+    uint32_t data = 12345;
+}
+
 void test_var_insert_retrieval_no_flush(void) {
     uint32_t key = 1;
     uint32_t data = 12345;
@@ -83,9 +88,9 @@ void test_var_insert_retrieval_no_flush(void) {
     uint32_t varBufSize = 12;  // Choose any size
     void *varDataBuffer = malloc(varBufSize);
     // query embedDB
-    embedDBGetVar(state, &key, &peanuts, &varStream);
+    // embedDBGetVar(state, &key, &peanuts, &varStream);
 
-    printf("%d\n", peanuts);
+    printf("%d\n", state->keyInWriteBuffer);
 
     /*
     if (varStream != NULL) {

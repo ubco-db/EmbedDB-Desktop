@@ -1048,16 +1048,23 @@ int8_t linearSearch(embedDBState *state, int16_t *numReads, void *buf, void *key
  */
 int8_t searchBuffer(embedDBState *state, void *buffer, void *key, void *data, int8_t range) {
     // return -1 if there is nothing in the buffer
-    if (EMBEDDB_GET_COUNT(buffer) == 0) return -1;
+    if (EMBEDDB_GET_COUNT(buffer) == 0) {
+        // set flag to 0 indic
+        state->keyInWriteBuffer = 0;
+        return -1;
+    }
     // find index of record
     id_t nextId = embedDBSearchNode(state, buffer, key, range);
     // return record found
     if (nextId != -1) {
         /* Key found */
         memcpy(data, (void *)((int8_t *)buffer + state->headerSize + state->recordSize * nextId + state->keySize), state->dataSize);
+        //
+        state->keyInWriteBuffer = 1;
         return 0;
     }
     // Key not found
+    state->keyInWriteBuffer = 0;
     return -1;
 }
 
@@ -1233,8 +1240,15 @@ int8_t embedDBGetVar(embedDBState *state, void *key, void *data, embedDBVarDataS
         return r;
     }
 
+    void *buf;
+    // key in output buffer
+    if (state->keyInWriteBuffer == 0) {
+        buf = (int8_t *)state->buffer + state->pageSize;
+    } else if (state->keyInWriteBuffer == 1) {
+        buf = (int8_t *)state->buffer;
+    }
     // Now the input buffer contains the record, so we can use that to find the variable data
-    void *buf = (int8_t *)state->buffer + state->pageSize;
+    // void *buf = (int8_t *)state->buffer + state->pageSize;
     id_t recordNum = embedDBSearchNode(state, buf, key, 0);
     int8_t setupResult = embedDBSetupVarDataStream(state, key, varData, recordNum);
 
