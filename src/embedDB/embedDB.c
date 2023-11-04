@@ -1233,7 +1233,7 @@ int8_t embedDBGetVar(embedDBState *state, void *key, void *data, embedDBVarDataS
         return r;
     }
 
-    // Now the input buffer contains the record, so we can use that to find the variable dat
+    // Now the input buffer contains the record, so we can use that to find the variable data
     void *buf = (int8_t *)state->buffer + state->pageSize;
     id_t recordNum = embedDBSearchNode(state, buf, key, 0);
     int8_t setupResult = embedDBSetupVarDataStream(state, key, varData, recordNum);
