@@ -70,7 +70,7 @@ void updateAverageKeyDifference(embedDBState *state, void *buffer);
 void embedDBInitSplineFromFile(embedDBState *state);
 int32_t getMaxError(embedDBState *state, void *buffer);
 void updateMaxiumError(embedDBState *state, void *buffer);
-int8_t embedDBSetupVarDataStream(embedDBState *state, void *key, embedDBVarDataStream **varData, id_t recordNumber);
+int8_t embedDBSetupVarDataStream(embedDBState *state, void *key, embedDBVarDataStream **varData, id_t recordNumber, int8_t readOrWriteBuf);
 uint32_t cleanSpline(embedDBState *state, void *key);
 
 void printBitmap(char *bm) {
@@ -1050,7 +1050,6 @@ int8_t searchBuffer(embedDBState *state, void *buffer, void *key, void *data, in
     // return -1 if there is nothing in the buffer
     if (EMBEDDB_GET_COUNT(buffer) == 0) {
         // set flag to 0 indic
-        state->keyInWriteBuffer = 0;
         return -1;
     }
     // find index of record
@@ -1064,7 +1063,6 @@ int8_t searchBuffer(embedDBState *state, void *buffer, void *key, void *data, in
         return 0;
     }
     // Key not found
-    state->keyInWriteBuffer = 0;
     return -1;
 }
 
@@ -1240,17 +1238,26 @@ int8_t embedDBGetVar(embedDBState *state, void *key, void *data, embedDBVarDataS
         return r;
     }
 
-    void *buf;
-    // key in output buffer
+    // point to write buffer by default
+    void *buf = (int8_t *)state->buffer;
+    // initialize recordNum, setupResult
+    id_t recordNum = 0;
+    int8_t setupResult = 0;
+    // if key is in the read buffer 
     if (state->keyInWriteBuffer == 0) {
-        buf = (int8_t *)state->buffer + state->pageSize;
-    } else if (state->keyInWriteBuffer == 1) {
-        buf = (int8_t *)state->buffer;
+        // increment to point buf at read page. 
+        buf += state->pageSize;
+        // retrieve key index from read buffer 
+        recordNum = embedDBSearchNode(state, buf, key, 0);
+        setupResult = embedDBSetupVarDataStream(state, key, varData, recordNum, EMBEDDB_DATA_READ_BUFFER);
+    } 
+    // if key is in the write buffer
+    else if (state->keyInWriteBuffer == 1) {
+        // retrieve key index from write buffer 
+        recordNum = embedDBSearchNode(state, buf, key, 0);
+        setupResult = embedDBSetupVarDataStream(state, key, varData, recordNum, EMBEDDB_DATA_WRITE_BUFFER);
+        printf("setupResult = %d\n", setupResult);
     }
-    // Now the input buffer contains the record, so we can use that to find the variable data
-    // void *buf = (int8_t *)state->buffer + state->pageSize;
-    id_t recordNum = embedDBSearchNode(state, buf, key, 0);
-    int8_t setupResult = embedDBSetupVarDataStream(state, key, varData, recordNum);
 
     switch (setupResult) {
         case 0:
@@ -1460,7 +1467,7 @@ int8_t embedDBNextVar(embedDBState *state, embedDBIterator *it, void *key, void 
 
     // Get the vardata address from the record
     count_t recordNum = it->nextDataRec - 1;
-    int8_t setupResult = embedDBSetupVarDataStream(state, key, varData, recordNum);
+    int8_t setupResult = embedDBSetupVarDataStream(state, key, varData, recordNum, 1);
     switch (setupResult) {
         case 0:
         case 1:
@@ -1478,14 +1485,19 @@ int8_t embedDBNextVar(embedDBState *state, embedDBIterator *it, void *key, void 
  * @param	state	embedDB algorithm state structure
  * @param   key     Key for the record
  * @param   varData Return variable for variable data as a embedDBVarDataStream (Unallocated). Returns NULL if no variable data. **Be sure to free the stream after you are done with it**
+ * @param   readOrWriteBuf int indicating if the requested record is in the read buffer or the write buffer. 
  * @return  Returns 0 if sucessfull or no variable data for the record, 1 if the records variable data was overwritten, 2 if the page failed to read, and 3 if the memorey failed to allocate.
  */
-int8_t embedDBSetupVarDataStream(embedDBState *state, void *key, embedDBVarDataStream **varData, id_t recordNumber) {
-    void *dataBuf = (int8_t *)state->buffer + state->pageSize * EMBEDDB_DATA_READ_BUFFER;
+// here 1
+int8_t embedDBSetupVarDataStream(embedDBState *state, void *key, embedDBVarDataStream **varData, id_t recordNumber, int8_t readOrWriteBuf) {
+    // change buffer pointer depending if the requested data is in the read buffer or not. 
+    void *dataBuf = (int8_t *)state->buffer + state->pageSize * readOrWriteBuf;
+    // retrieve record from appropriate buffer
     void *record = (int8_t *)dataBuf + state->headerSize + recordNumber * state->recordSize;
 
     uint32_t varDataAddr = 0;
     memcpy(&varDataAddr, (int8_t *)record + state->keySize + state->dataSize, sizeof(uint32_t));
+    printf("varDataAddr = %d\n", varDataAddr);
     if (varDataAddr == EMBEDDB_NO_VAR_DATA) {
         *varData = NULL;
         return 0;
@@ -1499,8 +1511,8 @@ int8_t embedDBSetupVarDataStream(embedDBState *state, void *key, embedDBVarDataS
 
     uint32_t pageNum = (varDataAddr / state->pageSize) % state->numVarPages;
 
-    // Read in page
-    if (readVariablePage(state, pageNum) != 0) {
+    // If record is in read buffer, read page. 
+    if (readOrWriteBuf == EMBEDDB_DATA_READ_BUFFER && readVariablePage(state, pageNum) != 0) {
 #ifdef PRINT_ERRORS
         printf("ERROR: embedDB failed to read variable page\n");
 #endif
@@ -1821,12 +1833,18 @@ int8_t readIndexPage(embedDBState *state, id_t pageNum) {
  * @param 	pageNum Page number to read
  * @return 	Return 0 if success, -1 if error
  */
+// here 2 
 int8_t readVariablePage(embedDBState *state, id_t pageNum) {
+
+    printf("bufferedVarPage = %d\n", state->bufferedVarPage);
+
     // Check if page is currently in buffer
     if (pageNum == state->bufferedVarPage) {
         state->bufferHits++;
         return 0;
     }
+
+    printf("embedDBWriteBuffer = %d\n", EMBEDDB_VAR_WRITE_BUFFER(state->parameters));
 
     // Get buffer to read into
     void *buf = (int8_t *)state->buffer + EMBEDDB_VAR_READ_BUFFER(state->parameters) * state->pageSize;
