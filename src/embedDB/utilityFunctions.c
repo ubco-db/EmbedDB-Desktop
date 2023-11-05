@@ -59,7 +59,7 @@ embedDBState *defaultInitializedState() {
 
     /* Address level parameters */
     state->numDataPages = 20000;  // Enough for 620,000 records
-    state->numIndexPages = 42;    // Enough for 645,792 records
+    state->numIndexPages = 44;    // Enough for 676,544 records
     state->eraseSizeInPages = 4;
 
     char dataPath[] = "build/artifacts/dataFile.bin", indexPath[] = "build/artifacts/indexFile.bin";
