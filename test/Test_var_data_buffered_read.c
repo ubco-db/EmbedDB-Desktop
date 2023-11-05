@@ -30,7 +30,7 @@ void setUp(void) {
     // address level parameters
     state->numDataPages = 1000;
     state->numIndexPages = 48;
-    state->numVarPages = 1000;
+    state->numVarPages = 75;
     state->eraseSizeInPages = 4;
     // configure file interface
     char dataPath[] = "build/artifacts/dataFile.bin", indexPath[] = "build/artifacts/indexFile.bin", varPath[] = "build/artifacts/varFile.bin";
@@ -58,7 +58,6 @@ void setUp(void) {
 }
 
 void tearDown() {
-    printf("we got here\n");
     embedDBClose(state);
     tearDownFile(state->dataFile);
     tearDownFile(state->indexFile);
@@ -75,11 +74,11 @@ void test_keyInWriteBuffer_0_after_flush(void) {
 }
 
 void test_var_insert_retrieval_no_flush(void) {
-    uint32_t key = 1;
+    uint32_t key = 121;
     uint32_t data = 12345;
     char varData[] = "Hello world";  // size 12
     embedDBPutVar(state, &key, &data, varData, 12);
-    // embedDBFlush(state);
+    //embedDBFlush(state);
     //  reset data
     uint32_t peanuts = 0;
     // create var data stream
@@ -88,22 +87,26 @@ void test_var_insert_retrieval_no_flush(void) {
     uint32_t varBufSize = 12;  // Choose any size
     void *varDataBuffer = malloc(varBufSize);
     // query embedDB
-    // embedDBGetVar(state, &key, &peanuts, &varStream);
-
-    printf("%d\n", state->keyInWriteBuffer);
-
-    /*
+    embedDBGetVar(state, &key, &peanuts, &varStream);
     if (varStream != NULL) {
         uint32_t bytesRead;
-        while ((bytesRead = embedDBVarDataStreamRead(state, varStream, varDataBuf, varBufSize)) > 0) {
+        while ((bytesRead = embedDBVarDataStreamRead(state, varStream, varDataBuffer, varBufSize)) > 0) {
             // Process data in varDataBuf
+            for(int i = 0; i < 12; ++i){
+                printf("%c", *(char* )varDataBuffer);
+                varDataBuffer++;
+            }
+            printf("\n");
         }
         free(varStream);
         varStream = NULL;
-    }*/
+    }
+    
 }
 
-// @TODO need to test range of inserts and retrieval
+// @TODO I want to know what happens with these cases: 
+// - If the variable record takes up multiple pages 
+
 int main() {
     UNITY_BEGIN();
     RUN_TEST(test_var_insert_retrieval_no_flush);

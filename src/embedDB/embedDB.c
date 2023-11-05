@@ -1548,8 +1548,11 @@ int8_t embedDBSetupVarDataStream(embedDBState *state, void *key, embedDBVarDataS
     varDataStream->totalBytes = dataLen;
     varDataStream->bytesRead = 0;
     varDataStream->fileOffset = varDataAddr;
+    varDataStream->readOrWriteBuf = readOrWriteBuf;
 
-    printf("dataStart = %d\ntotalBytes = %d\nbytesRead = %d\nfileOffset = %d\n", varDataStream->dataStart, varDataStream->totalBytes, varDataStream->bytesRead, varDataStream->fileOffset);
+    //printf("varDataStream = %d\n", readOrWriteBuf);
+
+    //printf("dataStart = %d\ntotalBytes = %d\nbytesRead = %d\nfileOffset = %d\n", varDataStream->dataStart, varDataStream->totalBytes, varDataStream->bytesRead, varDataStream->fileOffset);
 
     *varData = varDataStream;
     return 0;
@@ -1572,17 +1575,20 @@ uint32_t embedDBVarDataStreamRead(embedDBState *state, embedDBVarDataStream *str
         return 0;
     }
 
-    // Read in var page containing the data to read
+    //printf("***********************readOrWrtieBuf = %d\n", state->readOrWriteBuf);
+
+    // Read in var page containing the data to read if record is not in buffer 
     uint32_t pageNum = (stream->fileOffset / state->pageSize) % state->numVarPages;
-    if (readVariablePage(state, pageNum) != 0) {
+    if (state->readOrWriteBuf == 1 && readVariablePage(state, pageNum) != 0) {
 #ifdef PRINT_ERRORS
-        printf("ERROR: Couldn't read variable data page %d\n", pageNum);
+        printf("ERROR: couldn't read variable data page %d\n", pageNum);
 #endif
         return 0;
     }
 
     // Keep reading in data until the buffer is full
-    void *varDataBuf = (int8_t *)state->buffer + state->pageSize * EMBEDDB_VAR_READ_BUFFER(state->parameters);
+    void *varDataBuf = (int8_t *)state->buffer + state->pageSize * (EMBEDDB_VAR_WRITE_BUFFER(state->parameters) + stream->readOrWriteBuf);
+    //void *varDataBuf = (int8_t *)state->buffer + state->pageSize * EMBEDDB_VAR_WRITE_BUFFER(state->parameters);
     uint32_t amtRead = 0;
     while (amtRead < length && stream->bytesRead < stream->totalBytes) {
         uint16_t pageOffset = stream->fileOffset % state->pageSize;
