@@ -1292,6 +1292,7 @@ void embedDBInitIterator(embedDBState *state, embedDBIterator *it) {
         it->nextDataPage = state->minDataPageId;
     }
     it->nextDataRec = 0;
+    it->readFromWriteBuf = 0;
 }
 
 /**
@@ -1302,6 +1303,7 @@ void embedDBCloseIterator(embedDBIterator *it) {
     if (it->queryBitmap != NULL) {
         free(it->queryBitmap);
     }
+    //it->readFromWriteBuf = 0;
 }
 
 /**
@@ -1350,14 +1352,12 @@ int8_t embedDBFlush(embedDBState *state) {
  * @param	data	Return variable for data (Pre-allocated)
  * @return	1 if successful, 0 if no more records
  */
+
 int8_t embedDBNext(embedDBState *state, embedDBIterator *it, void *key, void *data) {
-
     // flag indiciating if read from wrtie buffer or read buffer. 0 = read from read and 1 = write
-    int8_t readFromWriteBuf = 0; 
+    
+    // reference to write buffer
     void *outputBuffer = (int8_t *)state->buffer;
-
-    
-    
     uint64_t itMinKey = 0;
     uint64_t itMaxKey = 0;
     uint64_t bufMinKey = 0;
@@ -1369,20 +1369,11 @@ int8_t embedDBNext(embedDBState *state, embedDBIterator *it, void *key, void *da
         memcpy(&bufMaxKey, embedDBGetMaxKey(state, outputBuffer), state->keySize);
         memcpy(&bufMinKey, embedDBGetMinKey(state, outputBuffer), state->keySize);
     }
-    
-    //printf("itMinKey = %d\n", itMinKey);
-    //printf("itMaxKey = %d\n", itMaxKey);
-    //printf("bufMinKey = %d\n", bufMinKey);
-    //printf("bufMaxKey = %d\n", bufMaxKey);
-    //printf("nextDataPageID = %d\n", state->nextDataPageId);
-    //printf("buf size = %d\n", EMBEDDB_GET_COUNT(outputBuffer));
-
-
     // iterate over pages
     while (1) {
-        // there is no case here if nextDataPage is 0 and nextDataPageId is 0 (a search condition for the buffer)
-        // no more records if all the pages are already read 
-        if (it->nextDataPage >= state->nextDataPageId && readFromWriteBuf == 0) {
+        // exit since all pages including the read buffer has been read
+        if (it->nextDataPage >= state->nextDataPageId && it->readFromWriteBuf == 0) {
+            printf("this should be called\n");
             return 0;
         }
         // If we are just starting to read a new page and we have a query bitmap
@@ -1397,7 +1388,7 @@ int8_t embedDBNext(embedDBState *state, embedDBIterator *it, void *key, void *da
                 if (readIndexPage(state, indexPage % state->numIndexPages) != 0) {
 #ifdef PRINT_ERRORS
                     printf("ERROR: Failed to read index page %i (%i)\n", indexPage, indexPage % state->numIndexPages);
-#endif
+#endif              
                     return 0;
                 }
 
@@ -1415,9 +1406,19 @@ int8_t embedDBNext(embedDBState *state, embedDBIterator *it, void *key, void *da
         
         // if iterator min key is inside buffer
         if(it->minKey != NULL && itMinKey >= bufMinKey ){
-            //printf("This passed for us. Hooray!\n");
+            // copy write buffer to read buffer
             readToWriteBuf(state);
-        } // else read page into EMBEDDB_DATA_READ_BUFFER
+            // set true to indicate data was read from write buffer
+            it->readFromWriteBuf = 1; 
+        }
+        // search buffer if there is no more pages to be read but the buffer has not been searched yet.
+        else if(it->nextDataPage >= state->nextDataPageId && it->readFromWriteBuf == 0){
+            // copy write buffer to read buffer
+            readToWriteBuf(state);
+            // set true to indicate data was read from write buffer
+            it->readFromWriteBuf = 1;
+        }
+        // else read page into EMBEDDB_DATA_READ_BUFFER
         else if (readPage(state, it->nextDataPage % state->numDataPages) != 0) {
 #ifdef PRINT_ERRORS
             printf("ERROR: Failed to read data page %i (%i)\n", it->nextDataPage, it->nextDataPage % state->numDataPages);
@@ -1435,26 +1436,23 @@ int8_t embedDBNext(embedDBState *state, embedDBIterator *it, void *key, void *da
             memcpy(key, buf + state->headerSize + it->nextDataRec * state->recordSize, state->keySize);
             memcpy(data, buf + state->headerSize + it->nextDataRec * state->recordSize + state->keySize, state->dataSize);
             it->nextDataRec++;
-
             // Check record
             if (it->minKey != NULL && state->compareKey(key, it->minKey) < 0)
                 continue;
             // if key is greater than the maxKey set by user, return 0 indicating there are no more records
-            if (it->maxKey != NULL && state->compareKey(key, it->maxKey) > 0)
+            if (it->maxKey != NULL && state->compareKey(key, it->maxKey) > 0){
                 return 0;
+            }
             if (it->minData != NULL && state->compareData(data, it->minData) < 0)
                 continue;
             if (it->maxData != NULL && state->compareData(data, it->maxData) > 0)
                 continue;
-
             // If we make it here, the record matches the query
             return 1;
         }
-
         // Finished reading through whole data page and didn't find a match
         it->nextDataPage++;
         it->nextDataRec = 0;
-
         // Try next data page by looping back to top
     }
 }
