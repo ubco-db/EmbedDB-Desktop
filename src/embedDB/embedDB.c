@@ -1351,7 +1351,7 @@ int8_t embedDBFlush(embedDBState *state) {
  * @return	1 if successful, 0 if no more records
  */
 int8_t embedDBNext(embedDBState *state, embedDBIterator *it, void *key, void *data) {
-    // here you cunt
+
     void *outputBuffer = (int8_t *)state->buffer;
     //printf("minKey = %d\n", *(int*)it->minKey);
 
