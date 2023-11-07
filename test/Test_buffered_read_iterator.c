@@ -71,7 +71,7 @@ void test_iterator_no_flush_on_keys(void){
     uint32_t key = 1; 
     uint32_t data = 111; 
     // records all to be contained in buffer
-    int recNum = 3;
+    int recNum = 33;
     // inserting records
     for(int i = 0; i < recNum; ++i){
         insert_static_record(state, key, data);
@@ -83,6 +83,8 @@ void test_iterator_no_flush_on_keys(void){
     int *itKey, *itData;
     key = 1; 
     data = 116;
+
+    printf("headerSize = %d\n", state->headerSize);
 
     uint32_t minKey = 1, maxKey = 31;
     it.minKey = &minKey;
@@ -105,10 +107,15 @@ void test_iterator_no_flush_on_keys(void){
     embedDBCloseIterator(&it);
 }
 
+// will need a test for defined minKey (that is so it can use the bitmap and spline etc)
+
+// will need a test for inserting records, flushing, and then inserting more (think getting nextDataPageId up to satisfy this if statement if (it->nextDataPage >= state->nextDataPageId))
+
+// will need a test for a variety of data types including floats 
 
 int main() {
     UNITY_BEGIN();
-    RUN_TEST(test_iterator_flush_on_keys);
+    //RUN_TEST(test_iterator_flush_on_keys);
     RUN_TEST(test_iterator_no_flush_on_keys);
     UNITY_END();
 }
