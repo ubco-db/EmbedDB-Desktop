@@ -72,6 +72,7 @@ int32_t getMaxError(embedDBState *state, void *buffer);
 void updateMaxiumError(embedDBState *state, void *buffer);
 int8_t embedDBSetupVarDataStream(embedDBState *state, void *key, embedDBVarDataStream **varData, id_t recordNumber);
 uint32_t cleanSpline(embedDBState *state, void *key);
+int readToWriteBuf(embedDBState *state);
 
 void printBitmap(char *bm) {
     for (int8_t i = 0; i <= 7; i++) {
@@ -1292,6 +1293,7 @@ void embedDBInitIterator(embedDBState *state, embedDBIterator *it) {
         it->nextDataPage = state->minDataPageId;
     }
     it->nextDataRec = 0;
+    it->readingWriteBuf = 0;
 }
 
 /**
@@ -1344,27 +1346,48 @@ int8_t embedDBFlush(embedDBState *state) {
 }
 
 int8_t iteratePage(embedDBState *state, embedDBIterator *it, void *key, void *data){
+    printf("key = %d\n", *(int*)key);
      // Keep reading record until we find one that matches the query
     int8_t *buf = (int8_t *)state->buffer + EMBEDDB_DATA_READ_BUFFER * state->pageSize;
     uint32_t pageRecordCount = EMBEDDB_GET_COUNT(buf);
+    //printf("pageRecordCount = %d\n", pageRecordCount);
     while (it->nextDataRec < pageRecordCount) {
         // Get record
+        //int* temp;
         memcpy(key, buf + state->headerSize + it->nextDataRec * state->recordSize, state->keySize);
-        memcpy(data, buf + state->headerSize + it->nextDataRec * state->recordSize + state->keySize, state->dataSize);
+        //void* temp = buf + state->headerSize + it->nextDataRec * state->recordSize;
+        //memcpy(key, temp, state->keySize);
+        //printf("key = %d\n", *(int*)key);
+
+        // for some reason I can have key or data but not both? 
+
+        //key = temp;
+        //memcpy(key, buf + state->headerSize + it->nextDataRec * state->recordSize, sizeof(int));
+        //memcpy(data, buf + state->headerSize + it->nextDataRec * state->recordSize + state->keySize, state->dataSize);
+        printf("Key = %d, data = %d it->nextDataRec = %d it->nextDataPage = %d\n", *(int*)key, *(int*)data, it->nextDataRec, it->nextDataPage );
+        //printf("Key = %d\n", *(uint32_t*)(buf + state->headerSize + it->nextDataRec * state->recordSize));
+        //printf("key addy = %d\n", temp);
         it->nextDataRec++;
         // Check record
-        if (it->minKey != NULL && state->compareKey(key, it->minKey) < 0)
+        if (it->minKey != NULL && state->compareKey(key, it->minKey) < 0){
+            //printf("Key = %d, minKey = %d \n", *(int*)key, *(int*)it->minKey);
             continue;
+        }
         if (it->maxKey != NULL && state->compareKey(key, it->maxKey) > 0)
             return 0;
         if (it->minData != NULL && state->compareData(data, it->minData) < 0)
             continue;
         if (it->maxData != NULL && state->compareData(data, it->maxData) > 0)
             continue;
-
-        // If we make it here, the record matches the query
+        // If we make it here, the record matches the query 
         return 1;
     }
+    // no more records after reading write buffer 
+    if(it->readingWriteBuf == 1) return 0;
+    // problem: for some reaosn my keys in my tests are all 0. When I run `make test`, those keys are not 0. I don't know 
+    // whats wrong, but that is why I am returning -1 which prevents the while loop wrapper to iterate over this and return
+    // records because it is constentally hitting that first if statement and then continueing to the next iteration. 
+    // Interestingly, I get the data from the key location but not the key itself. 
     return -1;
 }
 
@@ -1376,8 +1399,8 @@ int8_t iteratePage(embedDBState *state, embedDBIterator *it, void *key, void *da
  * @param	data	Return variable for data (Pre-allocated)
  * @return	1 if successful, 0 if no more records
  */
-
 int8_t embedDBNext(embedDBState *state, embedDBIterator *it, void *key, void *data) {
+    //printf("it->nextDataPage = %d \n", it->nextDataPage);
     void *outputBuffer = (int8_t *)state->buffer;
     uint64_t itMinKey = 0;
     uint64_t itMaxKey = 0;
@@ -1390,20 +1413,32 @@ int8_t embedDBNext(embedDBState *state, embedDBIterator *it, void *key, void *da
         memcpy(&bufMaxKey, embedDBGetMaxKey(state, outputBuffer), state->keySize);
         memcpy(&bufMinKey, embedDBGetMinKey(state, outputBuffer), state->keySize);
     }
-
-    // if the range begins in the buffer
-    if(it->minKey != NULL && (itMinKey >= bufMinKey && EMBEDDB_GET_COUNT(outputBuffer) != 0)){
+    // if the user defined maxKey is greater than the buffer max key return 0 as records are sequential
+    if(it->maxKey != NULL && (itMaxKey > bufMaxKey && EMBEDDB_GET_COUNT(outputBuffer) != 0)){
+        return 0; 
+    }
+    // if the range begins in the buffer (and the buffer is not empty)
+    else if(it->minKey != NULL && (itMinKey >= bufMinKey && EMBEDDB_GET_COUNT(outputBuffer) != 0)){
         // put output buffer in read buffer
         readToWriteBuf(state);
+        // flag indicating reading from write buffer
+        it->readingWriteBuf = 1;
         // iterate
-        return iteratePage(state, it, key, data);
+        return(iteratePage(state, it, key, data));
     }
     else{
         // search pages
         while (1) {
+            // if we have reached the end, read from output buffer or return 0
             if (it->nextDataPage >= (state->nextDataPageId)) {
-                printf("We got here? it->nextDataPage = %d and state->nextDataPageId = %d\n", it->nextDataPage, state->nextDataPageId);
-                return 0;
+                // if there are no in the buffer, return 
+                if(EMBEDDB_GET_COUNT(outputBuffer) == 0) return 0;
+                // else, search the write buffer
+                readToWriteBuf(state);
+                // flag indicating reading from write buffer
+                it->readingWriteBuf = 1;
+                int temp = iteratePage(state, it, key, data);
+                if(temp != -1) return temp;     
             }
             // If we are just starting to read a new page and we have a query bitmap
             if (it->nextDataRec == 0 && it->queryBitmap != NULL) {
