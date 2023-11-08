@@ -31,14 +31,14 @@ void test_iterator_flush_on_keys(void){
     uint32_t key = 1; 
     uint32_t data = 111;
     // ~ roughly 31 records per page 
-    int recNum = 31;
+    int recNum = 35;
     // inserting records
     for(int i = 0; i < recNum; ++i){
         insert_static_record(state, key, data);
         key += 1; 
         data += 5;
     }
-    embedDBFlush(state);
+    //embedDBFlush(state);
     // setup iterator
     embedDBIterator it;
     uint32_t *itKey = 0;
@@ -46,7 +46,7 @@ void test_iterator_flush_on_keys(void){
     // test second record since embedDBNext is called once for test. 
     data = 116;
 
-    uint32_t minKey = 1, maxKey = 33;
+    uint32_t minKey = 1, maxKey = 35;
     it.minKey = &minKey;
     it.maxKey = &maxKey;
     it.minData = NULL;
@@ -61,9 +61,9 @@ void test_iterator_flush_on_keys(void){
     while (embedDBNext(state, &it, (void**) &itKey, (void**) &itData)) {   
         // reason I don't get back 32 records is because some of them are in the buffer.          
         //TEST_ASSERT_EQUAL(data, itData);
-        //printf("key = %d, data = %d\n", 5, itData);
+        printf("key = %d, data = %d\n", itKey, itData);
         //data += 5;
-        printf("this passes\n");
+        //printf("this passes\n");
     }
 
     // close
@@ -125,7 +125,7 @@ void test_iterator_no_flush_on_keys(void){
 int main() {
     UNITY_BEGIN();
     RUN_TEST(test_iterator_flush_on_keys);
-    //RUN_TEST(test_iterator_no_flush_on_keys);
+    RUN_TEST(test_iterator_no_flush_on_keys);
     UNITY_END();
 }
 
