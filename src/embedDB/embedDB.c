@@ -937,8 +937,7 @@ int16_t embedDBEstimateKeyLocation(embedDBState *state, void *buffer, void *key)
     // return estimated location of the key
     float slope = embedDBCalculateSlope(state, buffer);
 
-    uint64_t minKey = 0,
-             thisKey = 0;
+    uint64_t minKey = 0, thisKey = 0;
     memcpy(&minKey, embedDBGetMinKey(state, buffer), state->keySize);
     memcpy(&thisKey, key, state->keySize);
 
