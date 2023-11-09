@@ -1070,7 +1070,7 @@ int8_t searchBuffer(embedDBState *state, void *buffer, void *key, void *data) {
  * @return	Return 0 if success. Non-zero value if error.
  */
 int8_t embedDBGet(embedDBState *state, void *key, void *data) {
-    void *outputBuffer = (int8_t *)state->buffer;
+    void *outputBuffer = state->buffer;
     if (state->nextDataPageId == 0) {
         int8_t success = searchBuffer(state, outputBuffer, key, data);
         if (success == 0) return success;
