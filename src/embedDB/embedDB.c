@@ -1082,20 +1082,20 @@ int8_t embedDBGet(embedDBState *state, void *key, void *data) {
     }
 
     uint64_t thisKey = 0;
-    uint64_t bufMaxKey = 0;
-    uint64_t bufMinKey = 0;
     memcpy(&thisKey, key, state->keySize);
-    memcpy(&bufMaxKey, embedDBGetMaxKey(state, outputBuffer), state->keySize);
-    memcpy(&bufMinKey, embedDBGetMinKey(state, outputBuffer), state->keySize);
 
     void *buf = (int8_t *)state->buffer + state->pageSize;
     int16_t numReads = 0;
 
     // if search buffer is not empty
     if ((EMBEDDB_GET_COUNT(outputBuffer) != 0)) {
+        // get the max/min key from output buffer
+        uint64_t bufMaxKey = 0;
+        uint64_t bufMinKey = 0;
+        memcpy(&bufMaxKey, embedDBGetMaxKey(state, outputBuffer), state->keySize);
+        memcpy(&bufMinKey, embedDBGetMinKey(state, outputBuffer), state->keySize);
         // return -1 if key is not in buffer
         if (thisKey > bufMaxKey) return -1;
-
         // if key >= buffer's min, check buffer
         if (thisKey >= bufMinKey) return (searchBuffer(state, outputBuffer, key, data));
     }
