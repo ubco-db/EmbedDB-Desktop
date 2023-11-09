@@ -1045,11 +1045,11 @@ int8_t linearSearch(embedDBState *state, int16_t *numReads, void *buf, void *key
  * @param   range
  * @return	Return 0 if success. Non-zero value if error.
  */
-int8_t searchBuffer(embedDBState *state, void *buffer, void *key, void *data, int8_t range) {
+int8_t searchBuffer(embedDBState *state, void *buffer, void *key, void *data) {
     // return -1 if there is nothing in the buffer
     if (EMBEDDB_GET_COUNT(buffer) == 0) return -1;
     // find index of record
-    id_t nextId = embedDBSearchNode(state, buffer, key, range);
+    id_t nextId = embedDBSearchNode(state, buffer, key, 0);
     // return record found
     if (nextId != -1) {
         /* Key found */
@@ -1072,7 +1072,7 @@ int8_t searchBuffer(embedDBState *state, void *buffer, void *key, void *data, in
 int8_t embedDBGet(embedDBState *state, void *key, void *data) {
     void *outputBuffer = (int8_t *)state->buffer;
     if (state->nextDataPageId == 0) {
-        int8_t success = searchBuffer(state, outputBuffer, key, data, 0);
+        int8_t success = searchBuffer(state, outputBuffer, key, data);
         if (success == 0) return success;
 
 #ifdef PRINT_ERRORS
@@ -1097,7 +1097,7 @@ int8_t embedDBGet(embedDBState *state, void *key, void *data) {
         if (thisKey > bufMaxKey) return -1;
 
         // if key >= buffer's min, check buffer
-        if (thisKey >= bufMinKey) return (searchBuffer(state, outputBuffer, key, data, 0));
+        if (thisKey >= bufMinKey) return (searchBuffer(state, outputBuffer, key, data));
     }
 
 #if SEARCH_METHOD == 0
