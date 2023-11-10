@@ -94,14 +94,14 @@ void test_insert_flush_insert_buffer(void) {
     TEST_ASSERT_EQUAL(154, *return_data);
     // flush
     embedDBFlush(state);
-    // insert another record 
+    // insert another record
     key = 2;
     insert_static_record(state, key, 12345);
     embedDBGet(state, &key, return_data);
     // test second record is retrieved from buffer
     TEST_ASSERT_EQUAL(12345, *return_data);
     // check if first record is retrieved from file storage
-    key = 1; 
+    key = 1;
     embedDBGet(state, &key, return_data);
     TEST_ASSERT_EQUAL(154, *return_data);
 }
@@ -117,8 +117,8 @@ void test_above_max_query(void) {
     }
     // query for max key not in database
     int key = 55;
-    int return_data[] = {0,0,0};
-    // test if embedDBGet can't retrieve data 
+    int return_data[] = {0, 0, 0};
+    // test if embedDBGet can't retrieve data
     TEST_ASSERT_EQUAL(-1, embedDBGet(state, &key, return_data));
 }
 
@@ -154,7 +154,7 @@ int main() {
     UNITY_BEGIN();
     RUN_TEST(test_single_insert_one_retrieval_flush);
     RUN_TEST(test_multiple_insert_one_retrieval_flush);
-    //RUN_TEST(test_multiple)
+    // RUN_TEST(test_multiple)
     RUN_TEST(test_single_insert_one_retrieval_no_flush);
     RUN_TEST(test_multiple_insert_one_retrieval_no_flush);
     RUN_TEST(test_insert_flush_insert_buffer);
