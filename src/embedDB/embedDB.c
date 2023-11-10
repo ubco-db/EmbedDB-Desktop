@@ -1094,8 +1094,10 @@ int8_t embedDBGet(embedDBState *state, void *key, void *data) {
         uint64_t bufMinKey = 0;
         memcpy(&bufMaxKey, embedDBGetMaxKey(state, outputBuffer), state->keySize);
         memcpy(&bufMinKey, embedDBGetMinKey(state, outputBuffer), state->keySize);
+
         // return -1 if key is not in buffer
         if (thisKey > bufMaxKey) return -1;
+
         // if key >= buffer's min, check buffer
         if (thisKey >= bufMinKey) return (searchBuffer(state, outputBuffer, key, data));
     }

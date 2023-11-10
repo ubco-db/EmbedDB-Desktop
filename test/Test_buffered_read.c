@@ -62,10 +62,7 @@ void test_single_insert_one_retrieval_no_flush(void) {
     int return_data[] = {0, 0, 0};
     embedDBGet(state, &key, return_data);
     // test
-    if (return_data != NULL)
-        TEST_ASSERT_EQUAL(123, *return_data);
-    else
-        TEST_FAIL_MESSAGE("If not marry, cry");
+    TEST_ASSERT_EQUAL(123, *return_data);
 }
 
 // insert 5 records into database and retrieve one
@@ -79,6 +76,17 @@ void test_multiple_insert_one_retrieval_no_flush(void) {
     int return_data[] = {0, 0, 0};
     embedDBGet(state, &key, return_data);
     TEST_ASSERT_EQUAL(103, *return_data);
+}
+
+void test_insert_page_query_buffer(void) {
+    int numInserts = 32;
+    for (int i = 0; i < numInserts; ++i) {
+        insert_static_record(state, i, (i + 100));
+    }
+    uint32_t key = 31;
+    int return_data[] = {0, 0, 0};
+    embedDBGet(state, &key, return_data);
+    TEST_ASSERT_EQUAL(131, *return_data);
 }
 
 // test insert key, flush, and insert again for retrieval
@@ -154,7 +162,7 @@ int main() {
     UNITY_BEGIN();
     RUN_TEST(test_single_insert_one_retrieval_flush);
     RUN_TEST(test_multiple_insert_one_retrieval_flush);
-    // RUN_TEST(test_multiple)
+    RUN_TEST(test_insert_page_query_buffer);
     RUN_TEST(test_single_insert_one_retrieval_no_flush);
     RUN_TEST(test_multiple_insert_one_retrieval_no_flush);
     RUN_TEST(test_insert_flush_insert_buffer);
