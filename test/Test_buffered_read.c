@@ -46,10 +46,10 @@ void test_multiple_insert_one_retrieval_flush(void) {
         insert_static_record(state, i, (i + 100));
     }
     embedDBFlush(state);
-    uint32_t key = 35;
+    uint32_t key = 93;
     int return_data[] = {0, 0, 0};
     embedDBGet(state, &key, return_data);
-    TEST_ASSERT_EQUAL(135, *return_data);
+    TEST_ASSERT_EQUAL(193, *return_data);
 }
 
 // test saving data to buffer and retrieves it
