@@ -703,7 +703,6 @@ void indexPage(embedDBState *state, uint32_t pageNumber) {
  */
 int8_t embedDBPut(embedDBState *state, void *key, void *data) {
     /* Copy record into block */
-
     count_t count = EMBEDDB_GET_COUNT(state->buffer);
     if (state->minKey != UINT32_MAX) {
         void *previousKey = NULL;
@@ -1036,6 +1035,32 @@ int8_t linearSearch(embedDBState *state, int16_t *numReads, void *buf, void *key
 }
 
 /**
+ * @brief	Given a key, searches for data associated with
+ *          that key in embedDB buffer using embedDBSearchNode.
+ *          Note: Space for data must be already allocated.
+ * @param	state	embedDB algorithm state structure
+ * @param   buffer  pointer to embedDB buffer
+ * @param	key		Key for record
+ * @param	data	Pre-allocated memory to copy data for record
+ * @param   range
+ * @return	Return 0 if success. Non-zero value if error.
+ */
+int8_t searchBuffer(embedDBState *state, void *buffer, void *key, void *data) {
+    // return -1 if there is nothing in the buffer
+    if (EMBEDDB_GET_COUNT(buffer) == 0) return -1;
+    // find index of record
+    id_t nextId = embedDBSearchNode(state, buffer, key, 0);
+    // return record found
+    if (nextId != -1) {
+        /* Key found */
+        memcpy(data, (void *)((int8_t *)buffer + state->headerSize + state->recordSize * nextId + state->keySize), state->dataSize);
+        return 0;
+    }
+    // Key not found
+    return -1;
+}
+
+/**
  * @brief	Given a key, returns data associated with key.
  * 			Note: Space for data must be already allocated.
  * 			Data is copied from database into data buffer.
@@ -1045,18 +1070,37 @@ int8_t linearSearch(embedDBState *state, int16_t *numReads, void *buf, void *key
  * @return	Return 0 if success. Non-zero value if error.
  */
 int8_t embedDBGet(embedDBState *state, void *key, void *data) {
+    void *outputBuffer = state->buffer;
     if (state->nextDataPageId == 0) {
+        int8_t success = searchBuffer(state, outputBuffer, key, data);
+        if (success == 0) return success;
+
 #ifdef PRINT_ERRORS
         printf("ERROR: No data in database.\n");
 #endif
         return -1;
     }
 
+    uint64_t thisKey = 0;
+    memcpy(&thisKey, key, state->keySize);
+
     void *buf = (int8_t *)state->buffer + state->pageSize;
     int16_t numReads = 0;
 
-    uint64_t thisKey = 0;
-    memcpy(&thisKey, key, state->keySize);
+    // if search buffer is not empty
+    if ((EMBEDDB_GET_COUNT(outputBuffer) != 0)) {
+        // get the max/min key from output buffer
+        uint64_t bufMaxKey = 0;
+        uint64_t bufMinKey = 0;
+        memcpy(&bufMaxKey, embedDBGetMaxKey(state, outputBuffer), state->keySize);
+        memcpy(&bufMinKey, embedDBGetMinKey(state, outputBuffer), state->keySize);
+
+        // return -1 if key is not in buffer
+        if (thisKey > bufMaxKey) return -1;
+
+        // if key >= buffer's min, check buffer
+        if (thisKey >= bufMinKey) return (searchBuffer(state, outputBuffer, key, data));
+    }
 
 #if SEARCH_METHOD == 0
     /* Perform a modified binary search that uses info on key location sequence for first placement. */
