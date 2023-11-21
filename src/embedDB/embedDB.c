@@ -1284,7 +1284,7 @@ void embedDBInitIterator(embedDBState *state, embedDBIterator *it) {
         if (RADIX_BITS > 0) {
             radixsplineFind(state->rdix, it->minKey, state->compareKey, &location, &lowbound, &highbound);
         } else {
-            splineFind(state->spl, it->minKey, state->compareKey, &location, &lowbound, &highbound); //
+            splineFind(state->spl, it->minKey, state->compareKey, &location, &lowbound, &highbound);  //
         }
 
         // Use the low bound as the start for our search
@@ -1345,12 +1345,12 @@ int8_t embedDBFlush(embedDBState *state) {
 }
 
 /**
- * @brief	Iterates through a page in the read buffer. 
+ * @brief	Iterates through a page in the read buffer.
  * @param	state	embedDB algorithm state structure
  * @param	it		embedDB iterator state structure
  * @param	key		Return variable for key (Pre-allocated)
  * @param	data	Return variable for data (Pre-allocated)
- * @return	ITERATE_MATCH if successful, ITERATE_NO_MORE_RECORDS if record is out of bounds, and ITERATE_NO_MATCH if record is not in page. 
+ * @return	ITERATE_MATCH if successful, ITERATE_NO_MORE_RECORDS if record is out of bounds, and ITERATE_NO_MATCH if record is not in page.
  */
 int8_t iterateReadBuffer(embedDBState *state, embedDBIterator *it, void *key, void *data) {
     //  Keep reading record until we find one that matches the query
@@ -1361,9 +1361,9 @@ int8_t iterateReadBuffer(embedDBState *state, embedDBIterator *it, void *key, vo
         memcpy(data, buf + state->headerSize + it->nextDataRec * state->recordSize + state->keySize, state->dataSize);
         it->nextDataRec++;
         // Check record
-        if (it->minKey != NULL && state->compareKey(key, it->minKey) < 0) 
+        if (it->minKey != NULL && state->compareKey(key, it->minKey) < 0)
             continue;
-        if (it->maxKey != NULL && state->compareKey(key, it->maxKey) > 0) 
+        if (it->maxKey != NULL && state->compareKey(key, it->maxKey) > 0)
             return ITERATE_NO_MORE_RECORDS;
         if (it->minData != NULL && state->compareData(data, it->minData) < 0)
             continue;
@@ -1800,7 +1800,7 @@ int8_t readPage(embedDBState *state, id_t pageNum) {
 }
 
 /**
- * @brief	Memcopies write buffer to the read buffer.  
+ * @brief	Memcopies write buffer to the read buffer.
  * @param	state	embedDB algorithm state structure
  */
 void readToWriteBuf(embedDBState *state) {
@@ -1904,5 +1904,3 @@ void embedDBClose(embedDBState *state) {
         }
     }
 }
-
-

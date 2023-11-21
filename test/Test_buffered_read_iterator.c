@@ -25,7 +25,7 @@ void tearDown(void) {
     state = NULL;
 }
 
-// test ensures iterator checks written pages using keys after writing. 
+// test ensures iterator checks written pages using keys after writing.
 void test_iterator_flush_on_keys_int(void) {
     // create key and data
     uint32_t key = 1;
@@ -40,7 +40,7 @@ void test_iterator_flush_on_keys_int(void) {
     // setup iterator
     embedDBIterator it;
     uint32_t itKey = 0;
-    uint32_t itData[] = {0,0,0};
+    uint32_t itData[] = {0, 0, 0};
     uint32_t minKey = 1, maxKey = 36;
     it.minKey = &minKey;
     it.maxKey = &maxKey;
@@ -61,7 +61,7 @@ void test_iterator_flush_on_keys_int(void) {
     embedDBCloseIterator(&it);
 }
 
-// test ensures iterator checks written pages using keys after writing. 
+// test ensures iterator checks written pages using keys after writing.
 void test_iterator_flush_on_keys_float(void) {
     // create key and data
     float key = 1;
@@ -76,7 +76,7 @@ void test_iterator_flush_on_keys_float(void) {
     // setup iterator
     embedDBIterator it;
     float itKey = 0;
-    float itData[] = {0,0,0};
+    float itData[] = {0, 0, 0};
     uint32_t minKey = 1, maxKey = 36;
     it.minKey = &minKey;
     it.maxKey = &maxKey;
@@ -97,8 +97,7 @@ void test_iterator_flush_on_keys_float(void) {
     embedDBCloseIterator(&it);
 }
 
-
-// test ensures iterator checks write buffer using keys without writing to file storage. 
+// test ensures iterator checks write buffer using keys without writing to file storage.
 void test_iterator_no_flush_on_keys(void) {
     // create key and data
     uint32_t key = 1;
@@ -133,7 +132,7 @@ void test_iterator_no_flush_on_keys(void) {
     embedDBCloseIterator(&it);
 }
 
-// test ensures iterator checks written pages using data after writing. 
+// test ensures iterator checks written pages using data after writing.
 void test_iterator_flush_on_data(void) {
     // create key and data
     uint32_t key = 1;
@@ -148,7 +147,7 @@ void test_iterator_flush_on_data(void) {
     // setup iterator
     embedDBIterator it;
     uint32_t itKey = NULL;
-    uint32_t itData[] = {0,0,0};
+    uint32_t itData[] = {0, 0, 0};
     it.minKey = NULL;
     it.maxKey = NULL;
     uint32_t minData = 111, maxData = 286;
@@ -184,7 +183,7 @@ void test_iterator_no_flush_on_data(void) {
     // setup iterator
     embedDBIterator it;
     uint32_t itKey = NULL;
-    uint32_t itData[] = {0,0,0};
+    uint32_t itData[] = {0, 0, 0};
     it.minKey = NULL;
     it.maxKey = NULL;
     uint32_t minData = 111, maxData = 186;
@@ -204,8 +203,6 @@ void test_iterator_no_flush_on_data(void) {
     // close
     embedDBCloseIterator(&it);
 }
-
-
 
 // will need a test for defined minKey (that is so it can use the bitmap and spline etc)
 // will need a test for inserting records, flushing, and then inserting more (think getting nextDataPageId up to satisfy this if statement if (it->nextDataPage >= state->nextDataPageId))
