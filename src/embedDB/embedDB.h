@@ -240,7 +240,6 @@ typedef struct {
     void *minData;
     void *maxData;
     void *queryBitmap;
-    uint8_t readingWriteBuf; 
 } embedDBIterator;
 
 typedef struct {
