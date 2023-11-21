@@ -25,12 +25,11 @@ void tearDown(void) {
     state = NULL;
 }
 
-// test ensures iterator checks written pages.
-void test_iterator_flush_on_keys(void) {
+// test ensures iterator checks written pages using keys after writing. 
+void test_iterator_flush_on_keys_int(void) {
     // create key and data
     uint32_t key = 1;
     uint32_t data = 111;
-    // ~ roughly 31 records per page
     int recNum = 36;
     // inserting records
     for (int i = 0; i < recNum; ++i) {
@@ -62,7 +61,44 @@ void test_iterator_flush_on_keys(void) {
     embedDBCloseIterator(&it);
 }
 
-// test ensures iterator checks write buffer
+// test ensures iterator checks written pages using keys after writing. 
+void test_iterator_flush_on_keys_float(void) {
+    // create key and data
+    float key = 1;
+    float data = 111.00;
+    int recNum = 36;
+    // inserting records
+    for (int i = 0; i < recNum; ++i) {
+        insert_static_record(state, key, data);
+        key += 1;
+        data += 5;
+    }
+    // setup iterator
+    embedDBIterator it;
+    float itKey = 0;
+    float itData[] = {0,0,0};
+    uint32_t minKey = 1, maxKey = 36;
+    it.minKey = &minKey;
+    it.maxKey = &maxKey;
+    it.minData = NULL;
+    it.maxData = NULL;
+
+    float data_comparison = 111.00;
+
+    embedDBInitIterator(state, &it);
+
+    // test data
+    while (embedDBNext(state, &it, (void**)&itKey, (void**)&itData)) {
+        TEST_ASSERT_EQUAL(data_comparison, *(int*)itData);
+        data_comparison += 5;
+    }
+
+    // close
+    embedDBCloseIterator(&it);
+}
+
+
+// test ensures iterator checks write buffer using keys without writing to file storage. 
 void test_iterator_no_flush_on_keys(void) {
     // create key and data
     uint32_t key = 1;
@@ -88,16 +124,88 @@ void test_iterator_no_flush_on_keys(void) {
     it.maxData = NULL;
 
     embedDBInitIterator(state, &it);
-
     // test data
     while (embedDBNext(state, &it, &itKey, &itData)) {
         TEST_ASSERT_EQUAL(data, itData);
         data += 5;
     }
+    // close
+    embedDBCloseIterator(&it);
+}
+
+// test ensures iterator checks written pages using data after writing. 
+void test_iterator_flush_on_data(void) {
+    // create key and data
+    uint32_t key = 1;
+    uint32_t data = 111;
+    int recNum = 36;
+    // inserting records
+    for (int i = 0; i < recNum; ++i) {
+        insert_static_record(state, key, data);
+        key += 1;
+        data += 5;
+    }
+    // setup iterator
+    embedDBIterator it;
+    uint32_t itKey = NULL;
+    uint32_t itData[] = {0,0,0};
+    it.minKey = NULL;
+    it.maxKey = NULL;
+    uint32_t minData = 111, maxData = 286;
+    it.minData = &minData;
+    it.maxData = &maxData;
+
+    int key_comparison = 1;
+
+    embedDBInitIterator(state, &it);
+
+    // test data
+    while (embedDBNext(state, &it, (void**)&itKey, (void**)&itData)) {
+        TEST_ASSERT_EQUAL(key_comparison, itKey);
+        key_comparison += 1;
+    }
 
     // close
     embedDBCloseIterator(&it);
 }
+
+// test ensures iterator checks written pages using data without flushing to storage
+void test_iterator_no_flush_on_data(void) {
+    // create key and data
+    uint32_t key = 1;
+    uint32_t data = 111;
+    int recNum = 15;
+    // inserting records
+    for (int i = 0; i < recNum; ++i) {
+        insert_static_record(state, key, data);
+        key += 1;
+        data += 5;
+    }
+    // setup iterator
+    embedDBIterator it;
+    uint32_t itKey = NULL;
+    uint32_t itData[] = {0,0,0};
+    it.minKey = NULL;
+    it.maxKey = NULL;
+    uint32_t minData = 111, maxData = 186;
+    it.minData = &minData;
+    it.maxData = &maxData;
+
+    int key_comparison = 1;
+
+    embedDBInitIterator(state, &it);
+
+    // test data
+    while (embedDBNext(state, &it, (void**)&itKey, (void**)&itData)) {
+        TEST_ASSERT_EQUAL(key_comparison, itKey);
+        key_comparison += 1;
+    }
+
+    // close
+    embedDBCloseIterator(&it);
+}
+
+
 
 // will need a test for defined minKey (that is so it can use the bitmap and spline etc)
 // will need a test for inserting records, flushing, and then inserting more (think getting nextDataPageId up to satisfy this if statement if (it->nextDataPage >= state->nextDataPageId))
@@ -107,8 +215,11 @@ void test_iterator_no_flush_on_keys(void) {
 
 int main() {
     UNITY_BEGIN();
-    RUN_TEST(test_iterator_flush_on_keys);
+    RUN_TEST(test_iterator_flush_on_keys_int);
+    RUN_TEST(test_iterator_flush_on_keys_float);
     RUN_TEST(test_iterator_no_flush_on_keys);
+    RUN_TEST(test_iterator_flush_on_data);
+    RUN_TEST(test_iterator_no_flush_on_data);
     UNITY_END();
 }
 

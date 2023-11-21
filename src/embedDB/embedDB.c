@@ -1259,7 +1259,6 @@ int8_t embedDBGetVar(embedDBState *state, void *key, void *data, embedDBVarDataS
  * @param	it		embedDB iterator state structure
  */
 void embedDBInitIterator(embedDBState *state, embedDBIterator *it) {
-    printf("*************************************** INIT\n");
     /* Build query bitmap (if used) */
     it->queryBitmap = NULL;
     if (EMBEDDB_USING_BMAP(state->parameters)) {
@@ -1345,45 +1344,36 @@ int8_t embedDBFlush(embedDBState *state) {
     return 0;
 }
 
-// return 0 if out of range terminating loop
-// return 1 if record is found
-// return -1 if page is finished being read.
-int8_t iteratePage(embedDBState *state, embedDBIterator *it, void *key, void *data) {
-    //printf("~~~~~~~~~Inside IteratePage~~~~~~~~~\n");
+/**
+ * @brief	Iterates through a page in the read buffer. 
+ * @param	state	embedDB algorithm state structure
+ * @param	it		embedDB iterator state structure
+ * @param	key		Return variable for key (Pre-allocated)
+ * @param	data	Return variable for data (Pre-allocated)
+ * @return	ITERATE_MATCH if successful, ITERATE_NO_MORE_RECORDS if record is out of bounds, and ITERATE_NO_MATCH if record is not in page. 
+ */
+int8_t iterateReadBuffer(embedDBState *state, embedDBIterator *it, void *key, void *data) {
     //  Keep reading record until we find one that matches the query
     int8_t *buf = (int8_t *)state->buffer + EMBEDDB_DATA_READ_BUFFER * state->pageSize;
     uint32_t pageRecordCount = EMBEDDB_GET_COUNT(buf);
-    //printf("amount of records in read buffer = %d, nextDataRec = %d, key = %d, nextDataPage = %d\n", pageRecordCount, it->nextDataRec, *(int *)key, it->nextDataPage);
-    //printf("1 nextDataPage = %d\n", it->nextDataPage);
     while (it->nextDataRec < pageRecordCount) {
         memcpy(key, buf + state->headerSize + it->nextDataRec * state->recordSize, state->keySize);
-        //printf("2 nextDataPage = %d\n", it->nextDataPage);
         memcpy(data, buf + state->headerSize + it->nextDataRec * state->recordSize + state->keySize, state->dataSize);
-        //printf("3 nextDataPage = %d\n", it->nextDataPage);
         it->nextDataRec++;
-        //printf("4 nextDataPage = %d\n", it->nextDataPage);
-
         // Check record
-        if (it->minKey != NULL && state->compareKey(key, it->minKey) < 0) {
+        if (it->minKey != NULL && state->compareKey(key, it->minKey) < 0) 
             continue;
-        }
-        if (it->maxKey != NULL && state->compareKey(key, it->maxKey) > 0) {
-            // printf("hello? key = %d\n", *(int *)key);
-            return 0;
-        }
+        if (it->maxKey != NULL && state->compareKey(key, it->maxKey) > 0) 
+            return ITERATE_NO_MORE_RECORDS;
         if (it->minData != NULL && state->compareData(data, it->minData) < 0)
             continue;
         if (it->maxData != NULL && state->compareData(data, it->maxData) > 0)
             continue;
         // If we make it here, the record matches the query
-        // printf("before returning 1 key = %d, nextDataPage = %d\n", *(int *)key, it->nextDataPage);
-        return 1;
+        return ITERATE_MATCH;
     }
-    // problem: for some reaosn my keys in my tests are all 0. When I run `make test`, those keys are not 0. I don't know
-    // whats wrong, but that is why I am returning -1 which prevents the while loop wrapper to iterate over this and return
-    // records because it is constentally hitting that first if statement and then continueing to the next iteration.
-    // Interestingly, I get the data from the key location but not the key itself.
-    return -1;
+    // If we make it here, no records in loaded page matches the query.
+    return ITERATE_NO_MATCH;
 }
 
 /**
@@ -1396,22 +1386,20 @@ int8_t iteratePage(embedDBState *state, embedDBIterator *it, void *key, void *da
  */
 int8_t embedDBNext(embedDBState *state, embedDBIterator *it, void *key, void *data) {
     while (1) {
-        // all pages including buffer has been read.
+        // return 0 since all pages including buffer has been read.
         if (it->nextDataPage > (state->nextDataPageId)) return 0;
-        // if we have reached the end, read from output buffer or return 0
+        // if we have reached the end, read from output buffer if it is not empty
         if (it->nextDataPage == (state->nextDataPageId)) {
             // point to outputBuffer
             void *outputBuffer = (int8_t *)state->buffer;
-            // if there are no in the buffer, return
+            // if there are no records in the buffer, return
             if (EMBEDDB_GET_COUNT(outputBuffer) == 0) return 0;
-            // else, search the write buffer
+            // else, place write buffer in read
             readToWriteBuf(state);
-            // search buffer
-            int i = iteratePage(state, it, key, data);
-            return (i != -1) ? i : 0;
+            // search reaad buffer
+            int i = iterateReadBuffer(state, it, key, data);
+            return (i != ITERATE_NO_MATCH) ? i : 0;
         }
-        //printf("nextDataPage = %d state->nextDataPageId = %d key = %d\n", it->nextDataPage, state->nextDataPageId, *(int *)key);
-
         // If we are just starting to read a new page and we have a query bitmap
         if (it->nextDataRec == 0 && it->queryBitmap != NULL) {
             // Find what index page determines if we should read the data page
@@ -1447,8 +1435,8 @@ int8_t embedDBNext(embedDBState *state, embedDBIterator *it, void *key, void *da
             return 0;
         }
 
-        int8_t i = iteratePage(state, it, key, data);
-        if (i != -1) return i;
+        int8_t i = iterateReadBuffer(state, it, key, data);
+        if (i != ITERATE_NO_MATCH) return i;
         // Finished reading through whole data page and didn't find a match
         it->nextDataPage++;
         it->nextDataRec = 0;
@@ -1811,17 +1799,17 @@ int8_t readPage(embedDBState *state, id_t pageNum) {
     return 0;
 }
 
-// function that copies from write buffer to read buffer for processing
-// @TODO write tests for the function?
-// @TODO look into why int8_t isn't working
+/**
+ * @brief	Memcopies write buffer to the read buffer.  
+ * @param	state	embedDB algorithm state structure
+ */
 void readToWriteBuf(embedDBState *state) {
     // point to read buffer
-    void *readBuf = (int8_t *)state->buffer + state->pageSize;
+    void *readBuf = (int8_t *)state->buffer + state->pageSize * EMBEDDB_DATA_READ_BUFFER;
     // point to write buffer
-    void *writeBuf = (int8_t *)state->buffer;
-    // copy
+    void *writeBuf = (int8_t *)state->buffer + state->pageSize * EMBEDDB_DATA_WRITE_BUFFER;
+    // copy write buffer to the read buffer.
     memcpy(readBuf, writeBuf, state->pageSize);
-    // if successful, return 1
 }
 
 /**
