@@ -1303,7 +1303,7 @@ void embedDBCloseIterator(embedDBIterator *it) {
     if (it->queryBitmap != NULL) {
         free(it->queryBitmap);
     }
-    // it->readFromWriteBuf = 0;
+ 
 }
 
 /**
