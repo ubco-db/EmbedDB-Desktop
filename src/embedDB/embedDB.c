@@ -1284,7 +1284,7 @@ void embedDBInitIterator(embedDBState *state, embedDBIterator *it) {
         if (RADIX_BITS > 0) {
             radixsplineFind(state->rdix, it->minKey, state->compareKey, &location, &lowbound, &highbound);
         } else {
-            splineFind(state->spl, it->minKey, state->compareKey, &location, &lowbound, &highbound);  //
+            splineFind(state->spl, it->minKey, state->compareKey, &location, &lowbound, &highbound);  
         }
 
         // Use the low bound as the start for our search
