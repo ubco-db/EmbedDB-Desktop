@@ -249,6 +249,12 @@ typedef struct {
     uint32_t fileOffset; /* Where the iterator should start reading data next time (offset from start of file) */
 } embedDBVarDataStream;
 
+typedef enum {
+    ITERATE_NO_MATCH = -1,
+    ITERATE_MATCH = 1,
+    ITERATE_NO_MORE_RECORDS = 0
+} IterateStatus;
+
 /**
  * @brief	Initialize embedDB structure.
  * @param	state			embedDB algorithm state structure
