@@ -80,10 +80,16 @@ queryExample: $(BUILD_PATHS) $(PATHB)advancedQueryInterfaceExample.$(TARGET_EXTE
 $(PATHB)advancedQueryInterfaceExample.$(TARGET_EXTENSION): $(EMBEDDB_OBJECTS) $(QUERY_OBJECTS) $(ADVANCED_QUERY)
 	$(LINK) -o $@ $^ $(MATH)
 
-testBuffered: $(BUILD_PATHS) $(PATHB)Test_buffered_read.$(TARGET_EXTENSION)
-	-./$(PATHB)Test_buffered_read.$(TARGET_EXTENSION)
+testBufferedVar: $(BUILD_PATHS) $(PATHB)Test_var_data_buffered_read.$(TARGET_EXTENSION)
+	-./$(PATHB)Test_var_data_buffered_read.$(TARGET_EXTENSION)
 
-$(PATHB)Test_buffered_read.$(TARGET_EXTENSION): $(EMBEDDB_OBJECTS) $(QUERY_OBJECTS) $(PATHO)Test_buffered_read.o $(PATHO)unity.o
+$(PATHB)Test_var_data_buffered_read.$(TARGET_EXTENSION): $(EMBEDDB_OBJECTS) $(QUERY_OBJECTS) $(PATHO)Test_var_data_buffered_read.o $(PATHO)unity.o
+	$(LINK) -o $@ $^ $(MATH)
+
+testVar: $(BUILD_PATHS) $(PATHB)Test_embedDB_var_data.$(TARGET_EXTENSION)
+	-./$(PATHB)Test_embedDB_var_data.$(TARGET_EXTENSION)
+
+$(PATHB)Test_embedDB_var_data.$(TARGET_EXTENSION): $(EMBEDDB_OBJECTS) $(QUERY_OBJECTS) $(PATHO)Test_embedDB_var_data.o $(PATHO)unity.o
 	$(LINK) -o $@ $^ $(MATH)
 
 test: $(BUILD_PATHS) $(RESULTS)

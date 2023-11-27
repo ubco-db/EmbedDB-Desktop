@@ -230,7 +230,6 @@ typedef struct {
     id_t bufferedIndexPageId;                                             /* Index page id currently in index read buffer */
     id_t bufferedVarPage;                                                 /* Variable page id currently in variable read buffer */
     uint8_t recordHasVarData;                                             /* Internal flag to signal that the record currently being written has var data */
-    int8_t readOrWriteBuf;                                                /* Internal flag to signal if which buffer contains key. 1 for read 0 for write  */
 } embedDBState;
 
 typedef struct {
@@ -244,12 +243,17 @@ typedef struct {
 } embedDBIterator;
 
 typedef struct {
-    uint32_t totalBytes;        /* Total number of bytes in the stream */
-    uint32_t bytesRead;         /* Number of bytes read so far */
-    uint32_t dataStart;         /* Start of data as an offset in bytes from the beginning of the file */
-    uint32_t fileOffset;        /* Where the iterator should start reading data next time (offset from start of file) */
-    uint32_t readOrWriteBuf;    /* Flag indiciating if the record is in the read or write buffer. 0 for write 1 for read */
+    uint32_t totalBytes; /* Total number of bytes in the stream */
+    uint32_t bytesRead;  /* Number of bytes read so far */
+    uint32_t dataStart;  /* Start of data as an offset in bytes from the beginning of the file */
+    uint32_t fileOffset; /* Where the iterator should start reading data next time (offset from start of file) */
 } embedDBVarDataStream;
+
+typedef enum {
+    ITERATE_NO_MATCH = -1,
+    ITERATE_MATCH = 1,
+    ITERATE_NO_MORE_RECORDS = 0
+} IterateStatus;
 
 /**
  * @brief	Initialize embedDB structure.

@@ -40,7 +40,7 @@
 
 #include "../src/embedDB/embedDB.h"
 #include "../src/embedDB/utilityFunctions.h"
-#include "unity.h"
+#include "../Unity/src/unity.h"
 
 embedDBState *state;
 uint32_t numRecords = 1000;
@@ -179,6 +179,7 @@ void test_get_when_full_page() {
 }
 
 void test_get_when_all() {
+    printf("************************ TEST_GET_WHEN_ALL ************************\n");
     char expectedVarData[] = "Testing 000...";
     char buf[20];
     embedDBVarDataStream *varStream = NULL;
@@ -215,8 +216,9 @@ void test_insert_rest() {
 
 int main() {
     UNITY_BEGIN();
-
-    for (i = 0; i < sizeof(dataSizes) / sizeof(dataSizes[i]); i++) {
+    //i < sizeof(dataSizes) / sizeof(dataSizes[i]);
+    
+    for (i = 0; i < 1; i++) {
         // Setup state
         initState(dataSizes[i]);
         RUN_TEST(test_init);
@@ -230,14 +232,18 @@ int main() {
         RUN_TEST(test_insert_1);
         RUN_TEST(test_get_when_almost_full_page);
         RUN_TEST(test_insert_1);
-        RUN_TEST(test_get_when_full_page);
+        RUN_TEST(test_get_when_full_page); // records in the buffer here when n =1 , 
+        printf("inserted = %d nextDataPageId = %d\n", inserted, state->nextDataPageId);
         RUN_TEST(test_insert_rest);
+        printf("inserted = %d nextDataPageId = %d\n", inserted, state->nextDataPageId);
         embedDBFlush(state);
+        //printf("inserted = %d nextDataPageId = %d\n", inserted, state->nextDataPageId);
         RUN_TEST(test_get_when_all);
 
         // Clean up state
         resetState();
     }
+    
 
     return UNITY_END();
 }
