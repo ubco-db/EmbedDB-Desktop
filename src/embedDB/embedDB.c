@@ -1229,15 +1229,15 @@ int8_t embedDBGetVar(embedDBState *state, void *key, void *data, embedDBVarDataS
 #endif
         return 0;
     }
-
+    
+    
     //printf("Next datapageId = %d\n", state->nextDataPageId);
-
     void *outputBuffer = (int8_t *)state->buffer;
     if(EMBEDDB_GET_COUNT(outputBuffer) > 0){  
-        printf("record count = %d nextDataPageId = %d\n", EMBEDDB_GET_COUNT(outputBuffer), state->nextDataPageId);
-        //embedDBFlush(state);
+        printf("*************************** record count = %d nextDataPageId = %d,  state->nextVarPageId = %d \n", EMBEDDB_GET_COUNT(outputBuffer), state->nextDataPageId,  state->nextVarPageId);
+        embedDBFlush(state);
     }
-
+    
     // Get the fixed data
     int8_t r = embedDBGet(state, key, data);
     if (r != 0) {

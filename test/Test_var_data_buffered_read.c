@@ -101,7 +101,6 @@ void test_var_insert_retrieval_no_flush(void) {
         free(varStream);
         varStream = NULL;
     }
-    
 }
 
 // @TODO I want to know what happens with these cases: 
