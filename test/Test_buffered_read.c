@@ -5,7 +5,6 @@
 #include "../src/embedDB/utilityFunctions.h"
 
 int insert_static_record(embedDBState* state, uint32_t key, uint32_t data);
-void* query_record(embedDBState* state, uint32_t* key);
 embedDBState* init_state();
 
 // global variable for state. Use in setUp() function and tearDown()
@@ -34,11 +33,11 @@ void test_single_insert_one_retrieval_flush(void) {
     // flush to file storage
     embedDBFlush(state);
     // query data
-    int* return_data = query_record(state, &key);
+    int return_data[] = {0, 0, 0};
+    embedDBGet(state, &key, return_data);
+    TEST_ASSERT_EQUAL(123, return_data[0]);
     // test
     TEST_ASSERT_EQUAL(123, *return_data);
-    // free allocated memory
-    free(return_data);
 }
 
 void test_multiple_insert_one_retrieval_flush(void) {
@@ -47,9 +46,10 @@ void test_multiple_insert_one_retrieval_flush(void) {
         insert_static_record(state, i, (i + 100));
     }
     embedDBFlush(state);
-    uint32_t key = 35;
-    int* return_data = query_record(state, &key);
-    TEST_ASSERT_EQUAL(135, *return_data);
+    uint32_t key = 93;
+    int return_data[] = {0, 0, 0};
+    embedDBGet(state, &key, return_data);
+    TEST_ASSERT_EQUAL(193, *return_data);
 }
 
 // test saving data to buffer and retrieves it
@@ -59,14 +59,10 @@ void test_single_insert_one_retrieval_no_flush(void) {
     // save to buffer
     insert_static_record(state, key, 123);
     // query data
-    int* return_data = query_record(state, &key);
+    int return_data[] = {0, 0, 0};
+    embedDBGet(state, &key, return_data);
     // test
-    if (return_data != NULL)
-        TEST_ASSERT_EQUAL(123, *return_data);
-    else
-        TEST_FAIL_MESSAGE("If not marry, cry");
-    // free allocated memory
-    free(return_data);
+    TEST_ASSERT_EQUAL(123, *return_data);
 }
 
 // insert 5 records into database and retrieve one
@@ -77,8 +73,20 @@ void test_multiple_insert_one_retrieval_no_flush(void) {
     }
 
     uint32_t key = 3;
-    int* return_data = query_record(state, &key);
+    int return_data[] = {0, 0, 0};
+    embedDBGet(state, &key, return_data);
     TEST_ASSERT_EQUAL(103, *return_data);
+}
+
+void test_insert_page_query_buffer(void) {
+    int numInserts = 32;
+    for (int i = 0; i < numInserts; ++i) {
+        insert_static_record(state, i, (i + 100));
+    }
+    uint32_t key = 31;
+    int return_data[] = {0, 0, 0};
+    embedDBGet(state, &key, return_data);
+    TEST_ASSERT_EQUAL(131, *return_data);
 }
 
 // test insert key, flush, and insert again for retrieval
@@ -88,13 +96,22 @@ void test_insert_flush_insert_buffer(void) {
     // save to buffer
     insert_static_record(state, key, 154);
     // query data
-    int* return_data = query_record(state, &key);
+    int return_data[] = {0, 0, 0};
+    embedDBGet(state, &key, return_data);
+    // test record is in buffer
+    TEST_ASSERT_EQUAL(154, *return_data);
     // flush
     embedDBFlush(state);
+    // insert another record
     key = 2;
     insert_static_record(state, key, 12345);
-    return_data = query_record(state, &key);
+    embedDBGet(state, &key, return_data);
+    // test second record is retrieved from buffer
     TEST_ASSERT_EQUAL(12345, *return_data);
+    // check if first record is retrieved from file storage
+    key = 1;
+    embedDBGet(state, &key, return_data);
+    TEST_ASSERT_EQUAL(154, *return_data);
 }
 
 // test checks to see if queried key > maxKey in buffer
@@ -108,11 +125,9 @@ void test_above_max_query(void) {
     }
     // query for max key not in database
     int key = 55;
-    int* return_data = query_record(state, &key);
-    // test if value is null
-    TEST_ASSERT_EQUAL(NULL, return_data);
-    // free
-    free(return_data);
+    int return_data[] = {0, 0, 0};
+    // test if embedDBGet can't retrieve data
+    TEST_ASSERT_EQUAL(-1, embedDBGet(state, &key, return_data));
 }
 
 // test checks to see if queried key is >= the minKey in the buffer.
@@ -124,11 +139,10 @@ void test_flush_before_insert(void) {
     // save to buffer
     insert_static_record(state, key, 123);
     // query data
-    int* return_data = query_record(state, &key);
+    int return_data[] = {0, 0, 0};
+    embedDBGet(state, &key, return_data);
     // test
     TEST_ASSERT_EQUAL(123, *return_data);
-    // free allocated memory
-    free(return_data);
 }
 
 // test checks retrievel if there is no data and nothing in the buffer
@@ -148,6 +162,7 @@ int main() {
     UNITY_BEGIN();
     RUN_TEST(test_single_insert_one_retrieval_flush);
     RUN_TEST(test_multiple_insert_one_retrieval_flush);
+    RUN_TEST(test_insert_page_query_buffer);
     RUN_TEST(test_single_insert_one_retrieval_no_flush);
     RUN_TEST(test_multiple_insert_one_retrieval_no_flush);
     RUN_TEST(test_insert_flush_insert_buffer);
@@ -169,18 +184,6 @@ int insert_static_record(embedDBState* state, uint32_t key, uint32_t data) {
     free(dataPtr);
     // return based on success
     return (result == 0) ? 0 : -1;
-}
-
-/* function that returns a pointer to allocated space in heap
-   Calling function must free memory as appropriate          */
-// @TODO make this into a malloc wrapper so it's clear that I need to clear memory.
-void* query_record(embedDBState* state, uint32_t* key) {
-    // allocate dataSize record in heap
-    void* temp = calloc(1, state->dataSize);
-    // query embedDB and returun pointer
-    if (embedDBGet(state, key, (void*)temp) == 0) return temp;
-    // else, return NULL
-    return 0;
 }
 
 /* Function returns a pointer to a newly created embedDBState*/

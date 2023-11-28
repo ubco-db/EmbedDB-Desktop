@@ -6,6 +6,3 @@ varFile.bin
 .vscode/
 build/
 result.xml
-proposed_README.md
-*.md
-notes.md

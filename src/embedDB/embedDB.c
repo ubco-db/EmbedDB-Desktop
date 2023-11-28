@@ -1056,6 +1056,7 @@ int8_t searchBuffer(embedDBState *state, void *buffer, void *key, void *data) {
     if (nextId != -1) {
         /* Key found */
         memcpy(data, (void *)((int8_t *)buffer + state->headerSize + state->recordSize * nextId + state->keySize), state->dataSize);
+        state->readOrWriteBuf = RECORD_IN_WRITE_BUF;
         return 0;
     }
     // Key not found
@@ -1204,6 +1205,7 @@ int8_t embedDBGet(embedDBState *state, void *key, void *data) {
     if (nextId != -1) {
         /* Key found */
         memcpy(data, (void *)((int8_t *)buf + state->headerSize + state->recordSize * nextId + state->keySize), state->dataSize);
+        state->readOrWriteBuf = 1;
         return 0;
     }
 
@@ -1231,19 +1233,39 @@ int8_t embedDBGetVar(embedDBState *state, void *key, void *data, embedDBVarDataS
     }
     
     
-    //printf("Next datapageId = %d\n", state->nextDataPageId);
+   
+    //void *outputBuffer = (int8_t *)state->buffer;
+    
     void *outputBuffer = (int8_t *)state->buffer;
     if(EMBEDDB_GET_COUNT(outputBuffer) > 0){  
-        printf("*************************** record count = %d nextDataPageId = %d,  state->nextVarPageId = %d \n", EMBEDDB_GET_COUNT(outputBuffer), state->nextDataPageId,  state->nextVarPageId);
         embedDBFlush(state);
+        initBufferPage(state, EMBEDDB_VAR_WRITE_BUFFER(state->parameters));
     }
-    
+
     // Get the fixed data
     int8_t r = embedDBGet(state, key, data);
     if (r != 0) {
         return r;
     }
 
+    // I am not discounting this as a potential solution. Maybe the answer here is copying the write buffer to the read buffer? I guess I don't love the 
+    // implication of that. 
+    /*
+    if(state->readOrWriteBuf == RECORD_IN_WRITE_BUF){
+        // point to read buffer
+        void *readBufVar = (int8_t *)state->buffer + state->pageSize * EMBEDDB_VAR_READ_BUFFER(state->parameters);
+        // point to write buffer
+        void *writeBufVar = (int8_t *)state->buffer + state->pageSize * EMBEDDB_VAR_WRITE_BUFFER(state->parameters);
+        // copy write buffer to the read buffer.
+        memcpy(readBufVar, writeBufVar, state->pageSize);
+        // point to read buffer
+        void *readBuf = (int8_t *)state->buffer + state->pageSize * EMBEDDB_DATA_READ_BUFFER;
+        // point to write buffer
+        void *writeBuf = (int8_t *)state->buffer + state->pageSize * EMBEDDB_DATA_WRITE_BUFFER;
+        // copy write buffer to the read buffer.
+        memcpy(readBuf, writeBuf, state->pageSize);
+    }*/
+    
     // Now the input buffer contains the record, so we can use that to find the variable data
     void *buf = (int8_t *)state->buffer + state->pageSize;
     id_t recordNum = embedDBSearchNode(state, buf, key, 0);
@@ -1347,6 +1369,7 @@ int8_t embedDBFlush(embedDBState *state) {
 
     // Flush var data page
     if (EMBEDDB_USING_VDATA(state->parameters)) {
+        // send write buffer pointer to write variable page 
         writeVariablePage(state, (int8_t *)state->buffer + EMBEDDB_VAR_WRITE_BUFFER(state->parameters) * state->pageSize);
         state->fileInterface->flush(state->varFile);
     }
@@ -1516,13 +1539,17 @@ int8_t embedDBSetupVarDataStream(embedDBState *state, void *key, embedDBVarDataS
 
     uint32_t pageNum = (varDataAddr / state->pageSize) % state->numVarPages;
 
+    printf("pageNum = %d\n", pageNum);
+
+    
     // Read in page
-    if (readVariablePage(state, pageNum) != 0) {
+    if (state->readOrWriteBuf == RECORD_IN_STORAGE && readVariablePage(state, pageNum) != 0) {
 #ifdef PRINT_ERRORS
         printf("ERROR: embedDB failed to read variable page\n");
 #endif
         return 2;
     }
+    
 
     // Get length of variable data
     void *varBuf = (int8_t *)state->buffer + state->pageSize * EMBEDDB_VAR_READ_BUFFER(state->parameters);
@@ -1575,7 +1602,9 @@ uint32_t embedDBVarDataStreamRead(embedDBState *state, embedDBVarDataStream *str
 
     // Read in var page containing the data to read
     uint32_t pageNum = (stream->fileOffset / state->pageSize) % state->numVarPages;
-    if (readVariablePage(state, pageNum) != 0) {
+    
+    
+    if (state->readOrWriteBuf == RECORD_IN_STORAGE && readVariablePage(state, pageNum) != 0) {
 #ifdef PRINT_ERRORS
         printf("ERROR: Couldn't read variable data page %d\n", pageNum);
 #endif
