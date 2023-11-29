@@ -6,4 +6,4 @@
 #include "../../src/embedDB/embedDB.h"
 #include "../../src/query-interface/advancedQueries.h"
 
-void execOperatorQuery3(embedDBState* state);
+int execOperatorQuery3(embedDBState* state);

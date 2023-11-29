@@ -1267,6 +1267,7 @@ void embedDBInitIterator(embedDBState *state, embedDBIterator *it) {
         if (it->minData != NULL || it->maxData != NULL) {
             it->queryBitmap = calloc(1, state->bitmapSize);
             state->buildBitmapFromRange(it->minData, it->maxData, it->queryBitmap);
+            printf("bitmap internal: %d\n", *(uint8_t *)it->queryBitmap);
         }
     }
 
