@@ -14,10 +14,6 @@ embedDBOperator* createOperator3(embedDBState* state, void*** allocatedValues) {
     it->maxData = NULL;
     embedDBInitIterator(state, it);
 
-    uint8_t bm = 0;
-    state->updateBitmap(minData, &bm);
-    printf("bm: %d\n", bm);
-
     uint8_t numCols = 4;
     int8_t colSizes[] = {4, 4, 4, 4};
     int8_t colSignedness[] = {embedDB_COLUMN_UNSIGNED, embedDB_COLUMN_SIGNED, embedDB_COLUMN_SIGNED, embedDB_COLUMN_SIGNED};

@@ -12,7 +12,7 @@
 #include "query3.h"
 #include "query4.h"
 
-#define NUM_RUNS 1
+#define NUM_RUNS 5
 
 void runBenchmark(int queryNum);
 
@@ -26,7 +26,7 @@ int8_t inCustomUWABitmap(void *data, void *bm);
 void buildCustomUWABitmapFromRange(void *min, void *max, void *bm);
 
 int main() {
-    for (int i = 1; i <= 3; i++) {
+    for (int i = 1; i <= 4; i++) {
         printf("\n");
         runBenchmark(i);
     }
@@ -137,6 +137,49 @@ embedDBState *getSeededEthState() {
     return state;
 }
 
+embedDBState *getSeededWatchState() {
+    embedDBState *state = calloc(1, sizeof(embedDBState));
+    state->keySize = 4;
+    state->dataSize = 12;
+    state->compareKey = int32Comparator;
+    state->compareData = int32Comparator;
+    state->pageSize = 512;
+    state->eraseSizeInPages = 4;
+    state->numDataPages = 20000;
+    state->numIndexPages = 1000;
+    state->numSplinePoints = 300;
+    char dataPath[] = "dataFile.bin", indexPath[] = "indexFile.bin";
+    state->fileInterface = getFileInterface();
+    state->dataFile = setupFile(dataPath);
+    state->indexFile = setupFile(indexPath);
+    state->bufferSizeInBlocks = 4;
+    state->buffer = malloc(state->bufferSizeInBlocks * state->pageSize);
+    state->parameters = EMBEDDB_USE_BMAP | EMBEDDB_USE_INDEX | EMBEDDB_RESET_DATA;
+    state->bitmapSize = 2;
+    state->inBitmap = inCustomWatchBitmap;
+    state->updateBitmap = updateCustomWatchBitmap;
+    state->buildBitmapFromRange = buildCustomWatchBitmapFromRange;
+    if (embedDBInit(state, 1)) {
+        printf("Error initializing database\n");
+        return NULL;
+    }
+
+    // Insert data
+    char const dataFileName[] = "../../data/watch_only_100K.bin";
+    FILE *dataset = fopen(dataFileName, "rb");
+
+    char dataPage[512];
+    while (fread(dataPage, 512, 1, dataset)) {
+        uint16_t count = *(uint16_t *)(dataPage + 4);
+        for (int record = 1; record <= count; record++) {
+            embedDBPut(state, dataPage + record * state->recordSize, dataPage + record * state->recordSize + state->keySize);
+        }
+    }
+    embedDBFlush(state);
+
+    return state;
+}
+
 void freeState(embedDBState *state) {
     embedDBClose(state);
     tearDownFile(state->dataFile);
@@ -232,4 +275,31 @@ void runQuery3() {
     printf("Count: %d\n", count);
 }
 
-void runQuery4() {}
+void runQuery4() {
+    double times[NUM_RUNS];
+    int count = 0;
+
+    for (int runNum = 0; runNum < NUM_RUNS; runNum++) {
+        embedDBState *state = getSeededWatchState();
+
+        clock_t start = clock();
+
+        count = execOperatorQuery4(state);
+
+        clock_t end = clock();
+
+        times[runNum] = (end - start) / (CLOCKS_PER_SEC / 1000.0);
+
+        freeState(state);
+    }
+
+    double sum = 0;
+    printf("Query 4: ");
+    for (int i = 0; i < NUM_RUNS; i++) {
+        sum += times[i];
+        printf("%.1f, ", times[i]);
+    }
+    printf("\n");
+    printf("Average: %.1fms\n", sum / NUM_RUNS);
+    printf("Count: %d\n", count);
+}
