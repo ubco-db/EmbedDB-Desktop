@@ -57,7 +57,7 @@ embedDBOperator* createOperator(embedDBState* state, void*** allocatedValues) {
     return aggOp;
 }
 
-void execOperatorQuery1(embedDBState* state) {
+int execOperatorQuery1(embedDBState* state) {
     void** allocatedValues;
     embedDBOperator* op = createOperator(state, &allocatedValues);
     void* recordBuffer = op->recordBuffer;
@@ -66,11 +66,11 @@ void execOperatorQuery1(embedDBState* state) {
     int32_t* C3 = (int32_t*)((int8_t*)recordBuffer + 8);
     float* C4 = (float*)((int8_t*)recordBuffer + 12);
 
-    // Print as csv
+    // Count records
+    int count = 0;
     while (exec(op)) {
-        // printf("%d,%d,%d,%f\n", *Day, *C2, *C3, *C4);
+        count++;
     }
-    // printf("\n");
 
     op->close(op);
     embedDBFreeOperatorRecursive(&op);
@@ -79,4 +79,6 @@ void execOperatorQuery1(embedDBState* state) {
         free(allocatedValues[i]);
     }
     free(allocatedValues);
+
+    return count;
 }

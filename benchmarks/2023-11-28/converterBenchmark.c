@@ -25,9 +25,10 @@ int8_t inCustomUWABitmap(void *data, void *bm);
 void buildCustomUWABitmapFromRange(void *min, void *max, void *bm);
 
 int main() {
-    // for (int i = 1; i <= 4; i++) {
-    runBenchmark(1);
-    // }
+    for (int i = 1; i <= 2; i++) {
+        printf("\n");
+        runBenchmark(i);
+    }
 
     return 0;
 }
@@ -102,13 +103,14 @@ void freeState(embedDBState *state) {
 
 void runQuery1() {
     double times[NUM_RUNS];
+    int count = 0;
 
     for (int runNum = 0; runNum < NUM_RUNS; runNum++) {
         embedDBState *state = getSeededUWAState();
 
         clock_t start = clock();
 
-        execOperatorQuery1(state);
+        count = execOperatorQuery1(state);
 
         clock_t end = clock();
 
@@ -121,13 +123,42 @@ void runQuery1() {
     printf("Query 1: ");
     for (int i = 0; i < NUM_RUNS; i++) {
         sum += times[i];
-        printf("%.1fms, ", times[i]);
+        printf("%.1f, ", times[i]);
     }
     printf("\n");
     printf("Average: %.1fms\n", sum / NUM_RUNS);
+    printf("Count: %d\n", count);
 }
 
-void runQuery2() {}
+void runQuery2() {
+    double times[NUM_RUNS];
+    int count = 0;
+
+    for (int runNum = 0; runNum < NUM_RUNS; runNum++) {
+        embedDBState *state = getSeededUWAState();
+
+        clock_t start = clock();
+
+        count = execOperatorQuery2(state);
+
+        clock_t end = clock();
+
+        times[runNum] = (end - start) / (CLOCKS_PER_SEC / 1000.0);
+
+        freeState(state);
+    }
+
+    double sum = 0;
+    printf("Query 2: ");
+    for (int i = 0; i < NUM_RUNS; i++) {
+        sum += times[i];
+        printf("%.1f, ", times[i]);
+    }
+    printf("\n");
+    printf("Average: %.1fms\n", sum / NUM_RUNS);
+    printf("Count: %d\n", count);
+}
+
 void runQuery3() {}
 void runQuery4() {}
 

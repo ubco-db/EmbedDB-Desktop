@@ -31,8 +31,9 @@ converterBenchmark:
 	gcc -c $(PATHQUERYIFACE)schema.c -o schema.o $(OSFLAGS)
 	gcc -c $(PATHQUERYIFACE)advancedQueries.c -o advancedQueries.o $(OSFLAGS)
 	gcc -c query1.c -o query1.o $(OSFLAGS)
+	gcc -c query2.c -o query2.o $(OSFLAGS)
 	gcc -c converterBenchmark.c -o converterBenchmark.o $(OSFLAGS)
-	gcc -o converterBenchmark.$(TARGET_EXTENSION) converterBenchmark.o embedDB.o utilityFunctions.o spline.o radixspline.o schema.o advancedQueries.o query1.o $(OSFLAGS)
+	gcc -o converterBenchmark.$(TARGET_EXTENSION) converterBenchmark.o embedDB.o utilityFunctions.o spline.o radixspline.o schema.o advancedQueries.o query1.o query2.o $(OSFLAGS)
 	./converterBenchmark.$(TARGET_EXTENSION)
 
 clean:
