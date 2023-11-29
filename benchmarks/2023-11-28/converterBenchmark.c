@@ -89,6 +89,7 @@ embedDBState *getSeededUWAState() {
             embedDBPut(state, dataPage + record * state->recordSize, dataPage + record * state->recordSize + state->keySize);
         }
     }
+    fclose(dataset);
     embedDBFlush(state);
 
     return state;
@@ -132,6 +133,7 @@ embedDBState *getSeededEthState() {
             embedDBPut(state, dataPage + record * state->recordSize, dataPage + record * state->recordSize + state->keySize);
         }
     }
+    fclose(dataset);
     embedDBFlush(state);
 
     return state;
@@ -175,6 +177,7 @@ embedDBState *getSeededWatchState() {
             embedDBPut(state, dataPage + record * state->recordSize, dataPage + record * state->recordSize + state->keySize);
         }
     }
+    fclose(dataset);
     embedDBFlush(state);
 
     return state;
