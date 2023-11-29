@@ -101,7 +101,7 @@ void freeState(embedDBState *state) {
 }
 
 void runQuery1() {
-    uint32_t times[NUM_RUNS];
+    double times[NUM_RUNS];
 
     for (int runNum = 0; runNum < NUM_RUNS; runNum++) {
         embedDBState *state = getSeededUWAState();
@@ -112,19 +112,19 @@ void runQuery1() {
 
         clock_t end = clock();
 
-        times[runNum] = end - start;
+        times[runNum] = (end - start) / (CLOCKS_PER_SEC / 1000.0);
 
         freeState(state);
     }
 
-    uint32_t sum = 0;
+    double sum = 0;
     printf("Query 1: ");
     for (int i = 0; i < NUM_RUNS; i++) {
         sum += times[i];
-        printf("%d, ", times[i]);
+        printf("%.1fms, ", times[i]);
     }
     printf("\n");
-    printf("Average: %d\n", sum / NUM_RUNS);
+    printf("Average: %.1fms\n", sum / NUM_RUNS);
 }
 
 void runQuery2() {}
