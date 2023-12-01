@@ -35,6 +35,7 @@ These attributes are only for fixed-size data/keys. If you require variable-size
 state->keySize = 4;  // Allowed up to 8
 state->dataSize = 12;  // No limit as long as at least one record can fit on a page after the page header
 ```
+**Note** `state->recordsize` is not necessarily the sum of `state->keySize` and `state->dataSize`. If you have variable data enabled, a pointer exists in the fixed record that points to the record in variable storage.
 
 ### Comparator functions
 
@@ -85,7 +86,7 @@ How to choose the number of blocks to use:
     -   2 blocks for variable data read/write buffers (If you need to have a variable sized portion of the record)
 
 ```c
-state->bufferSizeInBlocks = 6;
+state->bufferSizeInBlocks = 6; //6 buffers is needed when using index and variable
 state->buffer = malloc((size_t) state->bufferSizeInBlocks * state->pageSize);
 ```
 
@@ -95,8 +96,10 @@ state->buffer = malloc((size_t) state->bufferSizeInBlocks * state->pageSize);
 state->parameters = EMBEDDB_USE_BMAP | EMBEDDB_USE_INDEX | EMBEDDB_USE_VDATA;
 ```
 
-`EMBEDDB_USE_INDEX` - Writes the bitmap to a file for fast queries on the data (Usually used in conjuction with EMBEDDB_USE_BMAP) \
-`EMBEDDB_USE_BMAP` - Includes the bitmap in each page header so that it is easy to tell if a buffered page may contain a given key
+`EMBEDDB_USE_INDEX` - Writes the bitmap to a file for fast queries on the data (Usually used in conjuction with EMBEDDB_USE_BMAP). \
+`EMBEDDB_USE_BMAP` - Includes the bitmap in each page header so that it is easy to tell if a buffered page may contain a given key. \
+`EMBEDDB_USE_MAX_MIN` - Includes the max and min records in each page header. \
+`EMBEDDB_USE_VDATA` - Enables including variable-sized data with each record. 
 
 ```c
 state->bitmapSize = 8;
@@ -107,8 +110,6 @@ state->updateBitmap = updateBitmapInt64;
 state->buildBitmapFromRange = buildBitmapInt64FromRange;
 ```
 
-`EMBEDDB_USE_MAX_MIN` - Includes the max and min records in each page header \
-`EMBEDDB_USE_VDATA` - Enables including variable-sized data with each record
 
 ### Final initilization
 
@@ -139,13 +140,14 @@ Setting this constant to 0 will omit the Radix table, indexing will rely solely 
 
 ## Insert (put) items into table
 
-`key` is the key to insert. `dataPtr` points to associated data value. Keys are always assumed to be unsigned numbers and must always be inserted in ascending order.
+`key` is the key to insert. `dataPtr` points to associated data value. Keys are always assumed to be unsigned numbers and **must always be inserted in ascending order.**
 
 ```c
 uint32_t key = 123;
 void* dataPtr = calloc(1, state->dataSize);
 *((uint32_t*)data) = 12345678;
 embedDBPut(state, (void*) &key, dataPtr);
+free(dataPtr);
 ```
 
 Insert records when the `EMBEDDB_USE_VDATA` parameter is used. `varPtr` points to `length` bytes of data that can be inserted alongside the regular record. If a record does not have any variable data, `varPtr = NULL` and `length = 0`
@@ -154,7 +156,7 @@ Insert records when the `EMBEDDB_USE_VDATA` parameter is used. `varPtr` points t
 embedDBPutVar(state, (void*) &key, (void*) dataPtr, (void*) varPtr, (uint32_t) length);
 ```
 
-Flush the EmbedDB buffer to write the currently buffered page to storage. Not necessary unless you need to query anything that is still in buffer or you are done all inserts.
+Flush the EmbedDB buffer to write the currently buffered page to storage. 
 
 ```c
 embedDBFlush(state);
@@ -167,6 +169,7 @@ _For a simpler query interface, see [Simple Query Interface](advancedQueries.md)
 `keyPtr` points to key to search for. `dataPtr` must point to pre-allocated space to copy data into.
 
 ```c
+// could use some more code here 
 embedDBGet(state, (void*) keyPtr, (void*) dataPtr);
 ```
 
@@ -174,7 +177,7 @@ If the `EMBEDDB_USE_VDATA` parameter is used, then `varStream` is an un-allocate
 
 ```c
 embedDBVarDataStream *varStream = NULL;
-uint32_t varBufSize = 8;  // Choose any size
+uint32_t varBufSize = 8;  // The size is varaible but must be at least the size of the retrieved record. 
 void *varDataBuffer = malloc(varBufSize);
 
 embedDBGetVar(state, (void*) keyPtr, (void*) dataPtr, &varStream);
@@ -195,7 +198,10 @@ if (varStream != NULL) {
 
 ```c
 embedDBIterator it;
-uint32_t *itKey, *itData;
+// specify that we should be allocating itData in the stack or heap 
+uint32_t *itKey;
+uint32_t *itData; // note 
+void *varDataBuffer = malloc(varBufSize);
 
 uint32_t minKey = 1, maxKey = 1000;
 it.minKey = &minKey;
@@ -274,10 +280,12 @@ embedDBCloseIterator(&it);
 
 ```c
 embedDBClose(state);
-tearDownFile(state->dataFile);
-tearDownFile(state->indexFile);
+tearDownFile(state->dataFile); 
+tearDownFile(state->indexFile);	
 tearDownFile(state->varFile);
 free(state->fileInterface);
 free(state->buffer);
 free(state);
 ```
+
+*Note: Only tearDown files specified in `state->parameters`*
