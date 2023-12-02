@@ -146,7 +146,7 @@ void test_iterator_flush_on_data(void) {
     }
     // setup iterator
     embedDBIterator it;
-    uint32_t itKey = NULL;
+    uint32_t itKey;
     uint32_t itData[] = {0, 0, 0};
     it.minKey = NULL;
     it.maxKey = NULL;
@@ -182,7 +182,7 @@ void test_iterator_no_flush_on_data(void) {
     }
     // setup iterator
     embedDBIterator it;
-    uint32_t itKey = NULL;
+    uint32_t itKey;
     uint32_t itData[] = {0, 0, 0};
     it.minKey = NULL;
     it.maxKey = NULL;
