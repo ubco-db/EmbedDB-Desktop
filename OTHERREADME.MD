@@ -46,4 +46,4 @@ A paper describing SBITS use for time series indexing is [available from the pub
 -   [Building project](docs/buildRunInformation.md)
 -   [Test suite](docs/testInfo.md)
 
-#### Ramon Lawrence, David Ding, Ivan Carvalho<br>University of British Columbia Okanagan
+<br>University of British Columbia Okanagan
