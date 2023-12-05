@@ -1,5 +1,7 @@
 # Usage & Setup Documentation
 
+This guide provides comprehensive instructions for configuring, initializing, and using EmbedDB in your application, covering everything from setup, record management, to teardown. 
+
 ## Table of Contents
 
 -   [Configure EmbedDB State](#configure-records)
@@ -21,27 +23,30 @@
 
 ## Configure Records
 
-### Create an EmbedDB state
+### Create an EmbedDB State
+
+Allocate memory for the EmbedDB state structure.
 
 ```c
 embedDBState* state = (embedDBState*) malloc(sizeof(embedDBState));
 ```
 
-### Configure size of records
+### Configure Size of Records
 
 These attributes are only for fixed-size data/keys. If you require variable-sized records, see below. 
 
+- *Key Size*: Maximum allowed up to 8 bytes.
+- *Data Size*: No limit, but at least one record can fit on a page after the header. 
+
 ```c
-state->keySize = 4;  // Allowed up to 8
-state->dataSize = 12;  // No limit as long as at least one record can fit on a page after the page header
+state->keySize = 4;  
+state->dataSize = 12;  
 ```
 **Note** `state->recordsize` is not necessarily the sum of `state->keySize` and `state->dataSize`. If you have variable data enabled, a 4-byte pointer exists in the fixed record that points to the record in located variable storage.
 
-### Comparator functions
+### Comparator Functions
 
-You can find example implementations of these functions in src/embedDB/utilityFunctions.c \
-
-These can be customized for your own keys and data.
+Customize comparator functions for keys and data. Example implementations that you can use can be found in [utilityFunctions](../src/embedDB/utilityFunctions.c).
 
 
 ```c
@@ -50,16 +55,19 @@ state->compareKey = int32Comparator;
 state->compareData = dataComparator;
 ```
 
-### Configure file storage
+### Configure File Storage
 
 Configure the number of bytes per page and the minimum erase size for your storage medium.
 
+*Note: it is not necessary to allocate the index and varPages pages if you are not using them. If you do with to use these options, you must enable them in [Other Parameters](#other-parameters)*.
+
+**Page and Erase Size**
 ```c
 state->pageSize = 512;
 state->eraseSizeInPages = 4;
 ```
 
-Set the number of allocated file pages for each of the relevant files.
+**Allocated File Pages:**
 
 ```c
 state->numDataPages = 1000;
@@ -67,7 +75,7 @@ state->numIndexPages = 48;
 state->numVarPages = 1000;
 ```
 
-*Note: it is not necessary to allocate the index and varPages pages if you are not using them.* 
+**File Interface Setup**
 
 Setup the file interface that allows EmbedDB to work with any storage device. More info on: [Setting up a file interface](fileInterface.md).
 
@@ -79,9 +87,10 @@ state->indexFile = setupSDFile(indexPath);
 state->varFile = setupSDFile(varPath);
 ```
 
-### Configure memory buffers
+### Configure Memory Buffers
 
-How to choose the number of blocks to use: 
+Allocate memory buffers based on your requirements. 
+
 -   Required:
     -   2 blocks for record read/write buffers
 -   Optional:
@@ -89,27 +98,42 @@ How to choose the number of blocks to use:
     -   2 blocks for variable data read/write buffers (If you need to have a variable sized portion of the record) 
 
 ```c
+// ONLY USING READ/WRITE
+state->bufferSizeInBlocks = 2; //2 buffers is required for read/write buffers
+state->buffer = malloc((size_t) state->bufferSizeInBlocks * state->pageSize);
+
+// INDEX OR VARIABLE RECORDS
+state->bufferSizeInBlocks = 4; //4 buffers is needed when using index or variable
+state->buffer = malloc((size_t) state->bufferSizeInBlocks * state->pageSize);
+
+// BOTH INDEX AND VARIABLE RECORDS. 
 state->bufferSizeInBlocks = 6; //6 buffers is needed when using index and variable
 state->buffer = malloc((size_t) state->bufferSizeInBlocks * state->pageSize);
 ```
 
+
+
 ### Other parameters:
+
 
 ```c
 state->parameters = EMBEDDB_USE_BMAP | EMBEDDB_USE_INDEX | EMBEDDB_USE_VDATA;
 ```
 
-`EMBEDDB_USE_INDEX` - Writes the bitmap to a file for fast queries on the data (Usually used in conjuction with EMBEDDB_USE_BMAP). \
-`EMBEDDB_USE_BMAP` - Includes the bitmap in each page header so that it is easy to tell if a buffered page may contain a given key. \
-`EMBEDDB_USE_MAX_MIN` - Includes the max and min records in each page header. \
-`EMBEDDB_USE_VDATA` - Enables including variable-sized data with each record. \
-`EMBEDDB_RESET_DATA` - Disables data recovery.
+- `EMBEDDB_USE_INDEX` - Writes the bitmap to a file for fast queries on the data (Usually used in conjuction with EMBEDDB_USE_BMAP). 
+- `EMBEDDB_USE_BMAP` - Includes the bitmap in each page header so that it is easy to tell if a buffered page may contain a given key. 
+- `EMBEDDB_USE_MAX_MIN` - Includes the max and min records in each page header. 
+- `EMBEDDB_USE_VDATA` - Enables including variable-sized data with each record. 
+- `EMBEDDB_RESET_DATA` - Disables data recovery.
 
 *Note: If `EMBEDDB_RESET_DATA` is not enabled, embedDB will check if the file already exists, and if it does, it will attempt at recovering the data.*
 
 ### Bitmap 
 
-// probably need some notes here. 
+The bitmap is used to index data. 
+
+// looks like it's mandatory but it probably depends on how you want to use embedDB
+
 
 
 ```c
@@ -151,59 +175,97 @@ Setting this constant to 0 will omit the Radix table, and indexing will rely sol
 
 ## Insert (put) items into table
 
-`key` is the key to insert. `dataPtr` points to associated data value. Keys are always assumed to be unsigned numbers and **must always be inserted in ascending order.**
+### Overview
 
-#### Inserting Fixed-Size Data
+Use the `embedDBPut` function to insert fixed length records into the database. Variable length records can be inserted using `embeDBPutVar` only when `EMBEDDB_USE_VDATA` is enabled. Note that keys are always assumed to be unsigned numbers and **must always be inserted in ascending order.**
 
-Method:
+### Inserting Fixed-Size Data
+
+`key` is the key to insert. `dataPtr` points to associated data value. 
+
+**Method:**
 
 ```c
-embedDBGet(embedDBState *state, void *key, void *data) 
+embedDBPut(state, (void*) key, (void*) dataPtr)
 ```
+**Parameters**
+<pre>
+- state:				EmbedDB algorithm state structure.
+- key:					The key for the record. 
+- dataPtr:				Fixed-size data for the record. 
+</pre>
 
-Example:
+
+**Returns** 
+<pre>
+0 if success, Non-zero value if error. 
+</pre>
+
+**Example:**
 
 ```c
-// Initialize key (note keys must always be in ascending order)
+// Initialize key (note keys must always be inserted in ascending order)
 uint32_t key = 123;
 // calloc dataPtr in the heap
 void* dataPtr = calloc(1, state->dataSize);
-// set value to be inserted into embedDB
-*((uint32_t*)data) = 12345678;
+// set value to be inserted into EmbedDB
+*((uint32_t*)dataPtr) = 12345678;
 // perform insert of key and data 
 embedDBPut(state, (void*) &key, dataPtr);
 // free dynamic memory
 free(dataPtr);
 ```
 
-*Note: void pointers here are used to utilize different data-types*
+*Void pointers here are used to support different data-types*
 
-#### Inserting Variable-Length Data
+### Inserting Variable-Length Data
 
-embedDB has support for variable length records, but only when `EMBEDDB_USE_VDATA` is enabled. `varPtr` points to the variable sized data that you would like to insert and `length` specifies how many bytes that record takes up. It is important to note that when inserting variable-length data, embedDB still inserts fixed-size records as shown above, alongside the variable-length record that you would like to insert. If an individual record does not have any variable data, simply set `varPtr = NULL` and `length = 0`.
+EmbedDB has support for variable length records, but only when `EMBEDDB_USE_VDATA` is enabled. `varPtr` points to the variable sized data that you would like to insert and `length` specifies how many bytes that record takes up. It is important to note that when inserting variable-length data, EmbedDB still inserts fixed-size records just like above. If an individual record does not have any variable data, simply set `varPtr = NULL` and `length = 0`.
 
-Method:
+**Method:**
 
 ```c 
 embedDBPutVar(state, (void*) &key, (void*) dataPtr, (void*) varPtr, (uint32_t) length);
 ```
 
-Example:
+**Parameters**
+<pre>
+state:				EmbedDB algorithm state structure.
+key: 				Key for record. 
+dataPtr: 			Data for record. 
+varPtr:				Variable length data for record.  
+length: 			Length of the variable length data, in bytes.
+</pre>
+
+**Returns** 
+<pre>
+0 if success. Non-zero value if error. 
+</pre>
+
+
+
+**Example:**
 
 ```c
 // init key 
 uint32_t key = 124; 
-// Fixed size records can be inserted alongside variable records. 
+// calloc dataPtr in the heap
 void* dataPtr = calloc(1, state->dataSize);
+// set value to be inserted into embedDB
+*((uint32_t*)dataPtr) = 12345678;
 // Create variable-length data
-char varPtr[] = "Hello World"; // ~ 12 bytes long 
+char varPtr[] = "Hello World"; // ~ 12 bytes long including null terminator 
 // specify the length in bytes
 uint32_t length = 12;
 // insert variable record 
-embedDBPutVar(state, &key, &dataPtr, varPtr, length);
+embedDBPutVar(state, (void*)&key, (void*)&dataPtr, (void*)varPtr, length);
+// free dynamic memory
+free(dataPtr);
 ```
 
-Flush the EmbedDB buffer to write the currently buffered page to storage. 
+# can probably make this it's own thing.. 
+
+Flush the EmbedDB buffer to write the currently buffered page to storage. EmbedDB will automatically handle this for you when a buffer is filled up. 
 
 ```c
 embedDBFlush(state);
@@ -211,28 +273,82 @@ embedDBFlush(state);
 
 ## Query (get) items from table
 
+### Overview
+
 _For a simpler query interface, see [Simple Query Interface](advancedQueries.md)_
 
-`keyPtr` points to key to search for. `dataPtr` must point to pre-allocated space to copy data into.
+Use the `embedDBGet` function to retrieve fixed-length records from the database. You can use `embedDBGetVar` to retrieve variable-length records only when `EMBEDDB_USE_VDATA` parameter is enabled. EmbedDB will handle searching the write buffer for you, so there is no need to flush the storage. 
+
 
 ### Fixed-Length Record
 
-Method:
+`keyPtr` points to a key that `embedDBGet` will search for and `returnDataPtr` points to a pre-allocated space for this function to copy data into. It is important to note that `returnDataPtr` must be >= `state->recordSize` to allocate the appropriate amount of space for this incoming data. 
+
+**Method:**
 
 ```c
-// could use some more code here 
-embedDBGet(state, (void*) keyPtr, (void*) dataPtr);
+embedDBGet(state, (void*) keyPtr, (void*) returnDataPtr);
 ```
 
-Example: 
+**Parameters**
+<pre>
+state:				embedDB Algorithm state structure.			
+keyPtr:				Key for record.
+returnDataPtr:		        Pre-allocated memory to copy data into. 
+</pre>
 
-### Variable-Length Record
+**Returns**
+<pre>
+0 if success. Non-zero value if error.
+</pre>
 
+**Example:**
 
-If the `EMBEDDB_USE_VDATA` parameter is used, then a variable data stream needs to be created to read the variable length record. `varStream` is an un-allocated `embedDBVarDataStream`.  This method will return a data stream if there is variable data to read. Variable data is read in chunks from the stream. `bytesRead` is the number of bytes read into the buffer and is <=`varBufSize`. 
+Recall earlier that we inserted a key as 123 with a value of 12345678 in our PUT example. We also`state->dataSize` to 4 and `state->recordSize` to 12 upon initializing embedDB state.
 
 ```c
-embedDBVarDataStream *varStream = NULL;
+// key you would like to retrieve data for
+int key = 123; 
+// Ensure that allocated memory is >= state->recordSize. You may use dynamic memory as well. 
+int returnDataPtr[] = {0, 0, 0};
+// query embedDB
+embedDBGet(state, (void*) &key, (void*) returnDataPtr);
+// do something with the retrieved data
+```
+
+### Variable-Length Records
+
+Variable-length-data can be read only when the `EMBEDDB_USE_VDATA` parameter is enabled. A variable-length data stream must be created to retrieve variable-length records. `varStream` is an un-allocated `embedDBVarDataStream`; it will only return a data stream when there is data to read. Variable data is read in chunks from this stream. `bytesRead` is the number of bytes read into the buffer and is <=`varBufSize`. 
+
+In a similar fashion to reading static records, you must pre-allocate storage for `embedDBVarDataStreamRead` to insert variable-length records into. Since variable length records are inserted alongside fixed length records, we can also retrieve that fixed record as well, so ensure there is a seperate pre-allocated storage in the memory when retrieving the fixed length record. 
+
+
+**Methods:** 
+```c
+embedDBGetVar(embedDBState *state, void *key, void *data, embedDBVarDataStream **varData); 
+
+embedDBVarDataStreamRead(embedDBState *state, embedDBVarDataStream *stream, void *buffer uint32_t length); 
+```
+
+**Example:** 
+
+*Recall in the embedDBPutVar example, we inserted a key of 1234, with fixed data being 12234565
+and a 12 byte variable record that contained "Hello World".*
+
+```c
+// declare a varDataStream 
+embedDBVarDataStream *varStream = NULL;	 
+
+// allocate memory to read fixed data into 
+char fixed_rec[] = {0,0,0};
+
+// allocate buffer to read variable record into. 
+uint32_t var_rec_size = 12; // This must be at least the same size of the variable record.
+void var_rec = malloc(var_rec_size);
+
+
+
+
 uint32_t varBufSize = 8;  // The size is varaible but must be at least the size of the retrieved record. 
 void *varDataBuffer = malloc(varBufSize);
 
