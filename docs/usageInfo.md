@@ -297,7 +297,7 @@ embedDBGet(state, (void*) keyPtr, (void*) returnDataPtr);
 
 **Parameters**
 <pre>
-state:				embedDB Algorithm state structure.			
+state:				EmbedDB algorithm state structure.			
 keyPtr:				Key for record.
 returnDataPtr:		        Pre-allocated memory to copy data into. 
 </pre>
@@ -328,17 +328,49 @@ Variable-length-data can be read only when the `EMBEDDB_USE_VDATA` parameter is 
 In a similar fashion to reading static records, you must pre-allocate storage for `embedDBVarDataStreamRead` to insert variable-length records into. Since variable length records are inserted alongside fixed length records, we can also retrieve that fixed-length record as well, so ensure there is a seperate pre-allocated storage in the memory when retrieving the fixed length record. You may even retrieve the fixed length record by doing `embedDBGet` for a key that has a variable record. 
 
 
-**Methods:** 
+<ins>**Method**</ins> 
 ```c
 embedDBGetVar(embedDBState *state, void *key, void *data, embedDBVarDataStream **varData); 
-
-embedDBVarDataStreamRead(embedDBState *state, embedDBVarDataStream *stream, void *buffer uint32_t length); 
 ```
+**Parameters**
+<pre>
+state:				EmbedDB algorithm state structure. 
+key:				Key for record.
+data:				Pre-allocaated memory to copy data for record.
+varData:			Return variable for data as an embedDBVarDataStream.
+</pre>
+
+**Returns**
+<pre>
+Return 0 for success. 
+Return -1 for error reading file or failed memory allocation. 
+Return 1 if variable data was deleted for making room for new data.
+</pre>
+
+<ins>**Method**</ins> 
+```c
+embedDBVarDataStreamRead(embedDBState *state, embedDBVarDataStream *stream, void *buffer, uint32_t length)
+```
+
+**Parameters**
+<pre>
+state:				EmbedDB algorithm state structure. 		
+stream: 			Variable data stream. 
+buffer: 			Buffer to read variable data into. 
+length: 			Number of bytes to read. Must be <= buffer size. 		
+</pre>
+
+**Returns**
+<pre>
+Number of bytes read.
+</pre>
+
 
 **Example:** 
 
 *Recall in the embedDBPutVar example, we inserted a key of 1234, with fixed data being 12234565
 and a 12 byte variable record that contained "Hello World".*
+
 
 ```c
 // key you would like to retrieve data for. 
@@ -376,20 +408,92 @@ varRecBufPtr = NULL;
 
 ## Iterate through items in table
 
+### Overview
+
+EmbedDB has support for iterating through keys and data sequentially for both fixed and variable recrods. A comparator function must be initialized as discussed when [setting up EmbedDBState](#comparator-functions). Remember, `EMBEDDB_USE_VDATA` must be enabled to use variable data. 
+
+You must first declare an `embedDBIterator` type and specify the minKey/maxKey or minData/maxData depending on the type of filter you would like to perform. `embedDBInitIterator` will initialize this iterator and use indexing to predict where the record will be in the file system. `embedDBNext` will copy the requested key and data into pre allocated storage until there are no more records to read. `embedDBNext` will also locate records that are held in the write buffer.
+
+It is important that you pre allocate enough storage for the key and data to fit into. Also ensure Ensure to call `embedDBCloseIterator` to close the iterator after use. 
+
+
+Here are the methods that are common to both approaches. 
+
+<ins>**Method**</ins> 
+```c
+embedDBInitIterator(embedDBState *state, embedDBIterator *it);
+```
+
+**Parameters**
+<pre>
+state:				EmbedDB algorithm state structure.
+it: 				EmbedDB iterator state structure.
+</pre>
+
+**Returns**
+<pre>
+void
+</pre>
+
+<ins>**Method**</ins> 
+```c
+embedDBNext(embedDBState *state, embedDBIterator *it, void *key, void *data);
+```
+
+**Parameters**
+<pre>
+state:				EmbedDB algorithm state structure.
+it: 				EmbedDB iteraator state structure. 
+key: 				Return variable for key (pre allocated).
+data:				Return variable for data (pre allocated).
+</pre>
+
+**Returns**
+<pre>
+1 if successful 
+0 if no more records
+</pre>
+
+<ins>**Method**</ins> 
+```c
+embedDBCloseIterator(embedDBIterator *it)
+```
+
+**Parameters**
+<pre>
+it:				EmbedDB iterator structure. 
+</pre>
+
+**Returns**
+<pre>
+void
+</pre>
+
+
 ### Iterator with filter on keys
 
+EmbedDB can iterate through a range of keys sequentially. `minKey` specifies the minimum key to begin the search at and `maxKey` is where the search will stop. Since we are not iterating by data, ensure that `it.minData` and `it.maxData` is set to `NULL`.
+
+
+
+**Example**
+
+*Assume that we inserted over 1000 records*
+
 ```c
-// Recall, these are our record sizes set previously. 
-state->keySize = 4;  
-state->dataSize = 12; 
-
+// declare EmbedDB iterator. 
 embedDBIterator it;
-uint32_t *itKey;
-// Allocate memory for itData matching the size of state->datasize
-uint32_t* itData = malloc(3 * sizeof(uint32_t)); 
-void *varDataBuffer = malloc(varBufSize);
 
+// ensure that itKey is the same size as state->recordSize.
+uint32_t *itKey;				 
+
+// Allocate memory for itData matching the size of state->datasize.
+uint32_t* itData[] = {0,0,0};
+
+// specify min and max key to perform search on. 
 uint32_t minKey = 1, maxKey = 1000;
+
+// initalize buffer variables.
 it.minKey = &minKey;
 it.maxKey = &maxKey;
 it.minData = NULL;
@@ -397,6 +501,7 @@ it.maxData = NULL;
 
 embedDBInitIterator(state, &it);
 
+// while there are records to read. 
 while (embedDBNext(state, &it, (void**) &itKey, (void**) &itData)) {
 	/* Process record */
 }
@@ -406,12 +511,28 @@ embedDBCloseIterator(&it);
 
 ### Iterator with filter on data
 
+EmbedDB can iterate through a range of data sequentially. This time, `minData` specifies the minimum data value to begin the search at and `maxData` is where the search will stop. Since we are not iterating by key, ensure that `it.minKey` and `it.maxKey` is set to `NULL`.
+
+
+**Example**
+
+*Assume that several records are inserted that contain data spanning from values 0-150.*
+
 ```c
-// Same setup as above
+// declare EmbedDB iterator. 
+embedDBIterator it;
+
+// ensure that itKey is the same size as state->recordSize.
+uint32_t *itKey;				 
+
+// Allocate memory for itData matching the size of state->datasize.
+uint32_t* itData[] = {0,0,0};
+
+// specify min and max data to perform search on. 
+uint32_t minData = 90, maxData = 100;
 
 it.minKey = NULL;
 it.maxKey = NULL;
-uint32_t minData = 90, maxData = 100;
 it.minData = &minData;
 it.maxData = &maxData;
 
@@ -424,7 +545,57 @@ while (embedDBNext(state, &it, (void**) &itKey, (void**) &itData)) {
 embedDBCloseIterator(&it);
 ```
 
-### Iterate over records with vardata
+## Iterate over records with vardata
+
+### Overview 
+
+As [mentioned earlier](#iterate-through-items-in-tree), EmbedDB can iterate over variable records when `EMBEDDB_USE_VDATA` is enabled. The strategy is similar to the above, in that we are going to initialize an EmbedDB iterator with our minimum/maximum keys or data to iterate over, however, we need to declare and initialize an `embedDBVarDataStream` to perform the iteration. Be sure to use `embedDBCloseIterator` to close the iterator after use. Also ensure that you free the `embedDBVarDataStream`.
+
+These are methods common to iteratring over variable records specifically. It is recommended you read this entire section to gain an understanding of how the iterator works. 
+
+<ins>**Method**</ins> 
+```c
+embedDBNextVar(embedDBState *state, embedDBIterator *it, void *key, void *data, embedDBVarDataStream **varData)
+```
+
+**Parameters**
+<pre>
+state:				EmbedDB algorithm state structure.
+it:					EmbedDB iterator state structure. 
+key:				Return variable for key (pre allocated).
+data:				Return variable for data (pre allocated).
+varData:			Return variable for variable data as an embedDBVarDataStream.
+</pre>
+
+
+**Returns**
+<pre>
+1 if successful 
+0 if no more records
+NULL if three is no variable data. 
+</pre>
+
+<ins>**Method**</ins> 
+```c
+embedDBVarDataStreamRead(embedDBState *state, embedDBVarDataStream *stream, void *buffer, uint32_t length)
+```
+
+**Parameters**
+<pre>
+state:				EmbedDB algorithm state structure. 
+stream:				Variable data stream.
+buffer:				Buffer to read data into. 
+length:				Number of bytes to read. 
+</pre>
+
+*Note: length must be <= than the buffer size*
+
+**Returns**
+<pre>
+Number of bytes to read.
+</pre>
+
+### Filter on Keys
 
 ```c
 uint32_t minKey = 23, maxKey = 356;
@@ -476,4 +647,4 @@ free(state->buffer);
 free(state);
 ```
 
-*Note: Only tearDown files specified in `state->parameters`.*
+*Note: Ensure to only tearDown files specified in initialization.*
