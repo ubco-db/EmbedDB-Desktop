@@ -1,0 +1,23 @@
+gcc -c sqliteBenchmarkAggregate.c -ldl -lm -lpthread
+gcc -o sqliteBenchmarkAggregate.out sqlite3.o sqliteBenchmarkAggregate.o -ldl -lm -lpthread
+./sqliteBenchmarkAggregate.out
+
+Aggregate Query: min, max, and avg temperature for each day
+Time: 754 751 753 751 752 ~ 752ms
+Num Records Queried: 70
+
+Aggregate Query: Average temperature on days where the max wind speed was above 15
+Time: 753 752 753 753 753 ~ 752ms
+Num Records Queried: 18
+
+Aggregate Query: Percent of records with ethylene concentration > 0
+Time: 10 10 10 10 10 ~ 10ms
+Percent records returned: 37.5% (37531/100000)
+
+Join Query: Join SEA and UWA dataset to compare temperatures on the same day of the year
+Time: 2560 2558 2558 2558 2558 ~ 2558ms
+Num Records Queried: 9942
+
+Aggregate Query: Count the number of records with a magnitude of motion above 5e8 on the X axis for each of 10 time windows
+Time: 98 98 98 99 99 ~ 98ms
+Num Records Queried: 95
