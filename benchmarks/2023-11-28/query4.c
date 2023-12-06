@@ -64,7 +64,7 @@ int execOperatorQuery4(embedDBState* state) {
     // Count records
     int count = 0;
     while (exec(op)) {
-        count++;
+        count += *Count;
     }
 
     op->close(op);

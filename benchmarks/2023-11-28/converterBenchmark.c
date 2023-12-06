@@ -92,6 +92,8 @@ embedDBState *getSeededUWAState() {
     fclose(dataset);
     embedDBFlush(state);
 
+    embedDBResetStats(state);
+
     return state;
 }
 
@@ -135,6 +137,8 @@ embedDBState *getSeededEthState() {
     }
     fclose(dataset);
     embedDBFlush(state);
+
+    embedDBResetStats(state);
 
     return state;
 }
@@ -180,6 +184,8 @@ embedDBState *getSeededWatchState() {
     fclose(dataset);
     embedDBFlush(state);
 
+    embedDBResetStats(state);
+
     return state;
 }
 
@@ -195,8 +201,10 @@ void runQuery1() {
     double times[NUM_RUNS];
     int count = 0;
 
+    embedDBState *state;
+
     for (int runNum = 0; runNum < NUM_RUNS; runNum++) {
-        embedDBState *state = getSeededUWAState();
+        state = getSeededUWAState();
 
         clock_t start = clock();
 
@@ -218,14 +226,18 @@ void runQuery1() {
     printf("\n");
     printf("Average: %.1fms\n", sum / NUM_RUNS);
     printf("Count: %d\n", count);
+    printf("Num data reads: %d\n", state->numReads);
+    printf("Num index reads: %d\n", state->numIdxReads);
 }
 
 void runQuery2() {
     double times[NUM_RUNS];
     int count = 0;
 
+    embedDBState *state;
+
     for (int runNum = 0; runNum < NUM_RUNS; runNum++) {
-        embedDBState *state = getSeededUWAState();
+        state = getSeededUWAState();
 
         clock_t start = clock();
 
@@ -247,14 +259,18 @@ void runQuery2() {
     printf("\n");
     printf("Average: %.1fms\n", sum / NUM_RUNS);
     printf("Count: %d\n", count);
+    printf("Num data reads: %d\n", state->numReads);
+    printf("Num index reads: %d\n", state->numIdxReads);
 }
 
 void runQuery3() {
     double times[NUM_RUNS];
     int count = 0;
 
+    embedDBState *state;
+
     for (int runNum = 0; runNum < NUM_RUNS; runNum++) {
-        embedDBState *state = getSeededEthState();
+        state = getSeededEthState();
 
         clock_t start = clock();
 
@@ -276,14 +292,18 @@ void runQuery3() {
     printf("\n");
     printf("Average: %.1fms\n", sum / NUM_RUNS);
     printf("Count: %d\n", count);
+    printf("Num data reads: %d\n", state->numReads);
+    printf("Num index reads: %d\n", state->numIdxReads);
 }
 
 void runQuery4() {
     double times[NUM_RUNS];
     int count = 0;
 
+    embedDBState *state;
+
     for (int runNum = 0; runNum < NUM_RUNS; runNum++) {
-        embedDBState *state = getSeededWatchState();
+        state = getSeededWatchState();
 
         clock_t start = clock();
 
@@ -305,4 +325,6 @@ void runQuery4() {
     printf("\n");
     printf("Average: %.1fms\n", sum / NUM_RUNS);
     printf("Count: %d\n", count);
+    printf("Num data reads: %d\n", state->numReads);
+    printf("Num index reads: %d\n", state->numIdxReads);
 }
