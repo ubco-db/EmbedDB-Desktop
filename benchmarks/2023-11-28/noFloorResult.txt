@@ -1,22 +1,3 @@
-rm -f *.o	
-rm -f *.out
-rm -f *.db
-rm -f *.bin
-gcc -c ../../src/embedDB/embedDB.c -o embedDB.o -ldl -lm
-gcc -c ../../src/embedDB/utilityFunctions.c -o utilityFunctions.o  -ldl -lm
-gcc -c ../../src/spline/spline.c -o spline.o -ldl -lm
-gcc -c ../../src/spline/radixspline.c -o radixspline.o -ldl -lm
-gcc -c ../../src/query-interface/schema.c -o schema.o -ldl -lm
-gcc -c ../../src/query-interface/advancedQueries.c -o advancedQueries.o -ldl -lm
-gcc -c query1.c -o query1.o -ldl -lm
-gcc -c query2.c -o query2.o -ldl -lm
-gcc -c query3.c -o query3.o -ldl -lm
-gcc -c query4.c -o query4.o -ldl -lm
-gcc -c customFunctions.c -o customFunctions.o -ldl -lm
-gcc -c converterBenchmark.c -o converterBenchmark.o -ldl -lm
-gcc -o converterBenchmark.out converterBenchmark.o embedDB.o utilityFunctions.o spline.o radixspline.o schema.o advancedQueries.o query1.o query2.o query3.o query4.o customFunctions.o -ldl -lm
-./converterBenchmark.out
-
 Query 1: 143.3, 143.4, 143.3, 143.4, 143.5, 
 Average: 143.4ms
 Count: 70
