@@ -201,7 +201,6 @@ int8_t embedDBInit(embedDBState *state, size_t indexMaxError) {
 
     /* Calculate number of records per page */
     state->maxRecordsPerPage = (state->pageSize - state->headerSize) / state->recordSize;
-    printf("max rec = %d\n", state->maxRecordsPerPage);
 
     /* Initialize max error to maximum records per page */
     state->maxError = state->maxRecordsPerPage;
