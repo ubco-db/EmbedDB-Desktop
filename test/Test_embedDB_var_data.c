@@ -40,7 +40,7 @@
 
 #include "../src/embedDB/embedDB.h"
 #include "../src/embedDB/utilityFunctions.h"
-#include "../Unity/src/unity.h"
+#include "unity.h"
 
 embedDBState *state;
 uint32_t numRecords = 1000;
@@ -109,6 +109,7 @@ int insertRecords(uint32_t n) {
         varData[8] = (char)((j / 100) % 10) + '0';
 
         uint64_t data = j % 100;
+
         int result = embedDBPutVar(state, &j, &data, varData, 15);
         if (result != 0) {
             return result;
@@ -159,6 +160,7 @@ void test_get_when_almost_full_page() {
 
 void test_get_when_full_page() {
     TEST_ASSERT_EQUAL_UINT32_MESSAGE(1, state->nextDataPageId, "EmbedDB should have written a page by now");
+
     uint32_t key = 23;
     uint64_t expectedData = 23, data = 0;
     embedDBVarDataStream *varStream = NULL;
@@ -170,33 +172,28 @@ void test_get_when_full_page() {
     TEST_ASSERT_EQUAL_UINT32_MESSAGE(15, length, "Returned vardata was not the right length");
     char expected[] = "Testing 023...";
     TEST_ASSERT_EQUAL_CHAR_ARRAY_MESSAGE(expected, buf, 15, "embedDBGetVar did not return the correct vardata");
-    
+
     if (varStream != NULL) {
         free(varStream);
     }
 }
 
 void test_get_when_all() {
-    printf("************************ TEST_GET_WHEN_ALL ************************\n");
     char expectedVarData[] = "Testing 000...";
     char buf[20];
     embedDBVarDataStream *varStream = NULL;
-    printf("number of records = %d\n", numRecords);
-    for (int key = 42; key < 44; key++) {
+    for (int key = 0; key < numRecords; key++) {
         expectedVarData[10] = (char)(key % 10) + '0';
         expectedVarData[9] = (char)((key / 10) % 10) + '0';
         expectedVarData[8] = (char)((key / 100) % 10) + '0';
         uint64_t data = 0, expectedData = key % 100;
+
         int result = embedDBGetVar(state, &key, &data, &varStream);
         TEST_ASSERT_EQUAL_CHAR_ARRAY_MESSAGE(&expectedData, &data, state->dataSize, "embedDBGetVar did not return the correct fixed data");
         TEST_ASSERT_NOT_NULL_MESSAGE(varStream, "embedDBGetVar did not return vardata");
         uint32_t length = embedDBVarDataStreamRead(state, varStream, buf, 20);
-        printf("length = %d key = %d\n", length, key);
         TEST_ASSERT_EQUAL_UINT32_MESSAGE(15, length, "Returned vardata was not the right length");
         TEST_ASSERT_EQUAL_CHAR_ARRAY_MESSAGE(expectedVarData, buf, 15, "embedDBGetVar did not return the correct vardata");
-        for(int i = 0; i < 20; i++){
-            printf("%c", buf[i]);
-        }printf("\n");
         if (varStream != NULL) {
             free(varStream);
             varStream = NULL;
@@ -209,10 +206,7 @@ void test_insert_1() {
 }
 
 void test_insert_lt_page() {
-    //printf("Inserted %d records\n",state->maxRecordsPerPage - inserted - 1);
     TEST_ASSERT_EQUAL_INT_MESSAGE(0, insertRecords(state->maxRecordsPerPage - inserted - 1), "Error while inserting records");
-
-
 }
 
 void test_insert_rest() {
@@ -221,44 +215,29 @@ void test_insert_rest() {
 
 int main() {
     UNITY_BEGIN();
-    //i < sizeof(dataSizes) / sizeof(dataSizes[i]);
-    
-    for (i = 0; i < 1; i++) {
+
+    for (i = 0; i < sizeof(dataSizes) / sizeof(dataSizes[i]); i++) {
         // Setup state
         initState(dataSizes[i]);
         RUN_TEST(test_init);
 
         // Run tests
         RUN_TEST(test_get_when_empty);
-        printf("inserted = %d nextDataPageId = %d, nextVarPage = %d\n", inserted, state->nextDataPageId, state->nextVarPageId);
         RUN_TEST(test_insert_1);
-        printf("inserted = %d nextDataPageId = %d, nextVarPage = %d\n", inserted, state->nextDataPageId, state->nextVarPageId);
         RUN_TEST(test_get_when_1);
-        printf("inserted = %d nextDataPageId = %d, nextVarPage = %d\n", inserted, state->nextDataPageId, state->nextVarPageId);
         RUN_TEST(test_insert_lt_page);
-        printf("inserted = %d nextDataPageId = %d, nextVarPage = %d\n", inserted, state->nextDataPageId, state->nextVarPageId);
         RUN_TEST(test_get_when_almost_almost_full_page);
-        printf("inserted = %d nextDataPageId = %d, nextVarPage = %d\n", inserted, state->nextDataPageId, state->nextVarPageId);
         RUN_TEST(test_insert_1);
-        printf("inserted = %d nextDataPageId = %d, nextVarPage = %d\n", inserted, state->nextDataPageId, state->nextVarPageId);
         RUN_TEST(test_get_when_almost_full_page);
-        printf("inserted = %d nextDataPageId = %d, nextVarPage = %d\n", inserted, state->nextDataPageId, state->nextVarPageId);
-        RUN_TEST(test_insert_1); // this puts 1 record in the buffer
-        printf("inserted = %d nextDataPageId = %d, nextVarPage = %d\n", inserted, state->nextDataPageId, state->nextVarPageId);
-        RUN_TEST(test_get_when_full_page); // records in the buffer here when n =1 , 
-        printf("inserted = %d nextDataPageId = %d, nextVarPage = %d\n", inserted, state->nextDataPageId, state->nextVarPageId);
+        RUN_TEST(test_insert_1);
+        RUN_TEST(test_get_when_full_page);
         RUN_TEST(test_insert_rest);
-        printf("inserted = %d nextDataPageId = %d, nextVarPage = %d\n", inserted, state->nextDataPageId, state->nextVarPageId);
         embedDBFlush(state);
-        //printf("inserted = %d nextDataPageId = %d\n", inserted, state->nextDataPageId);
         RUN_TEST(test_get_when_all);
-        printf("inserted = %d nextDataPageId = %d, nextVarPage = %d\n", inserted, state->nextDataPageId, state->nextVarPageId);
-
 
         // Clean up state
         resetState();
     }
-    
 
     return UNITY_END();
 }
