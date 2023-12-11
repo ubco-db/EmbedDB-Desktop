@@ -1229,43 +1229,20 @@ int8_t embedDBGetVar(embedDBState *state, void *key, void *data, embedDBVarDataS
 #endif
         return 0;
     }
-    
-    //void *outputBuffer = (int8_t *)state->buffer;    
-    void *outputBuffer = (int8_t *)state->buffer;
 
-    if(EMBEDDB_GET_COUNT(outputBuffer) > 0){  
-        // flush embedDB 
-        embedDBFlush(state);
-        // init new buffer
-        initBufferPage(state, EMBEDDB_VAR_WRITE_BUFFER(state->parameters));
-        // determine how many bytes are left 
-        int temp = state->pageSize - (state->currentVarLoc%state->pageSize);
-        // create new offset
-        state->currentVarLoc += temp + state->variableDataHeaderSize;
+    // if there are records in the write buffer, flush to storage to be read
+    void *outputBuffer = (int8_t *)state->buffer;
+    if (EMBEDDB_GET_COUNT(outputBuffer) > 0) {
+        embedDBFlushVar(state);
     }
 
-    // Find if the record exists in the file system, load the fixed portion to read buffer 
     int8_t r = embedDBGet(state, key, data);
     if (r != 0) {
         return r;
     }
 
-
-    // if the record is in the write buffer, copy the write buffer over to the read buffer. 
-    // truly there is no point in doing the readToWriteBuf call since the record is already in the read buffer. 
-    // the problem is occuring that the variable page is being flushed to storage but the buffer does not haft too. 
-    /*
-    if(state->readOrWriteBuf == RECORD_IN_WRITE_BUF){
-        readToWriteBufVar(state);
-        readToWriteBuf(state);
-    }
-    */
-    // Since the read buffer contains the record, we can use that to find the variable data using the included pointer
-    void *buf = (int8_t *)state->buffer + (state->pageSize*EMBEDDB_DATA_READ_BUFFER);
-    // retrieve location of read buffer record 
+    void *buf = (int8_t *)state->buffer + (state->pageSize * EMBEDDB_DATA_READ_BUFFER);
     id_t recordNum = embedDBSearchNode(state, buf, key, 0);
-    //printf("This should retrieve the recordNum = %d\n", recordNum);
-    // use that location to find variable data beginning(?)
     int8_t setupResult = embedDBSetupVarDataStream(state, key, varData, recordNum);
 
     switch (setupResult) {
@@ -1335,6 +1312,21 @@ void embedDBCloseIterator(embedDBIterator *it) {
 }
 
 /**
+ * @brief   Flushes variable write buffer to storage and updates variable record pointer accordingly.
+ * @param   state   algorithm state structure
+ */
+void embedDBFlushVar(embedDBState *state) {
+    // flush embedDB
+    embedDBFlush(state);
+    // init new buffer
+    initBufferPage(state, EMBEDDB_VAR_WRITE_BUFFER(state->parameters));
+    // determine how many bytes are left
+    int temp = state->pageSize - (state->currentVarLoc % state->pageSize);
+    // create new offset
+    state->currentVarLoc += temp + state->variableDataHeaderSize;
+}
+
+/**
  * @brief	Flushes output buffer.
  * @param	state	algorithm state structure
  */
@@ -1366,7 +1358,7 @@ int8_t embedDBFlush(embedDBState *state) {
 
     // Flush var data page
     if (EMBEDDB_USING_VDATA(state->parameters)) {
-        // send write buffer pointer to write variable page 
+        // send write buffer pointer to write variable page
         writeVariablePage(state, (int8_t *)state->buffer + EMBEDDB_VAR_WRITE_BUFFER(state->parameters) * state->pageSize);
         state->fileInterface->flush(state->varFile);
     }
@@ -1385,6 +1377,7 @@ int8_t iterateReadBuffer(embedDBState *state, embedDBIterator *it, void *key, vo
     //  Keep reading record until we find one that matches the query
     int8_t *buf = (int8_t *)state->buffer + EMBEDDB_DATA_READ_BUFFER * state->pageSize;
     uint32_t pageRecordCount = EMBEDDB_GET_COUNT(buf);
+
     while (it->nextDataRec < pageRecordCount) {
         memcpy(key, buf + state->headerSize + it->nextDataRec * state->recordSize, state->keySize);
         memcpy(data, buf + state->headerSize + it->nextDataRec * state->recordSize + state->keySize, state->dataSize);
@@ -1490,30 +1483,17 @@ int8_t embedDBNextVar(embedDBState *state, embedDBIterator *it, void *key, void 
         return 0;
     }
 
-    //void *outputBuffer = (int8_t *)state->buffer;    
-    void *outputBuffer = (int8_t *)state->buffer;
-
-    
-    if(EMBEDDB_GET_COUNT(outputBuffer) > 0){  
-        printf("We got here\n");
-        // flush embedDB 
-        embedDBFlush(state);
-        // init new buffer
-        initBufferPage(state, EMBEDDB_VAR_WRITE_BUFFER(state->parameters));
-        // determine how many bytes are left 
-        int temp = state->pageSize - (state->currentVarLoc%state->pageSize);
-        // create new offset
-        state->currentVarLoc += temp + state->variableDataHeaderSize;
-        it->nextDataPage = 1;
-        //printf("it->nextDataPage = %d\n", state->nextDataPageId);
-
+    // ensure record exists
+    int8_t r = embedDBNext(state, it, key, data);
+    if (!r) {
+        return 0;
     }
 
-    int8_t r = embedDBNext(state, it, key, data);
-    printf("r = %d\n", r);
-    if (!r) {
-        printf("I bet it got a record eh key = %d r = %d\n", *(int *)it->minKey, r);
-        return 0;
+    // it->nextDataPage->0 indicates that records are in the output buffer. Flush so they are
+    // accessible.
+    void *outputBuffer = (int8_t *)state->buffer;
+    if (it->nextDataPage == 0 && (EMBEDDB_GET_COUNT(outputBuffer) > 0)) {
+        embedDBFlushVar(state);
     }
 
     // Get the vardata address from the record
@@ -1543,14 +1523,13 @@ int8_t embedDBSetupVarDataStream(embedDBState *state, void *key, embedDBVarDataS
     void *dataBuf = (int8_t *)state->buffer + state->pageSize * EMBEDDB_DATA_READ_BUFFER;
     // locate record inside read buffer
     void *record = (int8_t *)dataBuf + state->headerSize + recordNumber * state->recordSize;
-    // retrieve the pointer inside the record to retrieve variable data(?)
-    uint32_t varDataAddr = 0; // this might be the problem...
+    uint32_t varDataAddr = 0;
     memcpy(&varDataAddr, (int8_t *)record + state->keySize + state->dataSize, sizeof(uint32_t));
     if (varDataAddr == EMBEDDB_NO_VAR_DATA) {
         *varData = NULL;
         return 0;
     }
-    
+
     // Check if the variable data associated with this key has been overwritten due to file wrap around
     if (state->compareKey(key, &state->minVarRecordId) < 0) {
         *varData = NULL;
@@ -1558,7 +1537,7 @@ int8_t embedDBSetupVarDataStream(embedDBState *state, void *key, embedDBVarDataS
     }
 
     uint32_t pageNum = (varDataAddr / state->pageSize) % state->numVarPages;
-    
+
     // Read in page if the variable record is in file storage
     if (readVariablePage(state, pageNum) != 0) {
 #ifdef PRINT_ERRORS
@@ -1566,7 +1545,6 @@ int8_t embedDBSetupVarDataStream(embedDBState *state, void *key, embedDBVarDataS
 #endif
         return 2;
     }
-    
 
     // Get length of variable data
     void *varBuf = (int8_t *)state->buffer + state->pageSize * EMBEDDB_VAR_READ_BUFFER(state->parameters);
@@ -1619,8 +1597,7 @@ uint32_t embedDBVarDataStreamRead(embedDBState *state, embedDBVarDataStream *str
 
     // Read in var page containing the data to read
     uint32_t pageNum = (stream->fileOffset / state->pageSize) % state->numVarPages;
-    
-    
+
     if (readVariablePage(state, pageNum) != 0) {
 #ifdef PRINT_ERRORS
         printf("ERROR: Couldn't read variable data page %d\n", pageNum);
@@ -1867,7 +1844,7 @@ void readToWriteBuf(embedDBState *state) {
     memcpy(readBuf, writeBuf, state->pageSize);
 }
 
-void readToWriteBufVar(embedDBState *state){
+void readToWriteBufVar(embedDBState *state) {
     // point to read buffer -var
     void *readBufVar = (int8_t *)state->buffer + state->pageSize * EMBEDDB_VAR_READ_BUFFER(state->parameters);
     // point to write buffer - var
