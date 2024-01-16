@@ -131,7 +131,7 @@ state->parameters = EMBEDDB_USE_BMAP | EMBEDDB_USE_INDEX | EMBEDDB_USE_VDATA;
 
 ### Bitmap
 
-The bitmap is used for indexing data. It must be enabled as shown above but it is not mandatory. Depending on if `EMBEDDB_USE_INDEX` is enabled, the data will be saved in two locaations (datafile.bin) and on the index file.
+The bitmap is used for indexing data. It must be enabled as shown above but it is not mandatory. Depending on if `EMBEDDB_USE_INDEX` is enabled, the data will be saved in two locations (datafile.bin) and on the index file.
 
 Just like the comparator, you may customize the bitmap's functions to your liking. A sample implementation can be found in [utilityFunctions](../src/embedDB/utilityFunctions.c).
 
