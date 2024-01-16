@@ -328,7 +328,7 @@ embedDBGetVar(embedDBState *state, void *key, void *data, embedDBVarDataStream *
 ```
 state:		EmbedDB algorithm state structure.
 key:		Key for record.
-data:		Pre-allocaated memory to copy data for record.
+data:		Pre-allocated memory to copy data for record.
 varData:	Return variable for data as an embedDBVarDataStream.
 ```
 
