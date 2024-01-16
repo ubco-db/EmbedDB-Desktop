@@ -97,20 +97,20 @@ Allocate memory buffers based on your requirements. Since EmbedDB has support fo
 -   Required:
     -   2 blocks for record read/write buffers
 -   Optional:
-    -   2 blocks for index read/write buffers (Writing the bitmap index to file)
-    -   2 blocks for variable data read/write buffers (If you need to have a variable sized portion of the record)
+    -   2 blocks for index read/write buffers (writing the bitmap index to file)
+    -   2 blocks for variable data read/write buffers (if you need to have a variable sized portion of the record)
 
 ```c
 // ONLY USING READ/WRITE
-state->bufferSizeInBlocks = 2;  // 2 buffers is required for read/write buffers
+state->bufferSizeInBlocks = 2;  // 2 buffers is required for read/write buffers.
 state->buffer = malloc((size_t) state->bufferSizeInBlocks * state->pageSize);
 
 // INDEX OR VARIABLE RECORDS
-state->bufferSizeInBlocks = 4;  // 4 buffers is needed when using index or variable
+state->bufferSizeInBlocks = 4;  // 4 buffers is needed when using index or variable.
 state->buffer = malloc((size_t) state->bufferSizeInBlocks * state->pageSize);
 
 // BOTH INDEX AND VARIABLE RECORDS.
-state->bufferSizeInBlocks = 6;  // 6 buffers is needed when using index and variable
+state->bufferSizeInBlocks = 6;  // 6 buffers is needed when using index and variable.
 state->buffer = malloc((size_t) state->bufferSizeInBlocks * state->pageSize);
 ```
 
@@ -123,7 +123,7 @@ Here is how you can enable EmbedDB to use other included features. Below is an e
 state->parameters = EMBEDDB_USE_BMAP | EMBEDDB_USE_INDEX | EMBEDDB_USE_VDATA;
 ```
 
--   `EMBEDDB_USE_INDEX` - Writes the bitmap to a file for fast queries on the data (Usually used in conjuction with EMBEDDB_USE_BMAP).
+-   `EMBEDDB_USE_INDEX` - Writes the bitmap to a file for fast queries on the data (usually used in conjuction with EMBEDDB_USE_BMAP).
 -   `EMBEDDB_USE_BMAP` - Includes the bitmap in each page header so that it is easy to tell if a buffered page may contain a given key.
 -   `EMBEDDB_USE_MAX_MIN` - Includes the max and min records in each page header.
 -   `EMBEDDB_USE_VDATA` - Enables including variable-sized data with each record.
@@ -136,10 +136,10 @@ The bitmap is used for indexing data. It must be enabled as shown above but it i
 Just like the comparator, you may customize the bitmap's functions to your liking. A sample implementation can be found in [utilityFunctions](../src/embedDB/utilityFunctions.c).
 
 ```c
-// define how many bytes the bitmap is
+// define how many bytes the bitmap is.
 state->bitmapSize = 8;
 
-// Include function pointers that can build/update a bitmap of the specified size
+// Include function pointers that can build/update a bitmap of the specified size.
 state->inBitmap = inBitmapInt64;
 state->updateBitmap = updateBitmapInt64;
 state->buildBitmapFromRange = buildBitmapInt64FromRange;
@@ -209,11 +209,11 @@ embedDBPut(state, (void*) key, (void*) dataPtr)
 uint32_t key = 123;
 // calloc dataPtr in the heap
 void* dataPtr = calloc(1, state->dataSize);
-// set value to be inserted into EmbedDB
+// set value to be inserted into EmbedDB.
 *((uint32_t*)dataPtr) = 12345678;
-// perform insert of key and data
+// perform insert of key and data.
 embedDBPut(state, (void*) &key, dataPtr);
-// free dynamic memory
+// free dynamic memory.
 free(dataPtr);
 ```
 
@@ -248,19 +248,19 @@ length:		Length of the variable length data, in bytes.
 **Example:**
 
 ```c
-// init key
+// init key.
 uint32_t key = 124;
-// calloc dataPtr in the heap
+// calloc dataPtr in the heap.
 void* dataPtr = calloc(1, state->dataSize);
-// set value to be inserted into embedDB
+// set value to be inserted into embedDB.
 *((uint32_t*)dataPtr) = 12345678;
-// Create variable-length data
+// Create variable-length data.
 char varPtr[] = "Hello World"; // ~ 12 bytes long including null terminator
-// specify the length in bytes
+// specify the length, in bytes.
 uint32_t length = 12;
 // insert variable record
 embedDBPutVar(state, (void*)&key, (void*)dataPtr, (void*)varPtr, length);
-// free dynamic memory
+// free dynamic memory.
 free(dataPtr);
 dataPtr = NULL;
 ```
@@ -315,7 +315,7 @@ embedDBGet(state, (void*) &key, (void*) returnDataPtr);
 
 Variable-length-data can be read only when the `EMBEDDB_USE_VDATA` parameter is enabled. A variable-length data stream must be created to retrieve variable-length records. `varStream` is an un-allocated `embedDBVarDataStream`; it will only return a data stream when there is data to read. Variable data is read in chunks from this stream. The size of these chunks are the length parameter for `embedDBVarDataStreamRead`. `bytesRead` is the number of bytes read into the buffer and is <=`varBufSize`.
 
-In a similar fashion to reading static records, you must pre-allocate storage for `embedDBVarDataStreamRead` to insert variable-length records into. Since variable length records are inserted alongside fixed length records, we can also retrieve that fixed-length record as well, so ensure there is a seperate pre-allocated storage in the memory when retrieving the fixed length record. You may even retrieve the fixed length record by doing `embedDBGet` for a key that has a variable record.
+In a similar fashion to reading static records, you must pre-allocate storage for `embedDBVarDataStreamRead` to insert variable-length records into. Since variable length records are inserted alongside fixed length records, retrieving fixed length records is also possible, so ensure there is a separate pre-allocated variable in the memory available for pointing to the fixed length record too. You may even retrieve just the fixed length record by doing `embedDBGet` for a key that has a variable record.
 
 <ins>**Method**</ins>
 
@@ -386,7 +386,7 @@ embedDBGetVar(state, (void*) key, (void*) fixedRec, &varStream);
 
 /* process fixed record */
 
-// read data from varStream
+// read data from varStream.
 if (varStream != NULL) {
 	uint32_t bytesRead;
 	// as long as there is bytes to read
@@ -404,11 +404,11 @@ varRecBufPtr = NULL;
 
 ### Overview
 
-EmbedDB has support for iterating through keys and data sequentially for both fixed and variable recrods. A comparator function must be initialized as discussed when [setting up EmbedDBState](#comparator-functions). Remember, `EMBEDDB_USE_VDATA` must be enabled to use variable data.
+EmbedDB has support for iterating through keys and data sequentially for both fixed and variable records. A comparator function must be initialized as discussed when [setting up EmbedDBState](#comparator-functions). Remember, `EMBEDDB_USE_VDATA` must be enabled to use variable data.
 
-You must first declare an `embedDBIterator` type and specify the minKey/maxKey or minData/maxData depending on the type of filter you would like to perform. `embedDBInitIterator` will initialize this iterator and use indexing to predict where the record will be in the file system. `embedDBNext` will copy the requested key and data into pre allocated storage until there are no more records to read. `embedDBNext` will also locate records that are held in the write buffer.
+You must first declare an `embedDBIterator` type and specify the minKey/maxKey or minData/maxData depending on the type of filter you would like to perform. `embedDBInitIterator` will initialize this iterator and use indexing to predict where the record will be in storage. `embedDBNext` will copy the requested key and data into pre-allocated storage until there are no more records to read. `embedDBNext` will also locate records that are held in the write buffer.
 
-It is important that you pre allocate enough storage for the key and data to fit into. Also ensure Ensure to call `embedDBCloseIterator` to close the iterator after use.
+It is important that you pre-allocate enough storage for the key and data to fit in. Make sure to call `embedDBCloseIterator` to close the iterator after use.
 
 Here are the methods that are common to both approaches.
 
