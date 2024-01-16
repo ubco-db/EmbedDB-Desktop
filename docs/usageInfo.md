@@ -127,7 +127,7 @@ state->parameters = EMBEDDB_USE_BMAP | EMBEDDB_USE_INDEX | EMBEDDB_USE_VDATA;
 -   `EMBEDDB_USE_BMAP` - Includes the bitmap in each page header so that it is easy to tell if a buffered page may contain a given key.
 -   `EMBEDDB_USE_MAX_MIN` - Includes the max and min records in each page header.
 -   `EMBEDDB_USE_VDATA` - Enables including variable-sized data with each record.
--   `EMBEDDB_RESET_DATA` - Disables data recovery. If not enabled (default), embedDB will check if the file already exists, and if it does, it will attempt at recovering the data.
+-   `EMBEDDB_RESET_DATA` - Disables data recovery. If not enabled (default), EmbedDB will check if the file already exists, and if it does, it will attempt at recovering the data.
 
 ### Bitmap
 
