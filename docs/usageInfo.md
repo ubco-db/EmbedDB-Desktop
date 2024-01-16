@@ -271,7 +271,7 @@ _For a simpler query interface, see [Simple Query Interface](advancedQueries.md)
 
 ### Overview
 
-Use the `embedDBGet` function to retrieve fixed-length records from the database. You can use `embedDBGetVar` to retrieve variable-length records only when `EMBEDDB_USE_VDATA` is enabled. EmbedDB will handle searching the write buffer for you, so there is no need to flush the storage.
+Use the `embedDBGet` function to retrieve fixed-length records from the database. You can use `embedDBGetVar` to retrieve variable-length records only when `EMBEDDB_USE_VDATA` is enabled. EmbedDB searches the write buffer for you, so there is no need to flush the storage.
 
 ### Fixed-Length Record
 
