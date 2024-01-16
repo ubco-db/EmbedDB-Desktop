@@ -145,7 +145,7 @@ state->updateBitmap = updateBitmapInt64;
 state->buildBitmapFromRange = buildBitmapInt64FromRange;
 ```
 
-### Final initilization
+### Final initialization
 
 ```c
 size_t splineMaxError = 1; // Modify this value to change spline error tolerance
