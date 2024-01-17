@@ -2,7 +2,7 @@
 /**
  * @file		embedDBExample.c
  * @author		EmbedDB Team (See Authors.md)
- * @brief		This file includes an example of inserting and querying EmbedDB
+ * @brief		This file includes a benchmark of inserting and querying EmbedDB
  *              and tests the inserted data for correctness.
  * @copyright	Copyright 2023
  * 			    EmbedDB Team
