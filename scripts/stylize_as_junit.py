@@ -6,6 +6,8 @@
 #   [Released under MIT License. Please refer to license.txt for details]
 # ==========================================
 
+# Modified by EmbedDB Team to suit our needs
+
 import sys
 import os
 from glob import glob
@@ -34,7 +36,8 @@ class UnityTestSummary:
 
         # Dig through each result file, looking for details on pass/fail:
         for result_file in results:
-            lines = list(map(lambda line: line.rstrip(), open(result_file, "r").read().split('\n')))
+            lines = list(map(lambda line: line.rstrip(), open(
+                result_file, "r").read().split('\n')))
             if len(lines) == 0:
                 raise Exception("Empty test result file: %s" % result_file)
 
@@ -49,10 +52,12 @@ class UnityTestSummary:
             delimiter = Literal(':').suppress()
             # Format of a result line is `[file_name]:line:test_name:RESULT[:msg]`
             tc_result_line = Group(ZeroOrMore(entry.setResultsName('tc_file_name'))
-                + delimiter + entry.setResultsName('tc_line_nr')
-                + delimiter + entry.setResultsName('tc_name')
-                + delimiter + entry.setResultsName('tc_status') +
-                Optional(delimiter + entry.setResultsName('tc_msg'))).setResultsName("tc_line")
+                                   + delimiter +
+                                   entry.setResultsName('tc_line_nr')
+                                   + delimiter +
+                                   entry.setResultsName('tc_name')
+                                   + delimiter + entry.setResultsName('tc_status') +
+                                   Optional(delimiter + entry.setResultsName('tc_msg'))).setResultsName("tc_line")
 
             eol = LineEnd().suppress()
             sol = LineStart().suppress()
@@ -62,7 +67,8 @@ class UnityTestSummary:
             tc_summary_line = Group(Word(nums).setResultsName("num_of_tests") + "Tests" + Word(nums).setResultsName(
                 "num_of_fail") + "Failures" + Word(nums).setResultsName("num_of_ignore") + "Ignored").setResultsName(
                 "tc_summary")
-            tc_end_line = Or(Literal("FAIL"), Literal('Ok')).setResultsName("tc_result")
+            tc_end_line = Or(Literal("FAIL"), Literal('Ok')
+                             ).setResultsName("tc_result")
 
             # run it and see...
             pp1 = tc_result_line | Optional(tc_summary_line | tc_end_line)
@@ -81,10 +87,12 @@ class UnityTestSummary:
 
                     # get only the file name which will be used as the classname
                     if 'tc_file_name' in tmp_tc_line:
-                        file_name = tmp_tc_line['tc_file_name'].split('\\').pop().split('/').pop().rsplit('.', 1)[0]
+                        file_name = tmp_tc_line['tc_file_name'].split(
+                            '\\').pop().split('/').pop().rsplit('.', 1)[0]
                     else:
                         file_name = result_file.strip("./")
-                    tmp_tc = TestCase(name=tmp_tc_line['tc_name'], classname=file_name)
+                    tmp_tc = TestCase(
+                        name=tmp_tc_line['tc_name'], classname=file_name)
 
                     # This variable has been added as some of our methods have printed output and an additional
                     # check was needed to ensure it was not parsed into the test results.
@@ -139,8 +147,7 @@ class UnityTestSummary:
 
 if __name__ == '__main__':
     uts = UnityTestSummary()
-    parser = argparse.ArgumentParser(description=
-        """Takes as input the collection of *.testpass and *.testfail result
+    parser = argparse.ArgumentParser(description="""Takes as input the collection of *.testpass and *.testfail result
         files, and converts them to a JUnit formatted XML.""")
     parser.add_argument('targets_dir', metavar='result_file_directory',
                         type=str, nargs='?', default='build/results',
@@ -155,10 +162,12 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     if args.targets_dir[-1] != '/':
-        args.targets_dir+='/'
-    targets = list(map(lambda x: x.replace('\\', '/'), glob(args.targets_dir + '*.test*')))
+        args.targets_dir += '/'
+    targets = list(map(lambda x: x.replace('\\', '/'),
+                   glob(args.targets_dir + '*.test*')))
     if len(targets) == 0:
-        raise Exception("No *.testpass or *.testfail files found in '%s'" % args.targets_dir)
+        raise Exception(
+            "No *.testpass or *.testfail files found in '%s'" % args.targets_dir)
     uts.set_targets(targets)
 
     # set the root path

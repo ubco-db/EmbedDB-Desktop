@@ -10,7 +10,7 @@ The basic idea is to create a struct containing whatever file object you would n
 
 ## Examples
 
-For a full code example see [embedDB.h](../src/embedDB/embedDB.h) for the definition of `embeddbFileInterface` struct and [utilityFunctions.c](../src/embedDB/utilityFunctions.c) for implementations of the interface.
+For a full code example see [embedDB.h](../src/embedDB/embedDB.h) for the definition of `embedDBFileInterface` struct and [utilityFunctions.c](../src/embedDB/utilityFunctions.c) for implementations of the interface.
 
 Below is a step-by-step for two differnet storage devices.
 
@@ -39,7 +39,9 @@ void *setupSDFile(char *filename) {
     return fileInfo;
 }
 ```
+
 Along with that we need to provide a tearDown function since we calloc'd something
+
 ```c
  void tearDownSDFile(void *file) {
     SD_FILE_INFO *fileInfo = (SD_FILE_INFO *)file;
@@ -71,7 +73,9 @@ int8_t SD_OPEN(void *file, uint8_t mode) {
     }
 }
 ```
+
 Closing is pretty simple. Note that we only want to close the file object, not destroy the whole file struct because EmbedDB may request to re-open the file again after calling `close`.
+
 ```c
 int8_t SD_CLOSE(void *file) {
     SD_FILE_INFO *fileInfo = (SD_FILE_INFO *)file;
@@ -96,7 +100,9 @@ int8_t SD_WRITE(void *buffer, uint32_t pageNum, uint32_t pageSize, void *file) {
     return sd_fwrite(buffer, pageSize, 1, fileInfo->sdFile) == pageSize;
 }
 ```
+
 And `flush`:
+
 ```c
 int8_t SD_FLUSH(void *file) {
     SD_FILE_INFO *fileInfo = (SD_FILE_INFO *)file;
@@ -141,7 +147,9 @@ void tearDownDataflashFile(void *file) {
     free(file);
 }
 ```
+
 Since there is no file object to create when opening the file, the `open` and `close` functions will be doing nothing.
+
 ```c
 int8_t DF_OPEN(void *file, uint8_t mode) {
     return 1;
@@ -184,7 +192,9 @@ int8_t DF_WRITE(void *buffer, uint32_t pageNum, uint32_t pageSize, void *file) {
     }
 }
 ```
+
 Flushing is also not something that needs to be done on this storage device, so it will also just return 1
+
 ```c
 int8_t DF_FLUSH(void *file) {
     return 1;
