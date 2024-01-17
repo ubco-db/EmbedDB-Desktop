@@ -48,9 +48,9 @@ CFLAGS = $(if $(filter test,$(MAKECMDGOALS)),$(TEST_FLAGS),$(EXAMPLE_FLAGS))
 
 SRCT = $(wildcard $(PATHT)*.c)
 
-EMBED_VARIABLE_EXAMPLE = $(PATHO)embedDBVariableDataExample.o
-EMBEDDB_EXAMPLE = $(PATHO)embedDBExample.o
-ADVANCED_QUERY = $(PATHO)advancedQueryInterfaceExample.o
+EMBED_VARIABLE_BENCHMARK = $(PATHO)embedDBVariableBenchmark.o
+EMBEDDB_BENCHMARK = $(PATHO)embedDBBenchmark.o
+QUERY_INTERFACE_BENCHMARK = $(PATHO)advancedQueryInterfaceBenchmark.o
 
 COMPILE=gcc -c
 LINK=gcc
@@ -58,26 +58,31 @@ DEPEND=gcc -MM -MG -MF
 
 RESULTS = $(patsubst $(PATHT)Test%.c,$(PATHR)Test%.testpass,$(SRCT))
 
-embedDBVariableExample: $(BUILD_PATHS) $(PATHB)embedDBVariableDataExample.$(TARGET_EXTENSION)
-	@echo "Running EmbedDB variable data example"
-	-./$(PATHB)embedDBVariableDataExample.$(TARGET_EXTENSION)
-	@echo "Finished running EmbedDB variable data example"
+embedDBVariableBenchmark: $(BUILD_PATHS) $(PATHB)embedDBVariableBenchmark.$(TARGET_EXTENSION)
+	@echo "Running EmbedDB variable data benchmark"
+	-./$(PATHB)embedDBVariableBenchmark.$(TARGET_EXTENSION)
+	@echo "Finished running EmbedDB variable data benchmark"
 
-$(PATHB)embedDBVariableDataExample.$(TARGET_EXTENSION): $(EMBEDDB_OBJECTS) $(EMBED_VARIABLE_EXAMPLE)
+$(PATHB)embedDBVariableBenchmark.$(TARGET_EXTENSION): $(EMBEDDB_OBJECTS) $(EMBED_VARIABLE_BENCHMARK)
 	$(LINK) -o $@ $^ $(MATH)
 
-embedDBExample: $(BUILD_PATHS) $(PATHB)embedDBExample.$(TARGET_EXTENSION)
-	@echo "Running EmbedDB Example"
-	-./$(PATHB)embedDBExample.$(TARGET_EXTENSION)
-	@echo "Finished running EmbedDB example file"
+embedDBBenchmark: $(BUILD_PATHS) $(PATHB)embedDBBenchmark.$(TARGET_EXTENSION)
+	@echo "Running EmbedDB Benchmark"
+	-./$(PATHB)embedDBBenchmark.$(TARGET_EXTENSION)
+	@echo "Finished running EmbedDB benchmark"
+
+$(PATHB)embedDBBenchmark.$(TARGET_EXTENSION): $(EMBEDDB_OBJECTS) $(EMBEDDB_BENCHMARK)
+	$(LINK) -o $@ $^ $(MATH)
 
 $(PATHB)embedDBExample.$(TARGET_EXTENSION): $(EMBEDDB_OBJECTS) $(EMBEDDB_EXAMPLE)
 	$(LINK) -o $@ $^ $(MATH)
 
-queryExample: $(BUILD_PATHS) $(PATHB)advancedQueryInterfaceExample.$(TARGET_EXTENSION)
-	-./$(PATHB)advancedQueryInterfaceExample.$(TARGET_EXTENSION)
+queryBenchmark: $(BUILD_PATHS) $(PATHB)advancedQueryInterfaceBenchmark.$(TARGET_EXTENSION)
+	@echo "Running Advanced Query Interface Benchmark"
+	-./$(PATHB)advancedQueryInterfaceBenchmark.$(TARGET_EXTENSION)
+	@echo "Finished running Advanced Query Interface Benchmark"
 
-$(PATHB)advancedQueryInterfaceExample.$(TARGET_EXTENSION): $(EMBEDDB_OBJECTS) $(QUERY_OBJECTS) $(ADVANCED_QUERY)
+$(PATHB)advancedQueryInterfaceBenchmark.$(TARGET_EXTENSION): $(EMBEDDB_OBJECTS) $(QUERY_OBJECTS) $(QUERY_INTERFACE_BENCHMARK)
 	$(LINK) -o $@ $^ $(MATH)
 
 test: $(BUILD_PATHS) $(RESULTS)

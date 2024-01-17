@@ -2,7 +2,7 @@
 /**
  * @file		advancedQueryInterfaceExample.c
  * @author		EmbedDB Team (See Authors.md)
- * @brief		This file includes an example of querying EmbedDB using the
+ * @brief		This file includes a benchmark of querying EmbedDB using the
  *              advanced query interface.
  * @copyright	Copyright 2023
  * 			    EmbedDB Team
