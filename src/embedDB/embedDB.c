@@ -1506,8 +1506,6 @@ int8_t embedDBNextVar(embedDBState *state, embedDBIterator *it, void *key, void 
         return 0;
     }
 
-    // it->nextDataPage->0 indicates that records are in the output buffer. Flush so they are
-    // accessible.
     void *outputBuffer = (int8_t *)state->buffer;
     if (it->nextDataPage == 0 && (EMBEDDB_GET_COUNT(outputBuffer) > 0)) {
         embedDBFlushVar(state);
