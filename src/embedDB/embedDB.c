@@ -1556,7 +1556,6 @@ int8_t embedDBSetupVarDataStream(embedDBState *state, void *key, embedDBVarDataS
     }
 
     uint32_t pageNum = (varDataAddr / state->pageSize) % state->numVarPages;
-    // printf("pageNum = %d\n", pageNum);
 
     // Read in page
     if (readVariablePage(state, pageNum) != 0) {
