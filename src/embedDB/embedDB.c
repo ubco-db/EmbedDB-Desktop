@@ -1233,21 +1233,20 @@ int8_t embedDBGetVar(embedDBState *state, void *key, void *data, embedDBVarDataS
         return 0;
     }
 
-    // if queried records are inside write buffer, flush variable buffer and copy the write buffer to read buffer to retrieve pointer
     void *outputBuffer = (int8_t *)state->buffer;
-    if (EMBEDDB_GET_COUNT(outputBuffer) != 0) {
-        int8_t inWriteBuf = embedDBSearchNode(state, outputBuffer, key, 0);
-        if (inWriteBuf != NO_RECORD_FOUND) {
-            embedDBFlushVar(state);
-            readToWriteBuf(state);
-        }
-    }
 
-    // place record inside of read buffer
-    int8_t r = embedDBGet(state, key, data);
-    // if the record does not exist, return non-zero integer
-    if (r != 0) {
-        return r;
+    // if queried records are inside write buffer
+    if (EMBEDDB_GET_COUNT(outputBuffer) != 0 && embedDBSearchNode(state, outputBuffer, key, 0) != NO_RECORD_FOUND) {
+        // flush variable record buffer to storage
+        embedDBFlushVar(state);
+        // copy contents of write buffer to read buffer for embedDBSearchNode()
+        readToWriteBuf(state);
+        // retrieve fixed-length record
+        searchBuffer(state, outputBuffer, key, data);
+    }
+    // check if queries are in the file system, place in read buffer, and return fixed-length record. Else return NO_RECORD_FOUND
+    else if (embedDBGet(state, key, data) != RECORD_FOUND) {
+        return NO_RECORD_FOUND;
     }
 
     // pointer to read buffer
@@ -1327,10 +1326,7 @@ void embedDBCloseIterator(embedDBIterator *it) {
  * @param   state   algorithm state structure
  */
 void embedDBFlushVar(embedDBState *state) {
-    // flush embedDB
-    // embedDBFlush(state);
-
-    // only FLUSH variable buffer
+    // only flush variable buffer
     writeVariablePage(state, (int8_t *)state->buffer + EMBEDDB_VAR_WRITE_BUFFER(state->parameters) * state->pageSize);
     state->fileInterface->flush(state->varFile);
     // init new buffer

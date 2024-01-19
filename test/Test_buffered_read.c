@@ -94,12 +94,12 @@ void test_insert_flush_insert_buffer(void) {
     // create a key
     uint32_t key = 1;
     // save to buffer
-    insert_static_record(state, key, 169);
+    insert_static_record(state, key, 154);
     // query data
     int return_data[] = {0, 0, 0};
     embedDBGet(state, &key, return_data);
     // test record is in buffer
-    TEST_ASSERT_EQUAL(169, *return_data);
+    TEST_ASSERT_EQUAL(154, *return_data);
     // flush
     embedDBFlush(state);
     // insert another record
@@ -111,7 +111,7 @@ void test_insert_flush_insert_buffer(void) {
     // check if first record is retrieved from file storage
     key = 1;
     embedDBGet(state, &key, return_data);
-    TEST_ASSERT_EQUAL(169, *return_data);
+    TEST_ASSERT_EQUAL(154, *return_data);
 }
 
 // test checks to see if queried key > maxKey in buffer
@@ -160,15 +160,15 @@ void test_no_data(void) {
 
 int main() {
     UNITY_BEGIN();
-    //RUN_TEST(test_single_insert_one_retrieval_flush);
-    //RUN_TEST(test_multiple_insert_one_retrieval_flush);
-    //RUN_TEST(test_insert_page_query_buffer);
-    //RUN_TEST(test_single_insert_one_retrieval_no_flush);
-    //RUN_TEST(test_multiple_insert_one_retrieval_no_flush);
+    RUN_TEST(test_single_insert_one_retrieval_flush);
+    RUN_TEST(test_multiple_insert_one_retrieval_flush);
+    RUN_TEST(test_insert_page_query_buffer);
+    RUN_TEST(test_single_insert_one_retrieval_no_flush);
+    RUN_TEST(test_multiple_insert_one_retrieval_no_flush);
     RUN_TEST(test_insert_flush_insert_buffer);
-    //RUN_TEST(test_above_max_query);
-    //RUN_TEST(test_flush_before_insert);
-    //RUN_TEST(test_no_data);
+    RUN_TEST(test_above_max_query);
+    RUN_TEST(test_flush_before_insert);
+    RUN_TEST(test_no_data);
     UNITY_END();
 }
 
