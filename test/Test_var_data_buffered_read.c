@@ -124,7 +124,7 @@ void test_insert_retrieve_insert_and_retrieve_again(void) {
     // create var data stream
     embedDBVarDataStream *varStream = NULL;
     // create buffer for input
-    uint32_t varBufSize = 15; 
+    uint32_t varBufSize = 15;
     void *varDataBuffer = malloc(varBufSize);
     // query embedDB
     int r = embedDBGetVar(state, &key, &expData, &varStream);
@@ -193,7 +193,7 @@ void test_var_read_iterator_buffer(void) {
     embedDBCloseIterator(&it);
 }
 
-void test_insert_retrieve_flush_insert_retrieve_again(void){
+void test_insert_retrieve_flush_insert_retrieve_again(void) {
     // insert 3 records
     insertRecords(3);
     // retrieve record
@@ -202,7 +202,7 @@ void test_insert_retrieve_flush_insert_retrieve_again(void){
     // create var data stream
     embedDBVarDataStream *varStream = NULL;
     // create buffer for input
-    uint32_t varBufSize = 15; 
+    uint32_t varBufSize = 15;
     void *varDataBuffer = malloc(varBufSize);
     // query embedDB
     int r = embedDBGetVar(state, &key, &expData, &varStream);
@@ -215,11 +215,11 @@ void test_insert_retrieve_flush_insert_retrieve_again(void){
     // test
     TEST_ASSERT_EQUAL_UINT32_MESSAGE(15, bytesRead, "Returned vardata was not the right length");
     TEST_ASSERT_EQUAL_CHAR_ARRAY_MESSAGE(varData, varDataBuffer, 15, "embedDBGetVar did not return the correct vardata");
-    // free and flush 
+    // free and flush
     free(varDataBuffer);
     embedDBFlush(state);
     // insert more records
-    insertRecords(55);
+    insertRecords(58);
     key = 55;
     // create buffer for input
     varDataBuffer = malloc(varBufSize);
@@ -230,11 +230,11 @@ void test_insert_retrieve_flush_insert_retrieve_again(void){
     // retrieve variable record
     bytesRead = embedDBVarDataStreamRead(state, varStream, varDataBuffer, varBufSize);
     // test
-    TEST_ASSERT_EQUAL_UINT32_MESSAGE(15, 0, "Returned vardata was not the right length");
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(15, bytesRead, "Returned vardata was not the right length");
     TEST_ASSERT_EQUAL_CHAR_ARRAY_MESSAGE(varData_2, varDataBuffer, 15, "embedDBGetVar did not return the correct vardata");
 }
 
-void test_insert_retrieve_flush_insert_retrieve_single_record_again(void){
+void test_insert_retrieve_flush_insert_retrieve_single_record_again(void) {
     // insert 3 records
     insertRecords(3);
     // retrieve record
@@ -243,7 +243,7 @@ void test_insert_retrieve_flush_insert_retrieve_single_record_again(void){
     // create var data stream
     embedDBVarDataStream *varStream = NULL;
     // create buffer for input
-    uint32_t varBufSize = 15; 
+    uint32_t varBufSize = 15;
     void *varDataBuffer = malloc(varBufSize);
     // query embedDB
     int r = embedDBGetVar(state, &key, &expData, &varStream);
@@ -256,7 +256,7 @@ void test_insert_retrieve_flush_insert_retrieve_single_record_again(void){
     // test
     TEST_ASSERT_EQUAL_UINT32_MESSAGE(15, bytesRead, "Returned vardata was not the right length");
     TEST_ASSERT_EQUAL_CHAR_ARRAY_MESSAGE(varData, varDataBuffer, 15, "embedDBGetVar did not return the correct vardata");
-    // free and flush 
+    // free and flush
     free(varDataBuffer);
     embedDBFlush(state);
     // insert more records
@@ -265,11 +265,11 @@ void test_insert_retrieve_flush_insert_retrieve_single_record_again(void){
     varDataBuffer = malloc(varBufSize);
     r = embedDBGetVar(state, &key, &expData, &varStream);
     // test that records are found
-    TEST_ASSERT_EQUAL_INT_MESSAGE(0, r, "Records should have been found. 2");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(0, r, "Records should have been found");
     // retrieve variable record
     bytesRead = embedDBVarDataStreamRead(state, varStream, varDataBuffer, varBufSize);
     // test
-    TEST_ASSERT_EQUAL_UINT32_MESSAGE(15, 0, "Returned vardata was not the right length");
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(15, bytesRead, "Returned vardata was not the right length");
     TEST_ASSERT_EQUAL_CHAR_ARRAY_MESSAGE(varData, varDataBuffer, 15, "embedDBGetVar did not return the correct vardata");
 }
 
@@ -293,11 +293,11 @@ int insertRecords(uint32_t n) {
 
 int main() {
     UNITY_BEGIN();
-    //RUN_TEST(test_insert_single_record_and_retrieval_from_buffer_no_flush);
-    //RUN_TEST(test_single_variable_page_insert_and_retrieve_from_buffer);
-    //RUN_TEST(test_insert_retrieve_insert_and_retrieve_again);
-    //RUN_TEST(test_var_read_iterator_buffer);
-    //RUN_TEST(test_insert_retrieve_flush_insert_retrieve_again);
+    RUN_TEST(test_insert_single_record_and_retrieval_from_buffer_no_flush);
+    RUN_TEST(test_single_variable_page_insert_and_retrieve_from_buffer);
+    RUN_TEST(test_insert_retrieve_insert_and_retrieve_again);
+    RUN_TEST(test_var_read_iterator_buffer);
+    RUN_TEST(test_insert_retrieve_flush_insert_retrieve_again);
     RUN_TEST(test_insert_retrieve_flush_insert_retrieve_single_record_again);
     UNITY_END();
 }
