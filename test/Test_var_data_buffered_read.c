@@ -124,7 +124,7 @@ void test_insert_retrieve_insert_and_retrieve_again(void) {
     // create var data stream
     embedDBVarDataStream *varStream = NULL;
     // create buffer for input
-    uint32_t varBufSize = 15;  // Choose any size
+    uint32_t varBufSize = 15; 
     void *varDataBuffer = malloc(varBufSize);
     // query embedDB
     int r = embedDBGetVar(state, &key, &expData, &varStream);
@@ -139,13 +139,13 @@ void test_insert_retrieve_insert_and_retrieve_again(void) {
     TEST_ASSERT_EQUAL_CHAR_ARRAY_MESSAGE(varData, varDataBuffer, 15, "embedDBGetVar did not return the correct vardata");
     free(varDataBuffer);
     // insert more records
-    insertRecords(60);
+    insertRecords(58);
     key = 55;
     // create buffer for input
     varDataBuffer = malloc(varBufSize);
     r = embedDBGetVar(state, &key, &expData, &varStream);
     // test that records are found
-    TEST_ASSERT_EQUAL_INT_MESSAGE(0, r, "Records should have been found.");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(0, r, "Records should have been found. 2");
     char varData_2[] = "Testing 055...";
     // retrieve variable record
     bytesRead = embedDBVarDataStreamRead(state, varStream, varDataBuffer, varBufSize);
@@ -193,6 +193,86 @@ void test_var_read_iterator_buffer(void) {
     embedDBCloseIterator(&it);
 }
 
+void test_insert_retrieve_flush_insert_retrieve_again(void){
+    // insert 3 records
+    insertRecords(3);
+    // retrieve record
+    int key = 2;
+    uint32_t expData[] = {0, 0, 0};
+    // create var data stream
+    embedDBVarDataStream *varStream = NULL;
+    // create buffer for input
+    uint32_t varBufSize = 15; 
+    void *varDataBuffer = malloc(varBufSize);
+    // query embedDB
+    int r = embedDBGetVar(state, &key, &expData, &varStream);
+    // test that records are found
+    TEST_ASSERT_EQUAL_INT_MESSAGE(r, 0, "Records should have been found.");
+    // retrieve variable record
+    uint32_t bytesRead = embedDBVarDataStreamRead(state, varStream, varDataBuffer, varBufSize);
+    // create string to compaare to
+    char varData[] = "Testing 002...";
+    // test
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(15, bytesRead, "Returned vardata was not the right length");
+    TEST_ASSERT_EQUAL_CHAR_ARRAY_MESSAGE(varData, varDataBuffer, 15, "embedDBGetVar did not return the correct vardata");
+    // free and flush 
+    free(varDataBuffer);
+    embedDBFlush(state);
+    // insert more records
+    insertRecords(55);
+    key = 55;
+    // create buffer for input
+    varDataBuffer = malloc(varBufSize);
+    r = embedDBGetVar(state, &key, &expData, &varStream);
+    // test that records are found
+    TEST_ASSERT_EQUAL_INT_MESSAGE(0, r, "Records should have been found. 2");
+    char varData_2[] = "Testing 055...";
+    // retrieve variable record
+    bytesRead = embedDBVarDataStreamRead(state, varStream, varDataBuffer, varBufSize);
+    // test
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(15, 0, "Returned vardata was not the right length");
+    TEST_ASSERT_EQUAL_CHAR_ARRAY_MESSAGE(varData_2, varDataBuffer, 15, "embedDBGetVar did not return the correct vardata");
+}
+
+void test_insert_retrieve_flush_insert_retrieve_single_record_again(void){
+    // insert 3 records
+    insertRecords(3);
+    // retrieve record
+    int key = 2;
+    uint32_t expData[] = {0, 0, 0};
+    // create var data stream
+    embedDBVarDataStream *varStream = NULL;
+    // create buffer for input
+    uint32_t varBufSize = 15; 
+    void *varDataBuffer = malloc(varBufSize);
+    // query embedDB
+    int r = embedDBGetVar(state, &key, &expData, &varStream);
+    // test that records are found
+    TEST_ASSERT_EQUAL_INT_MESSAGE(r, 0, "Records should have been found.");
+    // retrieve variable record
+    uint32_t bytesRead = embedDBVarDataStreamRead(state, varStream, varDataBuffer, varBufSize);
+    // create string to compaare to
+    char varData[] = "Testing 002...";
+    // test
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(15, bytesRead, "Returned vardata was not the right length");
+    TEST_ASSERT_EQUAL_CHAR_ARRAY_MESSAGE(varData, varDataBuffer, 15, "embedDBGetVar did not return the correct vardata");
+    // free and flush 
+    free(varDataBuffer);
+    embedDBFlush(state);
+    // insert more records
+    insertRecords(55);
+    // create buffer for input
+    varDataBuffer = malloc(varBufSize);
+    r = embedDBGetVar(state, &key, &expData, &varStream);
+    // test that records are found
+    TEST_ASSERT_EQUAL_INT_MESSAGE(0, r, "Records should have been found. 2");
+    // retrieve variable record
+    bytesRead = embedDBVarDataStreamRead(state, varStream, varDataBuffer, varBufSize);
+    // test
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(15, 0, "Returned vardata was not the right length");
+    TEST_ASSERT_EQUAL_CHAR_ARRAY_MESSAGE(varData, varDataBuffer, 15, "embedDBGetVar did not return the correct vardata");
+}
+
 int insertRecords(uint32_t n) {
     char varData[] = "Testing 000...";
     int targetNum = n + inserted;
@@ -217,5 +297,7 @@ int main() {
     //RUN_TEST(test_single_variable_page_insert_and_retrieve_from_buffer);
     //RUN_TEST(test_insert_retrieve_insert_and_retrieve_again);
     //RUN_TEST(test_var_read_iterator_buffer);
+    //RUN_TEST(test_insert_retrieve_flush_insert_retrieve_again);
+    RUN_TEST(test_insert_retrieve_flush_insert_retrieve_single_record_again);
     UNITY_END();
 }
