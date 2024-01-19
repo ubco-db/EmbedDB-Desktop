@@ -236,3 +236,4 @@ embedDBState* init_state() {
 
     embedDBResetStats(state);
     return state;
+}
