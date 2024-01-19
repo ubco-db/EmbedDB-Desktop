@@ -149,4 +149,4 @@ clean:
 .PRECIOUS: $(PATHB)Test%.$(TARGET_EXTENSION)
 .PRECIOUS: $(PATHD)%.d
 .PRECIOUS: $(PATHO)%.o
-.PRECIOUS: $(PATHR)%.testpas
+.PRECIOUS: $(PATHR)%.testpass
