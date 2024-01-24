@@ -273,6 +273,21 @@ void test_insert_retrieve_flush_insert_retrieve_single_record_again(void) {
     TEST_ASSERT_EQUAL_CHAR_ARRAY_MESSAGE(varData, varDataBuffer, 15, "embedDBGetVar did not return the correct vardata");
 }
 
+void test_insert_retrieve_non_existing_record(void) {
+    // insert just over a page worth's of data
+    insertRecords(27);
+    int key = 29;
+    uint32_t expData[] = {0, 0, 0};
+    // create var data stream
+    embedDBVarDataStream *varStream = NULL;
+    // create buffer for input
+    uint32_t varBufSize = 15;  // Choose any size
+    void *varDataBuffer = malloc(varBufSize);
+    // query embedDB
+    int r = embedDBGetVar(state, &key, &expData, &varStream);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(r, -1, "Records should not have been found.");
+}
+
 int insertRecords(uint32_t n) {
     char varData[] = "Testing 000...";
     int targetNum = n + inserted;
@@ -299,5 +314,6 @@ int main() {
     RUN_TEST(test_var_read_iterator_buffer);
     RUN_TEST(test_insert_retrieve_flush_insert_retrieve_again);
     RUN_TEST(test_insert_retrieve_flush_insert_retrieve_single_record_again);
+    RUN_TEST(test_insert_retrieve_non_existing_record);
     UNITY_END();
 }
