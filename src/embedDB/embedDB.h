@@ -130,6 +130,8 @@ typedef uint16_t count_t;
         (bm & 0x02 ? '1' : '0'),   \
         (bm & 0x01 ? '1' : '0')
 
+#define NO_RECORD_FOUND -1
+#define RECORD_FOUND 0
 /**
  * @brief	An interface for embedDB to read/write to any storage medium at the page level of granularity
  */
