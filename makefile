@@ -22,7 +22,8 @@ endif
 
 PATHU = Unity/src/
 PATHS = src/
-PATHE = examples/
+PATHEX = examples/
+PATHBENCH = benchmarks/
 PATH_EMBEDDB = src/embedDB/
 PATHSPLINE = src/spline/
 PATH_QUERY = src/query-interface/
@@ -42,7 +43,7 @@ QUERY_OBJECTS = $(PATHO)schema.o $(PATHO)advancedQueries.o
 
 TEST_FLAGS = -I. -I $(PATHU) -I $(PATHS) -D TEST
 
-EXAMPLE_FLAGS = -I. -I$(PATHS) -I$(PATHE) -D PRINT_ERRORS
+EXAMPLE_FLAGS = -I. -I$(PATHS) -I$(PATHBENCH) -D PRINT_ERRORS
 
 CFLAGS = $(if $(filter test,$(MAKECMDGOALS)),$(TEST_FLAGS),$(EXAMPLE_FLAGS))
 
@@ -98,7 +99,7 @@ $(PATHB)Test%.$(TARGET_EXTENSION): $(PATHO)Test%.o $(EMBEDDB_OBJECTS) $(QUERY_OB
 $(PATHO)%.o:: $(PATHT)%.c
 	$(COMPILE) $(CFLAGS) $< -o $@
 
-$(PATHO)%.o:: $(PATHE)%.c
+$(PATHO)%.o:: $(PATHBENCH)%.c
 	$(COMPILE) $(CFLAGS) $< -o $@
 
 $(PATHO)%.o:: $(PATHSPLINE)%.c
