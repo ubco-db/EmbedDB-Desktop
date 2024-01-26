@@ -1,9 +1,3 @@
 [submodule "Unity"]
 	path = Unity
 	url = https://github.com/ThrowTheSwitch/Unity.git
-[submodule "lib/adaptive_sort"]
-	path = lib/adaptive_sort
-	url = https://github.com/ubco-db/adaptive_sort
-[submodule "lib/shared"]
-	path = lib/shared
-	url = https://github.com/ubco-db/shared
