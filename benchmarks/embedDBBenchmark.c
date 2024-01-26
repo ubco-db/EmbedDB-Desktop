@@ -58,7 +58,7 @@
  * Runs all tests and collects benchmarks
  */
 void runalltests_embedDB() {
-    printf("\n EmbedDB Example: \n");
+    printf("\n EmbedDB Benchmark: \n");
     int8_t M = 4;
     int32_t numRecords = 1000;     // default values
     int32_t testRecords = 500000;  // default values

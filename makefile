@@ -1,32 +1,31 @@
 ifeq ($(OS),Windows_NT)
   ifeq ($(shell uname -s),) # not in a bash-like shell
-	CLEANUP = del /F /Q
-	MKDIR = mkdir
+    CLEANUP = del /F /Q
+    MKDIR = mkdir
   else # in a bash-like shell, like msys
-	CLEANUP = rm -f
-	MKDIR = mkdir -p
+    CLEANUP = rm -f
+    MKDIR = mkdir -p
   endif
-  	MATH=
-	PYTHON=python
-	TARGET_EXTENSION=exe
+    MATH=
+    PYTHON=python
+    TARGET_EXTENSION=exe
 else
-	MATH = -lm
-	CLEANUP = rm -f
-	MKDIR = mkdir -p
-	TARGET_EXTENSION=out
-	PYTHON=python3
+  MATH = -lm
+  CLEANUP = rm -f
+  MKDIR = mkdir -p
+  TARGET_EXTENSION=out
+  PYTHON=python3
 endif
 
-.PHONY: clean
-.PHONY: test
+.PHONY: clean test examples timestampSequentialExample
 
 PATHU = Unity/src/
 PATHS = src/
-PATHEX = examples/
 PATHBENCH = benchmarks/
 PATH_EMBEDDB = src/embedDB/
 PATHSPLINE = src/spline/
 PATH_QUERY = src/query-interface/
+PATHEXAMPLES = examples/
 
 PATHT = test/
 PATHB = build/
@@ -38,26 +37,39 @@ PATHA = build/artifacts/
 BUILD_PATHS = $(PATHB) $(PATHD) $(PATHO) $(PATHR) $(PATHA)
 
 EMBEDDB_OBJECTS = $(PATHO)embedDB.o $(PATHO)spline.o $(PATHO)radixspline.o $(PATHO)utilityFunctions.o 
-
 QUERY_OBJECTS = $(PATHO)schema.o $(PATHO)advancedQueries.o
 
 TEST_FLAGS = -I. -I $(PATHU) -I $(PATHS) -D TEST
-
 EXAMPLE_FLAGS = -I. -I$(PATHS) -I$(PATHBENCH) -D PRINT_ERRORS
 
 CFLAGS = $(if $(filter test,$(MAKECMDGOALS)),$(TEST_FLAGS),$(EXAMPLE_FLAGS))
 
 SRCT = $(wildcard $(PATHT)*.c)
+EXAMPLES_SRC = $(wildcard $(PATHEXAMPLES)*.c)
+EXAMPLES_OBJECTS = $(patsubst $(PATHEXAMPLES)%.c,$(PATHO)%.o,$(EXAMPLES_SRC))
 
 EMBED_VARIABLE_BENCHMARK = $(PATHO)embedDBVariableBenchmark.o
 EMBEDDB_BENCHMARK = $(PATHO)embedDBBenchmark.o
 QUERY_INTERFACE_BENCHMARK = $(PATHO)advancedQueryInterfaceBenchmark.o
+TIMESTAMP_SEQUENTIAL_EXAMPLE = $(PATHO)timestampSequentialExample.o
 
 COMPILE=gcc -c
 LINK=gcc
 DEPEND=gcc -MM -MG -MF
 
 RESULTS = $(patsubst $(PATHT)Test%.c,$(PATHR)Test%.testpass,$(SRCT))
+
+$(PATHO)%.o:: $(PATHEXAMPLES)%.c
+	$(COMPILE) $(EXAMPLE_FLAGS) $< -o $@
+
+$(PATHB)%.$(TARGET_EXTENSION): $(PATHO)%.o $(EMBEDDB_OBJECTS) $(QUERY_OBJECTS)
+	$(LINK) -o $@ $^ $(MATH)
+
+sequentialDataExample: $(PATHB)sequentialDataExample.$(TARGET_EXTENSION)
+	-./$(PATHB)sequentialDataExample.$(TARGET_EXTENSION)
+
+timestampSequentialExample: $(PATHB)timestampSequentialExample.$(TARGET_EXTENSION)
+	-./$(PATHB)timestampSequentialExample.$(TARGET_EXTENSION)
 
 embedDBVariableBenchmark: $(BUILD_PATHS) $(PATHB)embedDBVariableBenchmark.$(TARGET_EXTENSION)
 	@echo "Running EmbedDB variable data benchmark"
@@ -75,9 +87,6 @@ embedDBBenchmark: $(BUILD_PATHS) $(PATHB)embedDBBenchmark.$(TARGET_EXTENSION)
 $(PATHB)embedDBBenchmark.$(TARGET_EXTENSION): $(EMBEDDB_OBJECTS) $(EMBEDDB_BENCHMARK)
 	$(LINK) -o $@ $^ $(MATH)
 
-$(PATHB)embedDBExample.$(TARGET_EXTENSION): $(EMBEDDB_OBJECTS) $(EMBEDDB_EXAMPLE)
-	$(LINK) -o $@ $^ $(MATH)
-
 queryBenchmark: $(BUILD_PATHS) $(PATHB)advancedQueryInterfaceBenchmark.$(TARGET_EXTENSION)
 	@echo "Running Advanced Query Interface Benchmark"
 	-./$(PATHB)advancedQueryInterfaceBenchmark.$(TARGET_EXTENSION)
@@ -93,7 +102,7 @@ test: $(BUILD_PATHS) $(RESULTS)
 $(PATHR)%.testpass: $(PATHB)%.$(TARGET_EXTENSION)
 	-./$< > $@ 2>&1
 
-$(PATHB)Test%.$(TARGET_EXTENSION): $(PATHO)Test%.o $(EMBEDDB_OBJECTS) $(QUERY_OBJECTS) $(PATHO)unity.o #$(PATHD)Test%.d
+$(PATHB)Test%.$(TARGET_EXTENSION): $(PATHO)Test%.o $(EMBEDDB_OBJECTS) $(QUERY_OBJECTS) $(PATHO)unity.o
 	$(LINK) -o $@ $^ $(MATH)
 
 $(PATHO)%.o:: $(PATHT)%.c
