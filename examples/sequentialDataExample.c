@@ -40,36 +40,74 @@
 #include "../src/embedDB/embedDB.h"
 #include "../src/embedDB/utilityFunctions.h"
 
-int insertFixedRecords(uint32_t n, uint32_t totalRecords);
-int insert_static_record(embedDBState* state, uint32_t key, uint32_t data);
+int insertFixedRecords(uint32_t n);
 int queryPrintFixedRecords(uint32_t start, uint32_t end);
 embedDBState* init_state();
 
 embedDBState* state;
 
+int totalRecords = 0;
+
 int main() {
-    printf("Performing an example of EmbeDB with sequentially generated data.\n");
-    printf("************************************************************************************************\n");
+    printf("****************Performing an example of EmbeDB with sequentially generated data****************\n");
     state = init_state();
     embedDBPrintInit(state);
-    printf("************************************************************************************************\n");
-    int totalRecords = 0;
-    int n = 10;
-    printf("Inserting %d records into write buffer...\n", n);
-    if (insertFixedRecords(n, totalRecords) == -1) {
-        printf("There was an error inserting static records");
+
+    printf("*******************For inserting and retrieving fixed-data in the write buffer*******************\n");
+    int n = 10;  // insert 10 records
+    if (insertFixedRecords(n) == -1) {
+        printf("There was an error inserting static records\n");
         exit(0);
     }
     printf("Querying %d records from write buffer using embeDDBGet()...\n", n);
     queryPrintFixedRecords(0, 10);
-    //  I think the way I want to structure it is like this
 
-    // printf();
-    //  INSERT FIXED LENGTH Records
+    printf("******For retrieving records in the file system and iterating over them with the iterator*******\n");
+    printf("Flushing embedDB so the files are in the file system...\n");
+    embedDBFlush(state);
+    printf("Flushed\n");
+    n = 25;  // insert 25 more records
+    if (insertFixedRecords(n) == -1) {
+        printf("There was an error inserting static records\n");
+        exit(0);
+    }
+    printf("Iterating over keys, 10 -> 34 inclusive...\n");
 
-    // RETRIEVE FIXED LENGTH Records
+    embedDBIterator it;
 
-    // RETRIEVE FIXED LENGTH RECORDS USING ITERATOR?
+    uint32_t* itKey;
+    uint32_t* itData[] = {0, 0, 0};
+    uint32_t minKey = 10, maxKey = 34;
+
+    it.minKey = &minKey;
+    it.maxKey = &maxKey;
+    it.minData = NULL;
+    it.maxData = NULL;
+
+    embedDBInitIterator(state, &it);
+
+    while (embedDBNext(state, &it, (void**)&itKey, (void**)&itData)) {
+        printf("Iterated key = %d and data = %d\n", itKey, *itData);
+    }
+
+    printf("Iterating over data, 10 -> 34 inclusive...\n");
+
+    // itKey;
+    // itData = {0, 0, 0};
+    uint32_t minData = 10, maxData = 34;
+
+    it.minKey = NULL;
+    it.maxKey = NULL;
+    it.minData = &minData;
+    it.maxData = &maxData;
+
+    embedDBInitIterator(state, &it);
+
+    while (embedDBNext(state, &it, (void**)&itKey, (void**)&itData)) {
+        printf("key = %d and iterated data = %d\n", itKey, *itData);
+    }
+
+    // initalize buffer variables.
 
     // INSERT VARIALBE LENGTH RECORDS
 
@@ -80,7 +118,8 @@ int main() {
     // it would be nice to print the variable records.
 }
 
-insertFixedRecords(uint32_t n, uint32_t totalRecords) {
+insertFixedRecords(uint32_t n) {
+    printf("Inserting %d records using embedDBPut()...\n", n);
     int targetNum = n + totalRecords;
     for (uint64_t i = totalRecords; i < targetNum; i++) {
         uint64_t data = i % 100;
@@ -95,13 +134,15 @@ insertFixedRecords(uint32_t n, uint32_t totalRecords) {
 }
 
 int queryPrintFixedRecords(uint32_t start, uint32_t end) {
+    // retrieve records from start to end
     for (int i = start; i < end; i++) {
-        // key you would like to retrieve data for
+        // key for data retrieval
         int key = i;
-        // Ensure that allocated memory is >= state->recordSize. You may use dynamic memory as well.
+        // data pointer for retrieval
         int returnDataPtr[] = {0, 0, 0};
         // query embedDB
         embedDBGet(state, (void*)&key, (void*)returnDataPtr);
+        // print result
         printf("Returned key = %d data = %d\n", key, *returnDataPtr);
     }
 }
