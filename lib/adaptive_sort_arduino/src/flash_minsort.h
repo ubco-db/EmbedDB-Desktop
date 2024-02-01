@@ -2,9 +2,9 @@
 #define FLASH_MINSORT_H
 
 #if defined(ARDUINO)
-#include "serial_c_iface.h"
 #include "file/kv_stdio_intercept.h"
 #include "file/sd_stdio_c_iface.h"
+#include "serial_c_iface.h"
 #endif
 
 #include <stdint.h>
@@ -14,11 +14,11 @@
 // #define BUFFER_OUTPUT_BLOCK_START_OFFSET  		OUTPUT_BLOCK_ID * es->page_size
 // #define BUFFER_OUTPUT_BLOCK_START_RECORD_OFFSET  OUTPUT_BLOCK_ID * es->page_size + BLOCK_HEADER_SIZE
 // Simplification if OUTPUT_BLOCK_ID is 0
-#define BUFFER_OUTPUT_BLOCK_START_OFFSET  			0
-#define BUFFER_OUTPUT_BLOCK_START_RECORD_OFFSET 	BLOCK_HEADER_SIZE
+#define BUFFER_OUTPUT_BLOCK_START_OFFSET 0
+#define BUFFER_OUTPUT_BLOCK_START_RECORD_OFFSET BLOCK_HEADER_SIZE
 
-#define SORT_KEY_SIZE       4
-#define INT_SIZE            4
+#define SORT_KEY_SIZE 4
+#define INT_SIZE 4
 
 #if defined(__cplusplus)
 extern "C" {
@@ -46,23 +46,22 @@ extern "C" {
                 Record comparison function for record ordering
 */
 int flash_minsort(
-        void    *iteratorState,
-		void    *tupleBuffer,
-        ION_FILE *outputFile,		
-		char    *buffer,        
-		int     bufferSizeInBytes,
-		external_sort_t *es,
-		long    *resultFilePtr,
-		metrics_t *metric,
-        int8_t  (*compareFn)(void *a, void *b)
-);
+    void *iteratorState,
+    void *tupleBuffer,
+    ION_FILE *outputFile,
+    char *buffer,
+    int bufferSizeInBytes,
+    external_sort_t *es,
+    long *resultFilePtr,
+    metrics_t *metric,
+    int8_t (*compareFn)(void *a, void *b));
 
 /*
 typedef struct OpState
 {   char type;
     unsigned long int blocks_written;
     unsigned long int blocks_read;
-    unsigned long int tuples_read; 
+    unsigned long int tuples_read;
     unsigned long int bytes_read;
     unsigned long int tuples_out;
 
@@ -71,39 +70,37 @@ typedef struct OpState
     TupleSlot* tupleSlot;
 } OpState;
 */
-typedef struct MinSortState
-{
-    char* buffer;
-    unsigned int* min;
-    
-    unsigned int current;           // current smallest value
-    unsigned int next;              // keep track of next smallest value for next iteration
-    unsigned long int nextIdx; 
-                       
+typedef struct MinSortState {
+    char *buffer;
+    unsigned int *min;
+
+    unsigned int current;  // current smallest value
+    unsigned int next;     // keep track of next smallest value for next iteration
+    unsigned long int nextIdx;
+
     unsigned int record_size;
     unsigned long int num_records;
-    unsigned int numBlocks;        
+    unsigned int numBlocks;
     unsigned int records_per_block;
     unsigned int blocks_per_region;
     unsigned int memoryAvailable;
-    unsigned int numRegions;          
+    unsigned int numRegions;
     unsigned int regionIdx;
-    unsigned int lastBlockIdx;    
+    unsigned int lastBlockIdx;
     unsigned int numDistinct;
 
-    void    *iteratorState;
+    void *iteratorState;
 
     /* Statistics */
     unsigned int blocksRead;
     unsigned int tuplesRead;
     unsigned int tuplesOut;
-    unsigned int bytesRead;    
+    unsigned int bytesRead;
 } MinSortState;
 
-
-void  init_MinSort(MinSortState* ms, external_sort_t *es, metrics_t *metric);
-char* next_MinSort(MinSortState* ms, external_sort_t *es, void *tupleBuffer, metrics_t *metric);
-void close_MinSort(MinSortState* ms, external_sort_t *es);
+void init_MinSort(MinSortState *ms, external_sort_t *es, metrics_t *metric);
+char *next_MinSort(MinSortState *ms, external_sort_t *es, void *tupleBuffer, metrics_t *metric);
+void close_MinSort(MinSortState *ms, external_sort_t *es);
 
 #if defined(__cplusplus)
 }

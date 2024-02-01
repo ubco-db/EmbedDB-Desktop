@@ -2,17 +2,17 @@
 #define FLASH_MINSORT_SUBLIST_H
 
 #if defined(ARDUINO)
-#include "serial_c_iface.h"
 #include "file/kv_stdio_intercept.h"
 #include "file/sd_stdio_c_iface.h"
+#include "serial_c_iface.h"
 #endif
 
 #include <stdint.h>
 
 #include "external_sort.h"
 
-#define SORT_KEY_SIZE       4
-#define INT_SIZE            4
+#define SORT_KEY_SIZE 4
+#define INT_SIZE 4
 
 #if defined(__cplusplus)
 extern "C" {
@@ -42,50 +42,47 @@ extern "C" {
                 Number of sublists
 */
 int flash_minsort_sublist(
-        void    *iteratorState,
-		void    *tupleBuffer,
-        ION_FILE *outputFile,		
-		char    *buffer,        
-		int     bufferSizeInBytes,
-		external_sort_t *es,
-		long    *resultFilePtr,
-		metrics_t *metric,
-        int8_t  (*compareFn)(void *a, void *b),
-        long    numSubList
-);
+    void *iteratorState,
+    void *tupleBuffer,
+    ION_FILE *outputFile,
+    char *buffer,
+    int bufferSizeInBytes,
+    external_sort_t *es,
+    long *resultFilePtr,
+    metrics_t *metric,
+    int8_t (*compareFn)(void *a, void *b),
+    long numSubList);
 
-typedef struct MinSortStateSublist
-{
-    char* buffer;
-    unsigned int* min;
-    unsigned long* offset;
+typedef struct MinSortStateSublist {
+    char *buffer;
+    unsigned int *min;
+    unsigned long *offset;
 
-    unsigned int current;           // current smallest value
-    unsigned int next;              // keep track of next smallest value for next iteration
-    unsigned long int nextIdx; 
-                       
+    unsigned int current;  // current smallest value
+    unsigned int next;     // keep track of next smallest value for next iteration
+    unsigned long int nextIdx;
+
     unsigned int record_size;
     unsigned long int num_records;
-    unsigned int numBlocks;                
+    unsigned int numBlocks;
     unsigned int memoryAvailable;
-    unsigned int numRegions;          
+    unsigned int numRegions;
     unsigned int regionIdx;
-    unsigned int lastBlockIdx;    
+    unsigned int lastBlockIdx;
     unsigned long fileOffset;
-    
-    void    *iteratorState;    
+
+    void *iteratorState;
 
     /* Statistics */
     unsigned int blocksRead;
     unsigned int tuplesRead;
     unsigned int tuplesOut;
-    unsigned int bytesRead;    
+    unsigned int bytesRead;
 } MinSortStateSublist;
 
-
-void  init_MinSort_sublist(MinSortStateSublist* ms, external_sort_t *es, metrics_t *metric);
-char* next_MinSort_sublist(MinSortStateSublist* ms, external_sort_t *es, void *tupleBuffer, metrics_t *metric);
-void close_MinSort_sublist(MinSortStateSublist* ms, external_sort_t *es);
+void init_MinSort_sublist(MinSortStateSublist *ms, external_sort_t *es, metrics_t *metric);
+char *next_MinSort_sublist(MinSortStateSublist *ms, external_sort_t *es, void *tupleBuffer, metrics_t *metric);
+void close_MinSort_sublist(MinSortStateSublist *ms, external_sort_t *es);
 
 #if defined(__cplusplus)
 }
