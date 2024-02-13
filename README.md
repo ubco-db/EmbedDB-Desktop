@@ -1,25 +1,59 @@
-# EmbedDB Index Structure for Time Series Data
+# EmbedDB Embedded Database for Time Series Data
 
-EmbedDB is a high performance embedded data storage and index structure for time series data for embedded systems:
+EmbedDB is a high performance embedded data storage and index structure optimized for time series data on embedded systems. It supports key-value and relational data and runs on a wide variety of embedded devices. EmbedDB does not require an operating system and outperforms other systems, including SQLite, on small embedded systems. Key features:
 
-1. Uses the minimum of two page buffers for performing all operations. The memory usage is less than 1.5 KB for 512 byte pages.
-2. Performance is several times faster than using B-trees and hash-based indexes using learned indexing. Simplifies data management without worrying about low-level details and storing data in raw files.
-3. No use of dynamic memory (i.e. malloc()). All memory is pre-allocated at creation of the index.
-4. Efficient insert (put) and query (get) of arbitrary key-value data. Ability to search data both on timestamp (key) and by data value.
-5. Option to store time series data with or without an index. Adding an index allows for faster retrieval of records based on data value.
-6. Several indexing approaches including learned indexing, radix spline, and bitmaps.
-7. Support for iterator to traverse data sequentially.
-8. Works with user-defined file-interfaces and iterators.
-9. Support for variable-sized records.
-10. Easy to use and include in existing projects.
-11. Included library with easy to use query operators.
-12. Open source license. Free to use for commerical and open source projects.
+1. Minimum memory requirement is 4 KB allowing execution on the smallest devices.
+2. Key-value store optimized for time series with extremely fast insert performance.
+3. Efficient insert (put) and query (get) of arbitrary key-value data. Ability to search data both on timestamp (key) and by data value.
+4. High-performance [learned index for keys](https://arxiv.org/abs/2302.03085) and efficient, [customizable data index](docs/SBITS_time_series_index.pdf) optimized for flash memory that outperforms B+-trees.
+5. Supports any type of storage including raw NOR and NAND chips and SD cards.
+6. No dependencies on libraries or need for an operating system.
+7. Advanced query API for SQL queries <!-- cite embed SQL repo -->
+8. Easily included in C projects.
+9. Open source license. Free to use for commerical and open source projects.
 
-**Note: This version is designed to run on a PC and may require porting to an embedded device.**
+**Note: This version is designed to run on a PC but a embedded version is [also available](https://github.com/ubco-db/EmbedDB)**
 
 ## License
 
 [![License](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
+
+## Example Usage
+
+```c
+embedDBState* state = (embedDBState*) malloc(sizeof(embedDBState));
+state->keySize = 4;  
+state->dataSize = 12;
+
+// Function pointers that can compare keys and data (user customizable)
+state->compareKey = int32Comparator;
+state->compareData = dataComparator;
+
+// Storage configuration
+state->pageSize = 512;
+state->eraseSizeInPages = 4;
+state->numDataPages = 1000;
+state->numIndexPages = 48;
+char dataPath[] = "dataFile.bin", indexPath[] = "indexFile.bin", varPath[] = "varFile.bin";
+state->fileInterface = getFileInterface();
+state->dataFile = setupFile(dataPath);
+state->indexFile = setupFile(indexPath);
+
+// Configure memory buffers
+state->bufferSizeInBlocks = 2; // Minimum 2 buffers is required for read/write operations
+state->buffer = malloc((size_t) state->bufferSizeInBlocks * state->pageSize);
+
+// Initialize
+embedDBInit(state, splineMaxError);
+
+// Store record
+uint32_t key = 123;
+char data[12] = "TEST DATA";
+embedDBPut(state, (void*) &key, dataPtr);
+
+// Get record
+embedDBGet(state, (void*) &key, (void*) returnDataPtr);
+```
 
 ## Code Files
 
