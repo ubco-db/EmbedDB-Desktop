@@ -19,7 +19,7 @@ char const randomizedDataFileName[] = "../data/ethylene_CO_only_4M_randomized.bi
 #define numRuns 10
 
 int main() {
-    clock_t timeInsert[numRuns],
+    double timeInsert[numRuns],
         timeSelectAll[numRuns],
         timeSelectKeySmallResult[numRuns],
         timeSelectKeyLargeResult[numRuns],
@@ -289,8 +289,6 @@ int main() {
         timeSeqKV[run] = (clock() - start) / (CLOCKS_PER_SEC / 1000.0);
         numReadsSeqKV = state->numReads - numReadsSeqKV;
 
-        fclose(dataset);
-
         //////////////////////
         // Random Key-Value //
         //////////////////////
@@ -312,17 +310,19 @@ int main() {
         timeRandKV[run] = (clock() - start) / (CLOCKS_PER_SEC / 1000.0);
         numReadsRandKV = state->numReads - numReadsRandKV;
 
+        fclose(dataset);
         fclose(randomDataset);
 
-        /////////////////
-        // Close EMBEDDB //
-        /////////////////
+        ///////////////////
+        // Close EmbedDB //
+        ///////////////////
         embedDBClose(state);
         tearDownFile(state->dataFile);
         tearDownFile(state->indexFile);
         free(state->fileInterface);
         free(state->buffer);
         free(recordBuffer);
+        free(state);
     }
 
     // Calculate averages
