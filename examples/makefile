@@ -23,9 +23,9 @@ embedDBBenchmarkEthylene4M:
 	gcc embedDBBenchmarkEthylene4M.c ../src/embedDB/embedDB.c ../src/embedDB/utilityFunctions.c ../src/spline/spline.c ../src/spline/radixspline.c -o embedDBBenchmarkEthylene4M.$(TARGET_EXTENSION) $(OSFLAGS)
 	./embedDBBenchmarkEthylene4M.$(TARGET_EXTENSION)
 
-embedDBBenchmarkUWA:
-	gcc embedDBBenchmarkUWA.c ../src/embedDB/embedDB.c ../src/embedDB/utilityFunctions.c ../src/spline/spline.c ../src/spline/radixspline.c -o embedDBBenchmarkUWA.$(TARGET_EXTENSION) $(OSFLAGS)
-	./embedDBBenchmarkUWA.$(TARGET_EXTENSION)
+embedDBBenchmarkUWA500K:
+	gcc embedDBBenchmarkUWA500K.c ../src/embedDB/embedDB.c ../src/embedDB/utilityFunctions.c ../src/spline/spline.c ../src/spline/radixspline.c -o embedDBBenchmarkUWA500K.$(TARGET_EXTENSION) $(OSFLAGS)
+	./embedDBBenchmarkUWA500K.$(TARGET_EXTENSION)
 
 clean:
 	$(CLEANUP) *.o	
