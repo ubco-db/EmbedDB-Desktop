@@ -153,14 +153,14 @@ int main() {
         numReadsSelectKeyLargeResult = state->numReads - numReadsSelectKeyLargeResult;
 
         //////////////////////////////////////
-        // SELECT * FROM r WHERE data = 600 //
+        // SELECT * FROM r WHERE data = 859 //
         //////////////////////////////////////
 
         start = (double)clock();
 
         embedDBIterator itSelectSingleDataResult;
-        int32_t minDataSelectSingleResult = 600;
-        int32_t maxDataSelectSingleResult = 600;
+        int32_t minDataSelectSingleResult = 850;
+        int32_t maxDataSelectSingleResult = 850;
         itSelectSingleDataResult.minKey = NULL;
         itSelectSingleDataResult.maxKey = NULL;
         itSelectSingleDataResult.minData = &minDataSelectSingleResult;
@@ -181,12 +181,12 @@ int main() {
         numIdxReadsSelectSingleDataResult = state->numIdxReads - numIdxReadsSelectSingleDataResult;
 
         ///////////////////////////////////////
-        // SELECT * FROM r WHERE data >= 600 //
+        // SELECT * FROM r WHERE data >= 850 //
         ///////////////////////////////////////
         start = (double)clock();
 
         embedDBIterator itSelectDataSmallResult;
-        int32_t minDataSelectDataSmallResult = 600;
+        int32_t minDataSelectDataSmallResult = 850;
         itSelectDataSmallResult.minKey = NULL;
         itSelectDataSmallResult.maxKey = NULL;
         itSelectDataSmallResult.minData = &minDataSelectDataSmallResult;
@@ -207,12 +207,12 @@ int main() {
         numIdxReadsSelectDataSmallResult = state->numIdxReads - numIdxReadsSelectDataSmallResult;
 
         ///////////////////////////////////////
-        // SELECT * FROM r WHERE data >= 420 //
+        // SELECT * FROM r WHERE data >= 480 //
         ///////////////////////////////////////
         start = (double)clock();
 
         embedDBIterator itSelectDataLargeResult;
-        int32_t minDataSelectDataLargeResult = 420;
+        int32_t minDataSelectDataLargeResult = 480;
         itSelectDataLargeResult.minKey = NULL;
         itSelectDataLargeResult.maxKey = NULL;
         itSelectDataLargeResult.minData = &minDataSelectDataLargeResult;
@@ -362,7 +362,7 @@ int main() {
     printf("Num reads: %d\n", numReadsSelectKeyLargeResult);
 
     sum = 0;
-    printf("\nSELECT * FROM r WHERE data = 600\n");
+    printf("\nSELECT * FROM r WHERE data = 850\n");
     printf("Time: ");
     for (int i = 0; i < numRuns; i++) {
         printf("%.1f ", timeSelectSingleDataResult[i]);
@@ -374,7 +374,7 @@ int main() {
     printf("Num idx reads: %d\n", numIdxReadsSelectSingleDataResult);
 
     sum = 0;
-    printf("\nSELECT * FROM r WHERE data >= 700\n");
+    printf("\nSELECT * FROM r WHERE data >= 850\n");
     printf("Time: ");
     for (int i = 0; i < numRuns; i++) {
         printf("%.1f ", timeSelectDataSmallResult[i]);
@@ -386,7 +386,7 @@ int main() {
     printf("Num idx reads: %d\n", numIdxReadsSelectDataSmallResult);
 
     sum = 0;
-    printf("\nSELECT * FROM r WHERE data >= 420\n");
+    printf("\nSELECT * FROM r WHERE data >= 480\n");
     printf("Time: ");
     for (int i = 0; i < numRuns; i++) {
         printf("%.1f ", timeSelectDataLargeResult[i]);
