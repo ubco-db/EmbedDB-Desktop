@@ -187,7 +187,6 @@ void runalltests_embedDB() {
 
         /* Initialize embedDB structure with parameters */
         if (embedDBInit(state, splineMaxError) != 0) {
-            printf("hello cuntie cunt cunt\n");
             printf("Initialization error.\n");
             return;
         }
@@ -333,7 +332,7 @@ void runalltests_embedDB() {
                 rec = 0;
                 reads = state->numReads;
                 while (embedDBNext(state, &it, &itKey, itData)) {
-                    printf("Key: %d  Data: %d\n", itKey, *(uint32_t *)itData);
+                    // printf("Key: %d  Data: %d\n", itKey, *(uint32_t *)itData);
                     if ((it.minData != NULL && *((int32_t *)itData) < *((int32_t *)it.minData)) ||
                         (it.maxData != NULL && *((int32_t *)itData) > *((int32_t *)it.maxData))) {
                         printf("Key: %d Data: %d Error\n", itKey, *(uint32_t *)itData);
@@ -453,7 +452,7 @@ void runalltests_embedDB() {
                 while (embedDBNext(state, &it, &itKey, itData)) {
                     if ((it.minData != NULL && *((int32_t *)itData) < *((int32_t *)it.minData)) ||
                         (it.maxData != NULL && *((int32_t *)itData) > *((int32_t *)it.maxData))) {
-                        printf("Key: %d Data: %d Error\n", itKey, *(uint32_t *)itData);
+                        // printf("Key: %d Data: %d Error\n", itKey, *(uint32_t *)itData);
                     }
                     rec++;
                 }
