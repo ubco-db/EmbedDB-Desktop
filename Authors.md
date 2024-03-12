@@ -7,4 +7,3 @@
 - Ramon Lawrence
 - Justin Schoenit
 
-pineapple
