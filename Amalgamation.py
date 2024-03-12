@@ -18,40 +18,39 @@ DEFINE_RADIX_BITS_REGEX = '#define RADIX_BITS [1-9]'
 DEFINE_PRINT_ERRORS_REGEX = '#define PRINT_ERRORS'
 
 # DIRECTORIES
-ROOT_DIR = ''
+ROOT_DIR = os.path.join("Implementation", "code") #change this to reflect project dir
 
 # C-standard library 
-
 c_stand = {
-  "assert.h",
-  "complex.h",
-  "ctype.h",
-  "errno.h",
-  "fenv.h",
-  "float.h",
-  "inttypes.h",
-  "iso646.h",
-  "limits.h",
-  "locale.h",
-  "math.h",
-  "setjmp.h",
-  "signal.h",
-  "stdalign.h",
-  "stdarg.h",
-  "stdatomic.h",
-  "stdbool.h",
-  "stddef.h",
-  "stdint.h",
-  "stdio.h",
-  "stdlib.h",
-  "stdnoreturn.h",
-  "string.h",
-  "tgmath.h",
-  "threads.h",
-  "time.h",
-  "uchar.h",
-  "wchar.h",
-  "wctype.h"
+    "#include <assert.h>",
+    "#include <complex.h>",
+    "#include <ctype.h>",
+    "#include <errno.h>",
+    "#include <fenv.h>",
+    "#include <float.h>",
+    "#include <inttypes.h>",
+    "#include <iso646.h>",
+    "#include <limits.h>",
+    "#include <locale.h>",
+    "#include <math.h>",
+    "#include <setjmp.h>",
+    "#include <signal.h>",
+    "#include <stdalign.h>",
+    "#include <stdarg.h>",
+    "#include <stdatomic.h>",
+    "#include <stdbool.h>",
+    "#include <stddef.h>",
+    "#include <stdint.h>",
+    "#include <stdio.h>",
+    "#include <stdlib.h>",
+    "#include <stdnoreturn.h>",
+    "#include <string.h>",
+    "#include <tgmath.h>",
+    "#include <threads.h>",
+    "#include <time.h>",
+    "#include <uchar.h>",
+    "#include <wchar.h>",
+    "#include <wctype.h>"
 }
 
 '''
@@ -125,6 +124,7 @@ def get_all_files_of_type(directory, file_extension):
 '''
 CLEANING PORTION
 '''
+
 def retrieve_pattern_from_source(source, pattern):
     '''
     Extracts and returns all unique #include statements from a given source code string using a regular expression.
@@ -155,7 +155,7 @@ def remove_pattern_from_source(source, pattern):
     
     return re.sub(pattern, " ", source)
 
-def check_against_standard_library(incoming_lib, amalg_c_stand_lib):
+def check_against_standard_library(c_stand, incoming_lib, amalg_c_stand_lib):
     '''
     Validates a set of C library headers against the Standard C Library headers and updates a set with the valid standard libraries.
 
@@ -166,15 +166,9 @@ def check_against_standard_library(incoming_lib, amalg_c_stand_lib):
     :param amalg_c_stand_lib: A set that is updated with the headers from incoming_lib that are part of the standard C library.
 
     :return: A set of strings representing the headers from incoming_lib that are not part of the standard C library. If all incoming headers are standard, an empty set is returned.
-
-    Note: The function expects a file named 'standard-c-lib.txt' in the ROOT_DIR directory, containing the standard C library headers, one per line.
     '''
-    
-    # retrieve standard library, extract it as a set 
-    lib_dir = os.path.join(ROOT_DIR, 'standard-c-lib.txt')
-    total_standard_lib = retrieve_pattern_from_source(read_file(lib_dir), REGEX_INCLUDE)
-
-    not_standard_lib = incoming_lib.difference(total_standard_lib)
+  
+    not_standard_lib = incoming_lib.difference(c_stand)
     required_standard_lib = incoming_lib - not_standard_lib
 
     amalg_c_stand_lib.update(required_standard_lib)
@@ -411,8 +405,9 @@ def create_amalgamation(files):
     return amalgamation
 
 '''
-@TODO only open up standard-c-lib.txt once! 
+FileNode Class
 '''
+
 class FileNode():
     '''
     A class to represent a file node which encapsulates file information and dependencies.
@@ -463,7 +458,7 @@ class FileNode():
         # retrieve included libraries
         includes = retrieve_pattern_from_source(original, REGEX_INCLUDE)
         # find local dependencies
-        self.header_dep = check_against_standard_library(includes, self.c_stand_dep)
+        self.header_dep = check_against_standard_library(c_stand, includes, self.c_stand_dep)
         # remove includes and assign source
         self.contents = remove_pattern_from_source(original, REGEX_INCLUDE)
         # format local dependencies
@@ -471,7 +466,7 @@ class FileNode():
 
 def main():
     # get source directory 
-    embedDB = os.path.join('src')
+    embedDB = os.path.join('Implementation', 'code', 'tests', 'test_files', 'EmbedDB')
     # set of objects containing source files (fileNode)
     header_file_nodes = retrieve_source_set(embedDB, 'h')
     source_file_nodes = retrieve_source_set(embedDB, 'c')
