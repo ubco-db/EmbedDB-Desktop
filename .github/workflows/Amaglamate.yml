@@ -20,3 +20,11 @@ jobs:
 
     - name: Run script
       run: python Amalgamation.py
+
+    - name: Commit and push if changes
+      run: |
+        git config --global user.email "gerren.14@gmail.com"
+        git config --global user.name "CookiedOutMonster"
+        git add EmbedDB.c
+        git add EmbedDB.h
+        git diff --staged --quiet || (git commit -m "Add generated file" && git push)
