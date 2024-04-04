@@ -1424,21 +1424,15 @@ int8_t iterateReadBuffer(embedDBState *state, embedDBIterator *it, void *key, vo
  * @return	1 if successful, 0 if no more records
  */
 int8_t embedDBNext(embedDBState *state, embedDBIterator *it, void *key, void *data) {
+    int searchWriteBuf = 0;
     while (1) {
-        // return 0 since all pages including buffer has been read.
-        if (it->nextDataPage > (state->nextDataPageId)) return 0;
-        // if we have reached the end, read from output buffer if it is not empty
-        if (it->nextDataPage == (state->nextDataPageId)) {
-            // point to outputBuffer
-            void *outputBuffer = (int8_t *)state->buffer;
-            // if there are no records in the buffer, return
-            if (EMBEDDB_GET_COUNT(outputBuffer) == 0) return 0;
-            // else, place write buffer in read
-            readToWriteBuf(state);
-            // search read buffer
-            int i = iterateReadBuffer(state, it, key, data);
-            return (i != ITERATE_NO_MATCH) ? i : 0;
+        if (it->nextDataPage > state->nextDataPageId) {
+            return 0;
         }
+        if (it->nextDataPage == state->nextDataPageId) {
+            searchWriteBuf = 1;
+        }
+
         // If we are just starting to read a new page and we have a query bitmap
         if (it->nextDataRec == 0 && it->queryBitmap != NULL) {
             // Find what index page determines if we should read the data page
@@ -1474,11 +1468,33 @@ int8_t embedDBNext(embedDBState *state, embedDBIterator *it, void *key, void *da
             return 0;
         }
 
-        int8_t i = iterateReadBuffer(state, it, key, data);
-        if (i != ITERATE_NO_MATCH) return i;
+        // Keep reading record until we find one that matches the query
+        int8_t *buf = searchWriteBuf == 0 ? (int8_t *)state->buffer + EMBEDDB_DATA_READ_BUFFER * state->pageSize : (int8_t *)state->buffer + EMBEDDB_DATA_WRITE_BUFFER * state->pageSize;
+        uint32_t pageRecordCount = EMBEDDB_GET_COUNT(buf);
+        while (it->nextDataRec < pageRecordCount) {
+            // Get record
+            memcpy(key, buf + state->headerSize + it->nextDataRec * state->recordSize, state->keySize);
+            memcpy(data, buf + state->headerSize + it->nextDataRec * state->recordSize + state->keySize, state->dataSize);
+            it->nextDataRec++;
+
+            // Check record
+            if (it->minKey != NULL && state->compareKey(key, it->minKey) < 0)
+                continue;
+            if (it->maxKey != NULL && state->compareKey(key, it->maxKey) > 0)
+                return 0;
+            if (it->minData != NULL && state->compareData(data, it->minData) < 0)
+                continue;
+            if (it->maxData != NULL && state->compareData(data, it->maxData) > 0)
+                continue;  // shouldn't this also return 0?
+
+            // If we make it here, the record matches the query
+            return 1;
+        }
+
         // Finished reading through whole data page and didn't find a match
         it->nextDataPage++;
         it->nextDataRec = 0;
+
         // Try next data page by looping back to top
     }
 }
