@@ -19,7 +19,7 @@ jobs:
         python -m pip install --upgrade pip
 
     - name: Run amalgamation
-      working-directory: ../amalgamation/
+      working-directory: ./amalgamation/
       run: |
         python amalgamation.py
 
