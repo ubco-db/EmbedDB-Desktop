@@ -660,10 +660,5 @@ def main():
     # create standard embedDB amalgamation
     amalgamate([EMBEDDB], aud_stand, "embedDB", False, PROJECT_ROOT)
 
-    # Print out all files in PROJECT_ROOT
-    for root, dirs, files in os.walk(PROJECT_ROOT):
-        for file in files:
-            print(os.path.join(root, file))
-
     
 main()
