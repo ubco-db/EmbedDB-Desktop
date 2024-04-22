@@ -65,8 +65,8 @@ $(PATHO)%.o:: $(PATHEXAMPLES)%.c
 $(PATHB)%.$(TARGET_EXTENSION): $(PATHO)%.o $(EMBEDDB_OBJECTS) $(QUERY_OBJECTS)
 	$(LINK) -o $@ $^ $(MATH)
 
-sequentialDataExample: $(PATHB)sequentialDataExample.$(TARGET_EXTENSION)
-	-./$(PATHB)sequentialDataExample.$(TARGET_EXTENSION)
+example: $(PATHB)example.$(TARGET_EXTENSION)
+	-./$(PATHB)example.$(TARGET_EXTENSION)
 
 timestampSequentialExample: $(PATHB)timestampSequentialExample.$(TARGET_EXTENSION)
 	-./$(PATHB)timestampSequentialExample.$(TARGET_EXTENSION)

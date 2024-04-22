@@ -333,10 +333,10 @@ void runalltests_embedDB() {
                 rec = 0;
                 reads = state->numReads;
                 while (embedDBNext(state, &it, &itKey, itData)) {
-                    printf("Key: %d  Data: %d\n", itKey, *(uint32_t *)itData);
+                    // printf("Key: %d  Data: %d\n", itKey, *(uint32_t *)itData);
                     if ((it.minData != NULL && *((int32_t *)itData) < *((int32_t *)it.minData)) ||
                         (it.maxData != NULL && *((int32_t *)itData) > *((int32_t *)it.maxData))) {
-                        printf("Key: %d Data: %d Error\n", itKey, *(uint32_t *)itData);
+                        // printf("Key: %d Data: %d Error\n", itKey, *(uint32_t *)itData);
                     }
                     rec++;
                 }
@@ -434,6 +434,7 @@ void runalltests_embedDB() {
                 }
             } else {
                 /* Data value query for given value range */
+                printf("******************************************************************************** what the fuck");
                 uint32_t itKey;
                 void *itData = calloc(1, state->dataSize);
                 embedDBIterator it;

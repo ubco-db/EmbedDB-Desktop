@@ -49,22 +49,19 @@ embedDBState* init_state();
 embedDBState* state;
 
 int main() {
-    printf("*********Example of EmbeDB with Sequential Timestamp Key Records*********\n");
+    printf("******************* Example of EmbeDB with Sequential Timestamp Key Records ***********************\n");
     state = init_state();
     embedDBPrintInit(state);
 
     // Inserting fixed-data records with timestamp keys
-    printf("*********Inserting and Retrieving Fixed-Data in the Write Buffer*********\n");
+    printf("******************* Inserting and iterating Fixed-Data in the Write Buffer ***********************\n");
     int n = 10;  // Number of records to insert
     if (insertFixedRecordsWithTimestamp(n) == -1) {
         printf("Error inserting records\n");
         exit(0);
     }
 
-    // Querying fixed-data records
-    printf("Querying %d records from write buffer using iterator\n", n);
     uint64_t currentTime = (uint64_t)time(NULL);
-    // queryPrintFixedRecords(currentTime - n, currentTime);
 
     embedDBIterator it;
 
@@ -80,13 +77,8 @@ int main() {
     embedDBInitIterator(state, &it);
 
     while (embedDBNext(state, &it, (void**)&itKey, (void**)&itData)) {
-        printf("key = %d, data = %d\n", itKey, *itData);
+        printf("key = %ld, data = %ld\n", (long)itKey, *(long*)itData);
     }
-
-    printf("Flushed\n");
-    embedDBFlush(state);
-
-    printf("Done.\n");
 }
 
 int insertFixedRecordsWithTimestamp(uint32_t n) {
