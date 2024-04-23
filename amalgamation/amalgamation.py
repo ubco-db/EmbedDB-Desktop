@@ -658,7 +658,7 @@ def main():
     PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     EMBEDDB = os.path.join(PROJECT_ROOT, "src")
     # create standard embedDB amalgamation
-    amalgamate([EMBEDDB], aud_stand, "embedDB", False, PROJECT_ROOT)
+    amalgamate([EMBEDDB], c_stand, "embedDB", False, PROJECT_ROOT)
 
     
 main()
