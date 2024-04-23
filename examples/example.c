@@ -219,13 +219,11 @@ int main() {
     while (embedDBNextVar(state, &varIt, &itVarKey, varItData, &itVarStream)) {
         /* process fixed-length data */
 
-        // printf("we got here!\n");
-
         /* Process vardata if this record has it */
         if (itVarStream != NULL) {
             uint32_t numBytesRead = 0;
             while ((numBytesRead = embedDBVarDataStreamRead(state, itVarStream, varDataBuffer, varBufSize)) > 0) {
-                printf("Iterated key = %ld, fixed-length record= %d, variable-length record = %s\n", (long)itVarKey, *varItData, (char*)varDataBuffer);
+                printf("Iterated key = %d, fixed-length record= %d, variable-length record = %s\n", (uint32_t)itVarKey, *varItData, (char*)varDataBuffer);
             }
             free(varStream);
             varStream = NULL;
