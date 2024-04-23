@@ -42,15 +42,14 @@
 
 #define SUCCESS 0
 
-int insertFixedRecords(uint32_t n);
-int queryPrintFixedRecords(uint32_t start, uint32_t end);
 embedDBState* init_state();
-
 embedDBState* state;
 
 int totalRecords = 0;
 
 int main() {
+    int totalRecords = 0;
+
     printf("******************* Performing an example of EmbeDB with sequentially generated data **************\n");
     // init state, see function for details.
     state = init_state();
@@ -223,7 +222,7 @@ int main() {
         if (itVarStream != NULL) {
             uint32_t numBytesRead = 0;
             while ((numBytesRead = embedDBVarDataStreamRead(state, itVarStream, varDataBuffer, varBufSize)) > 0) {
-                printf("Iterated key = %d, fixed-length record= %d, variable-length record = %s\n", (uint32_t)itVarKey, *varItData, (char*)varDataBuffer);
+                printf("Iterated key = %u, fixed-length record= %d, variable-length record = %s\n", (uint64_t)itVarKey, *varItData, (char*)varDataBuffer);
             }
             free(varStream);
             varStream = NULL;

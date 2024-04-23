@@ -26,8 +26,8 @@ EmbedDB is a high performance embedded data storage and index structure for time
 
 -   [utilityFunctions](src/embedDB/utilityFunctions.c) User defined functions with common/default configurations to get started.
 -   [advancedQueries](src/embedDB/utilityFunctions.c) - An included library with easy to use query operators. 
--   [embedDBExample](examples/embedDBExample.c) - An example file demonstrating how to get, put, and iterate through data in index. Try by using `make embedDBExample`
--   [embedDBVariableDataExample](examples/embedDBVariableDataExample.c) - An example file demonstrating the use of records with variable-sized data. Try using with `make embedDBVariableDataExample`
+-   [embedDBExample](examples/embedDBExample.c) - An example file demonstrating how to get, put, and iterate through fixed and variable length records. Try by using `make embedDBExample`
+-   [timestampSequentialExample](examples/timestampSequentialExample.c) - An example file for inserting and iterating over time series data generated on the fly. `make timestampSequentialExample`
 -   [embedDBQueryInterfaceExamples](examples/advancedQueryInterfaceExample.c) - An example file demonstrating the included embedDB library. Try by using with `make queryExample`
 -   [sbits.h](src/embedDB/embedDB.h), [sbits.c](src/embedDB/embedDB.c) - Core source files //I don't know what this is.
 -   [spline.c](src/spline/spline.c) - Implementation of spline index structure.
