@@ -8,3 +8,4 @@ build/
 result.xml
 venv/
 env/
+.idea/
